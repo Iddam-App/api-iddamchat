@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0f1117">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>CloudDrive</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <!-- ═══ LOGIN / REGISTER ═══ -->
+    <div id="auth-screen" class="auth-screen">
+        <div class="auth-card">
+            <div class="auth-logo">
+                <div class="auth-icon-wrap">
+                    <i class="fas fa-cloud"></i>
+                </div>
+                <h1>CloudDrive</h1>
+                <p>Tu nube personal segura</p>
+            </div>
+            <form id="auth-form">
+                <div class="input-group">
+                    <i class="fas fa-user"></i>
+                    <input type="text" id="auth-username" placeholder="Usuario" required autocomplete="username">
+                </div>
+                <div class="input-group">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="auth-password" placeholder="Contraseña" required autocomplete="current-password">
+                </div>
+                <button type="submit" id="auth-btn" class="btn-primary btn-full">
+                    <span>Iniciar sesión</span>
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+                <button type="button" id="auth-toggle" class="btn-link">¿No tienes cuenta? Regístrate</button>
+            </form>
+            <div id="auth-error" class="error-msg hidden"></div>
+        </div>
+    </div>
+
+    <!-- ═══ APP ═══ -->
+    <div id="app-screen" class="app-screen hidden">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <i class="fas fa-cloud header-icon"></i>
+                <span class="header-title">CloudDrive</span>
+            </div>
+            <div class="header-center">
+                <div class="storage-wrap">
+                    <div class="storage-bar">
+                        <div class="storage-fill" id="storage-fill"></div>
+                    </div>
+                    <span id="storage-text" class="storage-text">0 B / 10 GB</span>
+                </div>
+            </div>
+            <div class="header-right">
+                <span id="user-name" class="user-name"></span>
+                <button id="logout-btn" class="btn-icon" title="Cerrar sesión">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <nav class="breadcrumb" id="breadcrumb">
+                <button class="crumb-btn active" data-id="root">
+                    <i class="fas fa-home"></i><span>Inicio</span>
+                </button>
+            </nav>
+            <div class="toolbar-actions">
+                <button id="btn-view-toggle" class="btn-tool" title="Cambiar vista">
+                    <i class="fas fa-list"></i>
+                </button>
+                <button id="btn-new-folder" class="btn-tool" title="Nueva carpeta">
+                    <i class="fas fa-folder-plus"></i>
+                    <span class="btn-label">Carpeta</span>
+                </button>
+                <button id="btn-upload" class="btn-tool btn-accent" title="Subir archivos">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <span class="btn-label">Subir</span>
+                </button>
+                <input type="file" id="file-input" multiple hidden>
+            </div>
+        </div>
+
+        <!-- Content area -->
+        <div class="content-area">
+            <!-- File grid -->
+            <main class="file-grid" id="file-grid"></main>
+
+            <!-- Empty state -->
+            <div id="empty-state" class="empty-state hidden">
+                <div class="empty-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                <h3>Esta carpeta está vacía</h3>
+                <p>Arrastra archivos aquí o usa el botón subir</p>
+            </div>
+
+            <!-- Loading -->
+            <div id="loading" class="loading hidden">
+                <div class="spinner"></div>
+            </div>
+        </div>
+
+        <!-- Drop zone overlay -->
+        <div id="drop-overlay" class="drop-overlay hidden">
+            <div class="drop-content">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <p>Suelta tus archivos aquí</p>
+            </div>
+        </div>
+
+        <!-- Mobile FAB -->
+        <div class="fab-group" id="fab-group">
+            <button id="fab-main" class="fab" title="Acciones">
+                <i class="fas fa-plus"></i>
+            </button>
+            <div id="fab-menu" class="fab-menu hidden">
+                <button class="fab-option" id="fab-folder">
+                    <span>Nueva carpeta</span>
+                    <i class="fas fa-folder-plus"></i>
+                </button>
+                <button class="fab-option" id="fab-upload">
+                    <span>Subir archivo</span>
+                    <i class="fas fa-cloud-upload-alt"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Upload progress -->
+        <div id="upload-progress" class="upload-progress hidden">
+            <div class="upload-progress-inner">
+                <div class="upload-info">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <span id="upload-status">Subiendo...</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ CONTEXT MENU (Desktop right-click) ═══ -->
+    <div id="context-menu" class="context-menu hidden">
+        <button data-action="open"><i class="fas fa-folder-open"></i> Abrir</button>
+        <button data-action="preview"><i class="fas fa-eye"></i> Vista previa</button>
+        <button data-action="download"><i class="fas fa-download"></i> Descargar</button>
+        <button data-action="rename"><i class="fas fa-pen"></i> Renombrar</button>
+        <hr>
+        <button data-action="delete" class="danger"><i class="fas fa-trash"></i> Eliminar</button>
+    </div>
+
+    <!-- ═══ BOTTOM SHEET (Mobile action menu) ═══ -->
+    <div id="bottom-sheet-backdrop" class="sheet-backdrop hidden"></div>
+    <div id="bottom-sheet" class="bottom-sheet hidden">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+            <div class="sheet-icon" id="bs-icon-wrap"><i id="bs-icon" class="fas fa-file"></i></div>
+            <div class="sheet-title">
+                <span id="bs-name">archivo.txt</span>
+                <span id="bs-meta" class="sheet-meta"></span>
+            </div>
+        </div>
+        <div class="sheet-actions">
+            <button data-action="open"><i class="fas fa-folder-open"></i><span>Abrir</span></button>
+            <button data-action="preview"><i class="fas fa-eye"></i><span>Vista previa</span></button>
+            <button data-action="download"><i class="fas fa-download"></i><span>Descargar</span></button>
+            <button data-action="rename"><i class="fas fa-pen"></i><span>Renombrar</span></button>
+            <button data-action="delete" class="danger"><i class="fas fa-trash"></i><span>Eliminar</span></button>
+        </div>
+    </div>
+
+    <!-- ═══ MODALS ═══ -->
+    <!-- Rename -->
+    <div id="rename-modal" class="modal hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <i class="fas fa-pen"></i>
+                <h3>Renombrar</h3>
+            </div>
+            <input type="text" id="rename-input" class="modal-input" placeholder="Nuevo nombre">
+            <div class="modal-actions">
+                <button id="rename-cancel" class="btn-ghost">Cancelar</button>
+                <button id="rename-confirm" class="btn-primary">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- New folder -->
+    <div id="folder-modal" class="modal hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <i class="fas fa-folder-plus"></i>
+                <h3>Nueva carpeta</h3>
+            </div>
+            <input type="text" id="folder-name-input" class="modal-input" placeholder="Nombre de la carpeta">
+            <div class="modal-actions">
+                <button id="folder-cancel" class="btn-ghost">Cancelar</button>
+                <button id="folder-confirm" class="btn-primary">Crear</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete confirm -->
+    <div id="delete-modal" class="modal hidden">
+        <div class="modal-card modal-danger">
+            <div class="modal-header danger">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Eliminar</h3>
+            </div>
+            <p id="delete-msg" class="modal-body">¿Estás seguro?</p>
+            <div class="modal-actions">
+                <button id="delete-cancel" class="btn-ghost">Cancelar</button>
+                <button id="delete-confirm" class="btn-danger">Eliminar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image preview -->
+    <div id="preview-modal" class="preview-modal hidden">
+        <button id="preview-close" class="preview-close"><i class="fas fa-times"></i></button>
+        <div class="preview-body">
+            <img id="preview-img" src="" alt="">
+        </div>
+        <div class="preview-footer">
+            <span id="preview-name"></span>
+            <span id="preview-size"></span>
+        </div>
+    </div>
+
+    <!-- ═══ TOASTS ═══ -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
