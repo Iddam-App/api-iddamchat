@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Iniciar Sesion — IddamChat{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="auth-card">
+        <div class="logo-wrapper">
+            <img src="{% static 'img/logo_brown.png' %}" alt="COGWA">
+        </div>
+        <h2>Iniciar Sesion</h2>
+        <p class="subtitle">Ingresa a tu cuenta de IddamChat</p>
+
+        <div id="alert-box" class="alert-box alert"></div>
+
+        <form id="login-form" novalidate>
+            <div class="mb-3">
+                <label for="email" class="form-label">Correo Electronico</label>
+                <input type="email" class="form-control" id="email" placeholder="tu@correo.com" required>
+            </div>
+            <div class="mb-3">
+                <label for="password" class="form-label">Contrasena</label>
+                <input type="password" class="form-control" id="password" placeholder="Tu contrasena" required>
+            </div>
+            <button type="submit" class="btn btn-gold" id="btn-submit">
+                Iniciar Sesion
+            </button>
+        </form>
+
+        <div class="auth-footer">
+            No tienes cuenta? <a href="/register/">Registrate aqui</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('login-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btn-submit');
+
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+
+    if (!email || !password) {
+        showAlert('Por favor completa todos los campos.', 'warning');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Ingresando...';
+
+    try {
+        const res = await fetch('/api/auth/login/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            localStorage.setItem('access_token', data.access);
+            localStorage.setItem('refresh_token', data.refresh);
+
+            // Fetch user info and store it
+            const meRes = await fetch('/api/auth/me/', {
+                headers: { 'Authorization': 'Bearer ' + data.access }
+            });
+            if (meRes.ok) {
+                const user = await meRes.json();
+                localStorage.setItem('user_data', JSON.stringify(user));
+            }
+
+            // Redirect to hobbies feed
+            window.location.href = '/hobbies/';
+        } else {
+            const msg = data.detail || Object.values(data).flat().join(' ') || 'Credenciales incorrectas.';
+            showAlert(msg, 'danger');
+        }
+    } catch (err) {
+        showAlert('Error de conexion. Intenta nuevamente.', 'danger');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Iniciar Sesion';
+    }
+});
+
+function showAlert(message, type) {
+    const alertBox = document.getElementById('alert-box');
+    alertBox.className = 'alert-box alert alert-' + type + ' show';
+    alertBox.textContent = message;
+}
+</script>
+{% endblock %}

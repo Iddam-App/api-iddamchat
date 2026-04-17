@@ -1,0 +1,1003 @@
+/* ─── IddamChat Custom Styles ─────────────────────────────────────── */
+
+:root {
+    --gold: #8B7355;
+    --gold-light: #a8956f;
+    --gold-dark: #6d5a43;
+    --dark-bg: #1a1a2e;
+    --dark-bg-light: #16213e;
+    --dark-surface: #0f3460;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: #f0f2f5;
+}
+
+main {
+    flex: 1;
+}
+
+/* ─── Navbar ──────────────────────────────────────────────────────── */
+.navbar-brand img {
+    height: 36px;
+}
+
+.navbar-iddam {
+    background-color: #fff;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
+.navbar-iddam .nav-link {
+    color: #555;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.navbar-iddam .nav-link:hover {
+    color: var(--gold);
+}
+
+.text-gold {
+    color: var(--gold) !important;
+}
+
+/* ─── Hero / Landing ─────────────────────────────────────────────── */
+.hero {
+    background: linear-gradient(135deg, var(--dark-bg) 0%, var(--dark-bg-light) 50%, var(--dark-surface) 100%);
+    color: #fff;
+    padding: 6rem 0;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at 30% 50%, rgba(139, 115, 85, 0.1) 0%, transparent 50%);
+    pointer-events: none;
+}
+
+.hero-logo {
+    max-width: 320px;
+    margin-bottom: 2rem;
+}
+
+.hero h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.hero p.lead {
+    font-size: 1.2rem;
+    opacity: 0.85;
+    max-width: 600px;
+    margin: 0 auto 2rem;
+}
+
+/* ─── Buttons ─────────────────────────────────────────────────────── */
+.btn-gold {
+    background-color: var(--gold);
+    border-color: var(--gold);
+    color: #fff;
+    font-weight: 600;
+    padding: 0.6rem 1.8rem;
+    border-radius: 8px;
+    transition: all 0.3s;
+}
+
+.btn-gold:hover {
+    background-color: var(--gold-light);
+    border-color: var(--gold-light);
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(139, 115, 85, 0.4);
+}
+
+.btn-outline-gold {
+    border: 2px solid var(--gold);
+    color: var(--gold);
+    font-weight: 600;
+    padding: 0.6rem 1.8rem;
+    border-radius: 8px;
+    transition: all 0.3s;
+    background: transparent;
+}
+
+.btn-outline-gold:hover {
+    background-color: var(--gold);
+    color: #fff;
+    transform: translateY(-1px);
+}
+
+/* On dark backgrounds */
+.hero .btn-outline-gold {
+    border-color: #fff;
+    color: #fff;
+}
+
+.hero .btn-outline-gold:hover {
+    background-color: #fff;
+    color: var(--dark-bg);
+}
+
+/* ─── Features Section ───────────────────────────────────────────── */
+.features {
+    padding: 5rem 0;
+    background: #f8f9fa;
+}
+
+.feature-card {
+    text-align: center;
+    padding: 2rem 1.5rem;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+    transition: transform 0.3s, box-shadow 0.3s;
+    height: 100%;
+}
+
+.feature-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+}
+
+.feature-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, var(--gold-light), var(--gold-dark));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.2rem;
+    color: #fff;
+    font-size: 1.5rem;
+}
+
+.feature-card h5 {
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: #333;
+}
+
+.feature-card p {
+    color: #777;
+    font-size: 0.95rem;
+    margin-bottom: 0;
+}
+
+/* ─── Auth Forms ─────────────────────────────────────────────────── */
+.auth-wrapper {
+    min-height: calc(100vh - 130px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f0f2f5;
+    padding: 2rem 1rem;
+}
+
+.auth-card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.08);
+    padding: 2.5rem;
+    width: 100%;
+    max-width: 460px;
+}
+
+.auth-card.wide {
+    max-width: 560px;
+}
+
+.auth-card .logo-wrapper {
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.auth-card .logo-wrapper img {
+    max-width: 200px;
+}
+
+.auth-card h2 {
+    font-weight: 700;
+    color: #333;
+    text-align: center;
+    margin-bottom: 0.3rem;
+}
+
+.auth-card .subtitle {
+    text-align: center;
+    color: #888;
+    margin-bottom: 1.5rem;
+    font-size: 0.95rem;
+}
+
+.auth-card .form-label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #555;
+}
+
+.auth-card .form-control {
+    border-radius: 10px;
+    padding: 0.65rem 1rem;
+    border: 1.5px solid #ddd;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.auth-card .form-control:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(139, 115, 85, 0.15);
+}
+
+.auth-card .btn-gold {
+    width: 100%;
+    padding: 0.7rem;
+    font-size: 1rem;
+}
+
+.auth-card .auth-footer {
+    text-align: center;
+    margin-top: 1.2rem;
+    font-size: 0.9rem;
+    color: #888;
+}
+
+.auth-card .auth-footer a {
+    color: var(--gold);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.auth-card .auth-footer a:hover {
+    text-decoration: underline;
+}
+
+/* ─── Alerts ─────────────────────────────────────────────────────── */
+.alert-box {
+    border-radius: 10px;
+    padding: 0.8rem 1rem;
+    font-size: 0.9rem;
+    display: none;
+}
+
+.alert-box.show {
+    display: block;
+}
+
+/* ─── Footer ─────────────────────────────────────────────────────── */
+.footer-iddam {
+    background: var(--dark-bg);
+    color: rgba(255, 255, 255, 0.6);
+    padding: 2rem 0;
+    text-align: center;
+    font-size: 0.85rem;
+}
+
+.footer-iddam img {
+    max-width: 140px;
+    margin-bottom: 0.8rem;
+    opacity: 0.7;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SOCIAL FEED / HOBBIES STYLES
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ─── Feed Layout ────────────────────────────────────────────────── */
+.feed-container {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem;
+}
+
+.feed-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+}
+
+.feed-header h2 {
+    font-weight: 700;
+    color: #333;
+    margin: 0;
+    font-size: 1.6rem;
+}
+
+/* ─── Create Post Box ────────────────────────────────────────────── */
+.create-post-box {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    padding: 1.2rem 1.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    cursor: pointer;
+    transition: box-shadow 0.2s;
+}
+
+.create-post-box:hover {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.create-post-box .avatar-circle {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold-light), var(--gold-dark));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.create-post-box .avatar-circle img {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.create-post-box .prompt-text {
+    flex: 1;
+    color: #999;
+    font-size: 0.95rem;
+    background: #f0f2f5;
+    border-radius: 20px;
+    padding: 0.6rem 1rem;
+}
+
+/* ─── Post Card ──────────────────────────────────────────────────── */
+.post-card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    margin-bottom: 1.2rem;
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+}
+
+.post-card:hover {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.post-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 1rem 1.2rem 0.6rem;
+}
+
+.post-card-header .avatar-sm {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold-light), var(--gold-dark));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+    text-decoration: none;
+    overflow: hidden;
+}
+
+.post-card-header .avatar-sm img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.post-card-header .author-info {
+    flex: 1;
+}
+
+.post-card-header .author-name {
+    font-weight: 700;
+    color: #333;
+    font-size: 0.95rem;
+    text-decoration: none;
+}
+
+.post-card-header .author-name:hover {
+    color: var(--gold);
+}
+
+.post-card-header .post-time {
+    font-size: 0.8rem;
+    color: #999;
+}
+
+.post-card-header .post-menu {
+    color: #999;
+    cursor: pointer;
+    padding: 0.3rem;
+    border-radius: 50%;
+    transition: background 0.2s;
+}
+
+.post-card-header .post-menu:hover {
+    background: #f0f2f5;
+    color: #555;
+}
+
+.post-card-body {
+    padding: 0.5rem 1.2rem;
+}
+
+.post-card-body .post-title {
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: #222;
+    margin-bottom: 0.3rem;
+}
+
+.post-card-body .post-text {
+    color: #444;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.post-card-images {
+    margin-top: 0.5rem;
+}
+
+.post-card-images img {
+    width: 100%;
+    max-height: 500px;
+    object-fit: cover;
+    cursor: pointer;
+}
+
+.post-card-images .image-grid {
+    display: grid;
+    gap: 2px;
+}
+
+.post-card-images .image-grid.grid-2 {
+    grid-template-columns: 1fr 1fr;
+}
+
+.post-card-images .image-grid.grid-3 {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+}
+
+.post-card-images .image-grid.grid-3 img:first-child {
+    grid-row: 1 / 3;
+}
+
+/* ─── Post Stats & Actions ───────────────────────────────────────── */
+.post-card-stats {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 1.2rem;
+    font-size: 0.85rem;
+    color: #888;
+}
+
+.post-card-stats .reactions-count {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.post-card-actions {
+    display: flex;
+    border-top: 1px solid #eee;
+    padding: 0.3rem 0.5rem;
+}
+
+.post-card-actions .action-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.6rem;
+    border: none;
+    background: none;
+    color: #666;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background 0.2s, color 0.2s;
+}
+
+.post-card-actions .action-btn:hover {
+    background: #f0f2f5;
+}
+
+.post-card-actions .action-btn.liked {
+    color: var(--gold);
+}
+
+.post-card-actions .action-btn i {
+    font-size: 1.1rem;
+}
+
+/* ─── Reaction Picker ────────────────────────────────────────────── */
+.reaction-picker {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    background: #fff;
+    border-radius: 30px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    padding: 0.4rem 0.6rem;
+    display: none;
+    gap: 0.2rem;
+    z-index: 10;
+}
+
+.reaction-picker.show {
+    display: flex;
+}
+
+.reaction-picker button {
+    border: none;
+    background: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.2rem 0.4rem;
+    border-radius: 50%;
+    transition: transform 0.15s, background 0.15s;
+}
+
+.reaction-picker button:hover {
+    transform: scale(1.3);
+    background: #f0f2f5;
+}
+
+/* ─── Comments Section ───────────────────────────────────────────── */
+.comments-section {
+    border-top: 1px solid #eee;
+    padding: 0.8rem 1.2rem;
+}
+
+.comment-item {
+    display: flex;
+    gap: 0.6rem;
+    margin-bottom: 0.8rem;
+}
+
+.comment-item .avatar-xs {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold-light), var(--gold-dark));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.7rem;
+    flex-shrink: 0;
+}
+
+.comment-item .comment-bubble {
+    background: #f0f2f5;
+    border-radius: 14px;
+    padding: 0.5rem 0.8rem;
+    flex: 1;
+}
+
+.comment-item .comment-author {
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: #333;
+}
+
+.comment-item .comment-text {
+    font-size: 0.9rem;
+    color: #444;
+}
+
+.comment-item .comment-time {
+    font-size: 0.75rem;
+    color: #999;
+    margin-top: 0.2rem;
+    padding-left: 0.8rem;
+}
+
+.comment-input-row {
+    display: flex;
+    gap: 0.6rem;
+    align-items: center;
+    margin-top: 0.5rem;
+}
+
+.comment-input-row input {
+    flex: 1;
+    border: 1.5px solid #ddd;
+    border-radius: 20px;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.comment-input-row input:focus {
+    border-color: var(--gold);
+}
+
+.comment-input-row button {
+    border: none;
+    background: var(--gold);
+    color: #fff;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.comment-input-row button:hover {
+    background: var(--gold-light);
+}
+
+/* ─── Create Post Modal ──────────────────────────────────────────── */
+.modal-content {
+    border-radius: 16px;
+    border: none;
+}
+
+.modal-header {
+    border-bottom: 1px solid #eee;
+    padding: 1rem 1.5rem;
+}
+
+.modal-header .modal-title {
+    font-weight: 700;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.modal-body textarea {
+    border: none;
+    resize: none;
+    font-size: 1rem;
+    width: 100%;
+    min-height: 120px;
+    outline: none;
+}
+
+.modal-body textarea::placeholder {
+    color: #bbb;
+}
+
+.modal-footer {
+    border-top: 1px solid #eee;
+    padding: 0.8rem 1.5rem;
+}
+
+.image-preview-container {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.8rem;
+}
+
+.image-preview-container .preview-thumb {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.image-preview-container .preview-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.image-preview-container .preview-thumb .remove-btn {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    font-size: 0.7rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   PROFILE PAGE
+   ═══════════════════════════════════════════════════════════════════ */
+
+.profile-header {
+    background: linear-gradient(135deg, var(--dark-bg) 0%, var(--dark-bg-light) 100%);
+    color: #fff;
+    padding: 3rem 0 2rem;
+    text-align: center;
+}
+
+.profile-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold-light), var(--gold-dark));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 2.5rem;
+    margin: 0 auto 1rem;
+    border: 4px solid rgba(255,255,255,0.2);
+    overflow: hidden;
+}
+
+.profile-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.profile-header h2 {
+    font-weight: 700;
+    margin-bottom: 0.2rem;
+}
+
+.profile-header .profile-username {
+    opacity: 0.7;
+    font-size: 0.95rem;
+}
+
+.profile-header .profile-bio {
+    max-width: 500px;
+    margin: 0.8rem auto 0;
+    opacity: 0.8;
+    font-size: 0.95rem;
+}
+
+.profile-stats {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-top: 1.2rem;
+}
+
+.profile-stats .stat {
+    text-align: center;
+}
+
+.profile-stats .stat-number {
+    font-weight: 700;
+    font-size: 1.2rem;
+    display: block;
+}
+
+.profile-stats .stat-label {
+    font-size: 0.8rem;
+    opacity: 0.7;
+}
+
+.profile-actions {
+    display: flex;
+    justify-content: center;
+    gap: 0.8rem;
+    margin-top: 1.2rem;
+}
+
+.profile-info-cards {
+    max-width: 680px;
+    margin: -1rem auto 0;
+    padding: 0 1rem;
+}
+
+.info-card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    padding: 1.2rem 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.info-card h5 {
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 0.8rem;
+    font-size: 1rem;
+}
+
+.info-card .info-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.3rem 0;
+    color: #555;
+    font-size: 0.9rem;
+}
+
+.info-card .info-row i {
+    color: var(--gold);
+    width: 20px;
+    text-align: center;
+}
+
+/* ─── Loading Spinner ────────────────────────────────────────────── */
+.feed-spinner {
+    text-align: center;
+    padding: 3rem;
+    color: #999;
+}
+
+.feed-spinner .spinner-border {
+    color: var(--gold);
+}
+
+/* ─── Empty State ────────────────────────────────────────────────── */
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #999;
+}
+
+.empty-state i {
+    font-size: 3rem;
+    color: #ddd;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.empty-state h5 {
+    font-weight: 600;
+    color: #666;
+}
+
+/* ─── Post Detail Page ───────────────────────────────────────────── */
+.detail-container {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem;
+}
+
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--gold);
+    text-decoration: none;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    font-size: 0.95rem;
+}
+
+.back-link:hover {
+    color: var(--gold-dark);
+}
+
+/* ─── Toast Notifications ────────────────────────────────────────── */
+.toast-container {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    z-index: 9999;
+}
+
+.toast-iddam {
+    background: #333;
+    color: #fff;
+    border-radius: 10px;
+    padding: 0.8rem 1.2rem;
+    font-size: 0.9rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* ─── Dropdown Menu ──────────────────────────────────────────────── */
+.post-dropdown {
+    position: relative;
+}
+
+.post-dropdown-menu {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    padding: 0.4rem 0;
+    min-width: 160px;
+    display: none;
+    z-index: 10;
+}
+
+.post-dropdown-menu.show {
+    display: block;
+}
+
+.post-dropdown-menu button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    border: none;
+    background: none;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    color: #555;
+    cursor: pointer;
+    text-align: left;
+}
+
+.post-dropdown-menu button:hover {
+    background: #f0f2f5;
+}
+
+.post-dropdown-menu button.text-danger {
+    color: #dc3545;
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .hero {
+        padding: 4rem 0;
+    }
+
+    .hero-logo {
+        max-width: 220px;
+    }
+
+    .hero h1 {
+        font-size: 1.8rem;
+    }
+
+    .auth-card {
+        padding: 1.8rem;
+    }
+
+    .feed-container,
+    .detail-container {
+        padding: 1rem 0.5rem;
+    }
+
+    .profile-stats {
+        gap: 1.5rem;
+    }
+
+    .post-card-actions .action-btn span {
+        display: none;
+    }
+}

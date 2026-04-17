@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}IddamChat — Comunidad COGWA{% endblock %}
+
+{% block content %}
+<!-- Hero -->
+<section class="hero">
+    <div class="container position-relative">
+        <img src="{% static 'img/logo_white.png' %}" alt="COGWA" class="hero-logo">
+        <h1>Bienvenido a IddamChat</h1>
+        <p class="lead">
+            La plataforma de comunidad para los miembros de la Iglesia de Dios, Una Asociacion Mundial.
+            Conecta, comparte y crece en fe junto a hermanos de todo el mundo.
+        </p>
+        <div class="d-flex gap-3 justify-content-center flex-wrap">
+            <a href="/register/" class="btn btn-gold btn-lg">Crear Cuenta</a>
+            <a href="/login/" class="btn btn-outline-gold btn-lg">Iniciar Sesion</a>
+        </div>
+    </div>
+</section>
+
+<!-- Features -->
+<section class="features">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="bi bi-chat-dots"></i>
+                    </div>
+                    <h5>Chat en Tiempo Real</h5>
+                    <p>Conversa con hermanos de la fe en chats privados y grupales.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="bi bi-people"></i>
+                    </div>
+                    <h5>Grupos y Comunidad</h5>
+                    <p>Unete a grupos por congregacion, intereses o region geografica.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="bi bi-book"></i>
+                    </div>
+                    <h5>Estudio Biblico</h5>
+                    <p>Accede a herramientas de estudio biblico y comparte notas.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="bi bi-calendar-event"></i>
+                    </div>
+                    <h5>Eventos</h5>
+                    <p>Mantente informado sobre actividades, fiestas y reuniones.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="bi bi-house-heart"></i>
+                    </div>
+                    <h5>Hospedaje</h5>
+                    <p>Encuentra y ofrece hospedaje para las Fiestas de Dios.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="bi bi-globe"></i>
+                    </div>
+                    <h5>Conexion Global</h5>
+                    <p>Conecta con miembros de COGWA alrededor del mundo.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

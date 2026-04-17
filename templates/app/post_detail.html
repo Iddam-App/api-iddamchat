@@ -1,0 +1,392 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Publicacion — IddamChat{% endblock %}
+
+{% block content %}
+<div class="detail-container">
+    <a href="/hobbies/" class="back-link"><i class="bi bi-arrow-left"></i> Volver al feed</a>
+
+    <!-- Loading -->
+    <div class="feed-spinner" id="detail-spinner">
+        <div class="spinner-border" role="status"></div>
+    </div>
+
+    <!-- Post -->
+    <div id="post-container"></div>
+
+    <!-- Comments Section -->
+    <div class="post-card" id="comments-card" style="display:none;">
+        <div class="comments-section">
+            <h6 style="font-weight:700; margin-bottom:1rem;">
+                <i class="bi bi-chat-dots me-1"></i>Comentarios
+                <span class="text-muted" id="comments-count" style="font-weight:400; font-size:0.85rem;"></span>
+            </h6>
+
+            <div id="comments-list"></div>
+
+            <div class="empty-state py-3" id="no-comments" style="display:none;">
+                <p class="mb-0" style="color:#999; font-size:0.9rem;">Se el primero en comentar</p>
+            </div>
+
+            <!-- Add comment -->
+            <div class="comment-input-row">
+                <input type="text" id="comment-input" placeholder="Escribe un comentario...">
+                <button onclick="submitComment()"><i class="bi bi-send"></i></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toast-container"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const REACTIONS = {like:'👍', love:'❤️', pray:'🙏', amen:'🙌', fire:'🔥'};
+let postId = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (!isLoggedIn()) { window.location.href = '/login/'; return; }
+
+    const pathParts = window.location.pathname.split('/').filter(Boolean);
+    postId = parseInt(pathParts[1]);
+
+    loadPost();
+    loadComments();
+
+    // Submit comment on Enter
+    document.getElementById('comment-input').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') submitComment();
+    });
+});
+
+async function loadPost() {
+    const spinner = document.getElementById('detail-spinner');
+    try {
+        const res = await authFetch(`/api/posts/${postId}/`);
+        spinner.style.display = 'none';
+
+        if (!res.ok) {
+            document.getElementById('post-container').innerHTML = `
+                <div class="empty-state"><i class="bi bi-exclamation-triangle"></i><h5>Publicacion no encontrada</h5></div>`;
+            return;
+        }
+
+        const post = await res.json();
+        document.getElementById('post-container').innerHTML = renderPostCard(post);
+        document.getElementById('comments-card').style.display = 'block';
+    } catch(e) {
+        spinner.style.display = 'none';
+        console.error(e);
+    }
+}
+
+async function loadComments() {
+    try {
+        const res = await authFetch(`/api/posts/${postId}/comments/`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const comments = data.results || data;
+
+        document.getElementById('comments-count').textContent = `(${comments.length})`;
+
+        if (comments.length === 0) {
+            document.getElementById('no-comments').style.display = 'block';
+            return;
+        }
+
+        const list = document.getElementById('comments-list');
+        comments.forEach(comment => {
+            list.insertAdjacentHTML('beforeend', renderComment(comment));
+        });
+    } catch(e) {
+        console.error(e);
+    }
+}
+
+function renderComment(comment) {
+    const author = comment.author || {};
+    const initial = (author.first_name || author.username || '?')[0].toUpperCase();
+    const displayName = author.display_name || author.first_name || author.username;
+    const timeAgo = formatTimeAgo(comment.created_at);
+
+    let repliesHtml = '';
+    if (comment.replies && comment.replies.length > 0) {
+        repliesHtml = comment.replies.map(r => {
+            const rAuthor = r.author || {};
+            const rInit = (rAuthor.first_name || rAuthor.username || '?')[0].toUpperCase();
+            const rName = rAuthor.display_name || rAuthor.first_name || rAuthor.username;
+            return `
+            <div class="comment-item" style="margin-left:2.5rem;">
+                <div class="avatar-xs">${rInit}</div>
+                <div>
+                    <div class="comment-bubble">
+                        <div class="comment-author">${escapeHtml(rName)}</div>
+                        <div class="comment-text">${escapeHtml(r.content)}</div>
+                    </div>
+                    <div class="comment-time">${formatTimeAgo(r.created_at)}</div>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    return `
+    <div class="comment-item" id="comment-${comment.id}">
+        <div class="avatar-xs">${initial}</div>
+        <div style="flex:1;">
+            <div class="comment-bubble">
+                <div class="comment-author">
+                    <a href="/profile/${author.id}/" style="text-decoration:none; color:inherit;">${escapeHtml(displayName)}</a>
+                </div>
+                <div class="comment-text">${escapeHtml(comment.content)}</div>
+            </div>
+            <div class="comment-time">
+                ${timeAgo}
+                <a href="#" style="color:var(--gold); text-decoration:none; margin-left:0.5rem; font-size:0.75rem;" onclick="replyTo(${comment.id}, '${escapeHtml(displayName)}'); return false;">Responder</a>
+            </div>
+        </div>
+    </div>
+    ${repliesHtml}`;
+}
+
+let replyToId = null;
+
+function replyTo(commentId, authorName) {
+    replyToId = commentId;
+    const input = document.getElementById('comment-input');
+    input.placeholder = `Respondiendo a ${authorName}...`;
+    input.focus();
+}
+
+async function submitComment() {
+    const input = document.getElementById('comment-input');
+    const content = input.value.trim();
+    if (!content) return;
+
+    const body = { content };
+    if (replyToId) body.parent = replyToId;
+
+    try {
+        const res = await authFetch(`/api/posts/${postId}/comments/`, {
+            method: 'POST',
+            body: JSON.stringify(body)
+        });
+
+        if (res.ok) {
+            const comment = await res.json();
+            const list = document.getElementById('comments-list');
+            document.getElementById('no-comments').style.display = 'none';
+
+            if (replyToId) {
+                // Add reply after the parent comment
+                const parentEl = document.getElementById('comment-' + replyToId);
+                if (parentEl) {
+                    parentEl.insertAdjacentHTML('afterend', renderComment(comment));
+                }
+            } else {
+                list.insertAdjacentHTML('beforeend', renderComment(comment));
+            }
+
+            input.value = '';
+            input.placeholder = 'Escribe un comentario...';
+            replyToId = null;
+            showToast('Comentario publicado');
+        } else {
+            const data = await res.json();
+            if (data.needs_confirmation) {
+                showToast(data.detail || 'Contenido requiere revision');
+            } else {
+                showToast(data.detail || 'Error al comentar');
+            }
+        }
+    } catch(e) {
+        showToast('Error de conexion');
+    }
+}
+
+// ─── Render Post Card ────────────────────────────────────
+function renderPostCard(post) {
+    const author = post.author || {};
+    const initial = (author.first_name || author.username || '?')[0].toUpperCase();
+    const avatarHtml = author.avatar ? `<img src="${author.avatar}" alt="">` : initial;
+    const displayName = author.display_name || author.first_name || author.username;
+    const timeAgo = formatTimeAgo(post.created_at);
+    const me = JSON.parse(localStorage.getItem('user_data') || '{}');
+    const isMe = me.id === author.id;
+
+    let imagesHtml = '';
+    if (post.images && post.images.length > 0) {
+        if (post.images.length === 1) {
+            imagesHtml = `<div class="post-card-images"><img src="${post.images[0].image}" alt=""></div>`;
+        } else {
+            const imgs = post.images.map(i => `<img src="${i.image}" alt="">`).join('');
+            imagesHtml = `<div class="post-card-images"><div class="image-grid grid-2">${imgs}</div></div>`;
+        }
+    }
+
+    const reactionEmoji = post.my_reaction ? REACTIONS[post.my_reaction] || '👍' : '';
+    const likedClass = post.my_reaction ? 'liked' : '';
+
+    let menuHtml = '';
+    if (isMe) {
+        menuHtml = `
+        <div class="post-dropdown">
+            <div class="post-menu" onclick="toggleMenu(this)"><i class="bi bi-three-dots"></i></div>
+            <div class="post-dropdown-menu">
+                <button onclick="toggleHidePost(${post.id})"><i class="bi bi-eye-slash"></i> ${post.is_hidden ? 'Mostrar' : 'Ocultar'}</button>
+                <button class="text-danger" onclick="deletePost(${post.id})"><i class="bi bi-trash"></i> Eliminar</button>
+            </div>
+        </div>`;
+    }
+
+    return `
+    <div class="post-card" id="post-${post.id}">
+        <div class="post-card-header">
+            <a href="/profile/${author.id}/" class="avatar-sm">${avatarHtml}</a>
+            <div class="author-info">
+                <a href="/profile/${author.id}/" class="author-name">${displayName}</a>
+                <div class="post-time">${timeAgo} ${post.post_type === 'hobby' ? '· Hobby' : ''}</div>
+            </div>
+            ${menuHtml}
+        </div>
+        <div class="post-card-body">
+            ${post.title ? `<div class="post-title">${escapeHtml(post.title)}</div>` : ''}
+            <div class="post-text">${escapeHtml(post.content)}</div>
+        </div>
+        ${imagesHtml}
+        <div class="post-card-stats">
+            <div class="reactions-count">
+                ${post.reaction_count > 0 ? '👍 ' + post.reaction_count : ''}
+            </div>
+            <div>
+                ${post.comment_count > 0 ? post.comment_count + ' comentario' + (post.comment_count > 1 ? 's' : '') : ''}
+            </div>
+        </div>
+        <div class="post-card-actions">
+            <div style="position:relative; flex:1; display:flex;">
+                <div class="reaction-picker" id="picker-${post.id}">
+                    ${Object.entries(REACTIONS).map(([k,v]) => `<button onclick="react(${post.id},'${k}')" title="${k}">${v}</button>`).join('')}
+                </div>
+                <button class="action-btn ${likedClass}" style="flex:1;" onclick="react(${post.id},'like')" onmouseenter="showPicker(${post.id})" onmouseleave="hidePicker(${post.id})" data-reaction="${post.my_reaction || ''}">
+                    <i class="bi ${post.my_reaction ? 'bi-hand-thumbs-up-fill' : 'bi-hand-thumbs-up'}"></i>
+                    <span>${reactionEmoji || 'Me gusta'}</span>
+                </button>
+            </div>
+            <button class="action-btn" onclick="document.getElementById('comment-input').focus()">
+                <i class="bi bi-chat"></i>
+                <span>Comentar</span>
+            </button>
+            <button class="action-btn" onclick="savePost(${post.id})">
+                <i class="bi ${post.is_saved ? 'bi-bookmark-fill' : 'bi-bookmark'}"></i>
+                <span>${post.is_saved ? 'Guardado' : 'Guardar'}</span>
+            </button>
+        </div>
+    </div>`;
+}
+
+// ─── Reactions ───────────────────────────────────────────
+let pickerTimeout;
+function showPicker(id) {
+    clearTimeout(pickerTimeout);
+    document.getElementById('picker-' + id).classList.add('show');
+}
+function hidePicker(id) {
+    pickerTimeout = setTimeout(() => {
+        const el = document.getElementById('picker-' + id);
+        if (el) el.classList.remove('show');
+    }, 300);
+}
+
+async function react(id, type) {
+    hidePicker(id);
+    const card = document.getElementById('post-' + id);
+    const btn = card.querySelector('.action-btn[data-reaction]');
+    const current = btn.dataset.reaction;
+    if (current === type) {
+        await authFetch(`/api/posts/${id}/react/`, { method: 'DELETE' });
+        btn.dataset.reaction = '';
+        btn.classList.remove('liked');
+        btn.querySelector('i').className = 'bi bi-hand-thumbs-up';
+        btn.querySelector('span').textContent = 'Me gusta';
+    } else {
+        await authFetch(`/api/posts/${id}/react/`, {
+            method: 'POST', body: JSON.stringify({ reaction_type: type })
+        });
+        btn.dataset.reaction = type;
+        btn.classList.add('liked');
+        btn.querySelector('i').className = 'bi bi-hand-thumbs-up-fill';
+        btn.querySelector('span').textContent = REACTIONS[type];
+    }
+}
+
+async function savePost(id) {
+    const res = await authFetch(`/api/posts/${id}/save/`, { method: 'POST' });
+    if (res.ok) {
+        const data = await res.json();
+        const card = document.getElementById('post-' + id);
+        const btns = card.querySelectorAll('.action-btn');
+        const saveBtn = btns[btns.length - 1];
+        saveBtn.querySelector('i').className = data.saved ? 'bi bi-bookmark-fill' : 'bi bi-bookmark';
+        saveBtn.querySelector('span').textContent = data.saved ? 'Guardado' : 'Guardar';
+        showToast(data.saved ? 'Guardada' : 'Removida');
+    }
+}
+
+function toggleMenu(el) {
+    const menu = el.nextElementSibling;
+    document.querySelectorAll('.post-dropdown-menu.show').forEach(m => {
+        if (m !== menu) m.classList.remove('show');
+    });
+    menu.classList.toggle('show');
+}
+
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.post-dropdown'))
+        document.querySelectorAll('.post-dropdown-menu.show').forEach(m => m.classList.remove('show'));
+});
+
+async function toggleHidePost(id) {
+    const res = await authFetch(`/api/posts/${id}/hide/`, { method: 'POST' });
+    if (res.ok) {
+        const data = await res.json();
+        document.getElementById('post-' + id).style.opacity = data.is_hidden ? '0.5' : '1';
+        showToast(data.is_hidden ? 'Oculta' : 'Visible');
+    }
+}
+
+async function deletePost(id) {
+    if (!confirm('Eliminar publicacion?')) return;
+    const res = await authFetch(`/api/posts/${id}/`, { method: 'DELETE' });
+    if (res.ok || res.status === 204) {
+        showToast('Eliminada');
+        setTimeout(() => window.location.href = '/hobbies/', 1000);
+    }
+}
+
+function formatTimeAgo(dateStr) {
+    const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
+    if (diff < 60) return 'Ahora';
+    if (diff < 3600) return Math.floor(diff / 60) + ' min';
+    if (diff < 86400) return Math.floor(diff / 3600) + ' h';
+    if (diff < 604800) return Math.floor(diff / 86400) + ' d';
+    return new Date(dateStr).toLocaleDateString('es');
+}
+
+function escapeHtml(text) {
+    const d = document.createElement('div');
+    d.textContent = text;
+    return d.innerHTML;
+}
+
+function showToast(message) {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = 'toast-iddam';
+    toast.textContent = message;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+</script>
+{% endblock %}

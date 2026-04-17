@@ -3,7 +3,21 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
+from apps.core.views_web import (
+    landing_view, login_view, register_view,
+    hobbies_view, profile_view, post_detail_view,
+)
+
 urlpatterns = [
+    # Web pages
+    path('', landing_view, name='landing'),
+    path('login/', login_view, name='login'),
+    path('register/', register_view, name='register'),
+    path('hobbies/', hobbies_view, name='hobbies'),
+    path('profile/', profile_view, name='my_profile'),
+    path('profile/<int:user_id>/', profile_view, name='user_profile'),
+    path('post/<int:pk>/', post_detail_view, name='post_detail'),
+
     path('admin/', admin.site.urls),
 
     # API v1

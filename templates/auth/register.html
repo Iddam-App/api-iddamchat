@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Registrarse — IddamChat{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="auth-card wide">
+        <div class="logo-wrapper">
+            <img src="{% static 'img/logo_brown.png' %}" alt="COGWA">
+        </div>
+        <h2>Crear Cuenta</h2>
+        <p class="subtitle">Unete a la comunidad IddamChat</p>
+
+        <div id="alert-box" class="alert-box alert"></div>
+
+        <form id="register-form" novalidate>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="email" class="form-label">Correo Electronico *</label>
+                    <input type="email" class="form-control" id="email" placeholder="tu@correo.com" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="username" class="form-label">Nombre de Usuario *</label>
+                    <input type="text" class="form-control" id="username" placeholder="usuario123" required>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="first_name" class="form-label">Nombre *</label>
+                    <input type="text" class="form-control" id="first_name" placeholder="Juan" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="last_name" class="form-label">Apellido *</label>
+                    <input type="text" class="form-control" id="last_name" placeholder="Perez" required>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="nickname" class="form-label">Apodo</label>
+                    <input type="text" class="form-control" id="nickname" placeholder="Juanito (opcional)">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="age" class="form-label">Edad</label>
+                    <input type="number" class="form-control" id="age" placeholder="25" min="1" max="120">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="country" class="form-label">Pais</label>
+                    <input type="text" class="form-control" id="country" placeholder="Chile">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="password" class="form-label">Contrasena *</label>
+                    <input type="password" class="form-control" id="password" placeholder="Minimo 8 caracteres" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="password_confirm" class="form-label">Confirmar Contrasena *</label>
+                    <input type="password" class="form-control" id="password_confirm" placeholder="Repite la contrasena" required>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-gold mt-2" id="btn-submit">
+                Crear Cuenta
+            </button>
+        </form>
+
+        <div class="auth-footer">
+            Ya tienes cuenta? <a href="/login/">Inicia sesion aqui</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('register-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const alertBox = document.getElementById('alert-box');
+    const btn = document.getElementById('btn-submit');
+
+    const fields = {
+        email: document.getElementById('email').value.trim(),
+        username: document.getElementById('username').value.trim(),
+        first_name: document.getElementById('first_name').value.trim(),
+        last_name: document.getElementById('last_name').value.trim(),
+        password: document.getElementById('password').value,
+        password_confirm: document.getElementById('password_confirm').value,
+    };
+
+    // Optional fields
+    const nickname = document.getElementById('nickname').value.trim();
+    const age = document.getElementById('age').value;
+    const country = document.getElementById('country').value.trim();
+    if (nickname) fields.nickname = nickname;
+    if (age) fields.age = parseInt(age);
+    if (country) fields.country = country;
+
+    // Basic validation
+    if (!fields.email || !fields.username || !fields.first_name || !fields.last_name || !fields.password) {
+        showAlert('Por favor completa todos los campos obligatorios (*).', 'warning');
+        return;
+    }
+
+    if (fields.password !== fields.password_confirm) {
+        showAlert('Las contrasenas no coinciden.', 'warning');
+        return;
+    }
+
+    if (fields.password.length < 8) {
+        showAlert('La contrasena debe tener al menos 8 caracteres.', 'warning');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Creando cuenta...';
+
+    try {
+        const res = await fetch('/api/auth/register/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(fields)
+        });
+
+        const data = await res.json();
+
+        if (res.ok || res.status === 201) {
+            showAlert('Cuenta creada exitosamente! Ya puedes iniciar sesion.', 'success');
+            document.getElementById('register-form').reset();
+        } else {
+            // Parse DRF error format
+            let messages = [];
+            for (const [key, value] of Object.entries(data)) {
+                const errs = Array.isArray(value) ? value : [value];
+                messages.push(...errs);
+            }
+            showAlert(messages.join(' ') || 'Error al crear la cuenta.', 'danger');
+        }
+    } catch (err) {
+        showAlert('Error de conexion. Intenta nuevamente.', 'danger');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Crear Cuenta';
+    }
+});
+
+function showAlert(message, type) {
+    const alertBox = document.getElementById('alert-box');
+    alertBox.className = 'alert-box alert alert-' + type + ' show';
+    alertBox.textContent = message;
+}
+</script>
+{% endblock %}

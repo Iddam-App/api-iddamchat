@@ -1,0 +1,411 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Perfil — IddamChat{% endblock %}
+
+{% block content %}
+<!-- Profile Header -->
+<div class="profile-header" id="profile-header">
+    <div class="container">
+        <div class="profile-avatar" id="profile-avatar">?</div>
+        <h2 id="profile-name">Cargando...</h2>
+        <div class="profile-username" id="profile-username"></div>
+        <div class="profile-bio" id="profile-bio"></div>
+        <div class="profile-stats">
+            <div class="stat">
+                <span class="stat-number" id="stat-posts">0</span>
+                <span class="stat-label">Publicaciones</span>
+            </div>
+            <div class="stat">
+                <span class="stat-number" id="stat-followers">0</span>
+                <span class="stat-label">Seguidores</span>
+            </div>
+            <div class="stat">
+                <span class="stat-number" id="stat-following">0</span>
+                <span class="stat-label">Siguiendo</span>
+            </div>
+        </div>
+        <div class="profile-actions" id="profile-actions"></div>
+    </div>
+</div>
+
+<!-- Profile Content -->
+<div class="profile-info-cards" id="profile-content">
+    <!-- Info card -->
+    <div class="info-card" id="info-card" style="display:none;">
+        <h5><i class="bi bi-info-circle me-2"></i>Informacion</h5>
+        <div id="info-rows"></div>
+    </div>
+
+    <!-- Posts -->
+    <div class="feed-header mt-3">
+        <h5 style="font-weight:700; color:#333; margin:0;"><i class="bi bi-grid me-2"></i>Publicaciones</h5>
+    </div>
+
+    <div class="feed-spinner" id="posts-spinner">
+        <div class="spinner-border" role="status"></div>
+    </div>
+
+    <div id="user-posts"></div>
+
+    <div class="empty-state" id="empty-posts" style="display:none;">
+        <i class="bi bi-image"></i>
+        <h5>Sin publicaciones aun</h5>
+    </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toast-container"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const REACTIONS = {like:'👍', love:'❤️', pray:'🙏', amen:'🙌', fire:'🔥'};
+let profileUserId = null;
+let isOwnProfile = false;
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (!isLoggedIn()) { window.location.href = '/login/'; return; }
+
+    // Determine which profile to show
+    const pathParts = window.location.pathname.split('/').filter(Boolean);
+    const me = JSON.parse(localStorage.getItem('user_data') || '{}');
+
+    if (pathParts.length >= 2 && pathParts[1] !== '') {
+        profileUserId = parseInt(pathParts[1]);
+        isOwnProfile = profileUserId === me.id;
+    } else {
+        profileUserId = me.id;
+        isOwnProfile = true;
+    }
+
+    loadProfile();
+    loadUserPosts();
+});
+
+async function loadProfile() {
+    try {
+        const res = await authFetch(`/api/auth/users/${profileUserId}/`);
+        if (!res.ok) throw new Error('Not found');
+        const user = await res.json();
+
+        // Avatar
+        const avatarEl = document.getElementById('profile-avatar');
+        if (user.avatar) {
+            avatarEl.innerHTML = `<img src="${user.avatar}" alt="">`;
+        } else {
+            avatarEl.textContent = (user.first_name || user.username || '?')[0].toUpperCase();
+        }
+
+        // Name & username
+        document.getElementById('profile-name').textContent = user.display_name || `${user.first_name} ${user.last_name}`;
+        document.getElementById('profile-username').textContent = '@' + user.username;
+
+        if (user.bio) {
+            document.getElementById('profile-bio').textContent = user.bio;
+        }
+
+        // Info card
+        const infoRows = document.getElementById('info-rows');
+        const infoCard = document.getElementById('info-card');
+        let hasInfo = false;
+
+        const infoItems = [
+            { icon: 'bi-geo-alt', value: [user.city, user.country].filter(Boolean).join(', ') },
+            { icon: 'bi-building', value: user.congregation },
+            { icon: 'bi-instagram', value: user.instagram },
+            { icon: 'bi-telephone', value: user.phone },
+            { icon: 'bi-cake', value: user.age ? user.age + ' anos' : '' },
+        ];
+
+        infoItems.forEach(item => {
+            if (item.value) {
+                hasInfo = true;
+                infoRows.insertAdjacentHTML('beforeend', `
+                    <div class="info-row"><i class="bi ${item.icon}"></i>${escapeHtml(item.value)}</div>
+                `);
+            }
+        });
+
+        if (hasInfo) infoCard.style.display = 'block';
+
+        // Actions (follow/message for other users)
+        const actionsEl = document.getElementById('profile-actions');
+        if (!isOwnProfile) {
+            // Check follow status
+            const followRes = await authFetch('/api/social/following/');
+            let isFollowing = false;
+            if (followRes.ok) {
+                const followData = await followRes.json();
+                const follows = followData.results || followData;
+                isFollowing = follows.some(f => f.followed?.id === profileUserId || f.followed_id === profileUserId);
+            }
+
+            actionsEl.innerHTML = `
+                <button class="btn ${isFollowing ? 'btn-outline-light' : 'btn-gold'} btn-sm px-4" id="btn-follow" onclick="toggleFollow()">
+                    <i class="bi ${isFollowing ? 'bi-person-check' : 'bi-person-plus'} me-1"></i>
+                    ${isFollowing ? 'Siguiendo' : 'Seguir'}
+                </button>
+                <a href="/chat/${profileUserId}/" class="btn btn-outline-light btn-sm px-3">
+                    <i class="bi bi-chat me-1"></i>Mensaje
+                </a>
+            `;
+        } else {
+            actionsEl.innerHTML = `
+                <a href="/hobbies/" class="btn btn-gold btn-sm px-4">
+                    <i class="bi bi-plus-lg me-1"></i>Nuevo Hobby
+                </a>
+            `;
+        }
+
+        // Load follower/following counts
+        loadStats();
+
+    } catch(e) {
+        document.getElementById('profile-name').textContent = 'Usuario no encontrado';
+        console.error(e);
+    }
+}
+
+async function loadStats() {
+    try {
+        // We estimate posts from loaded data
+        // For followers/following we need API calls
+        const [followersRes, followingRes] = await Promise.all([
+            authFetch('/api/social/followers/'),
+            authFetch('/api/social/following/')
+        ]);
+
+        if (followersRes.ok) {
+            const data = await followersRes.json();
+            const items = data.results || data;
+            // This returns current user's followers, for other profiles we approximate
+            if (isOwnProfile) {
+                document.getElementById('stat-followers').textContent = items.length;
+            }
+        }
+        if (followingRes.ok) {
+            const data = await followingRes.json();
+            const items = data.results || data;
+            if (isOwnProfile) {
+                document.getElementById('stat-following').textContent = items.length;
+            }
+        }
+    } catch(e) {}
+}
+
+async function loadUserPosts() {
+    const spinner = document.getElementById('posts-spinner');
+    try {
+        const res = await authFetch(`/api/posts/user/${profileUserId}/`);
+        spinner.style.display = 'none';
+
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+        const posts = data.results || data;
+
+        document.getElementById('stat-posts').textContent = posts.length;
+
+        if (posts.length === 0) {
+            document.getElementById('empty-posts').style.display = 'block';
+            return;
+        }
+
+        const container = document.getElementById('user-posts');
+        posts.forEach(post => {
+            container.insertAdjacentHTML('beforeend', renderPostCard(post));
+        });
+    } catch(e) {
+        spinner.style.display = 'none';
+        console.error(e);
+    }
+}
+
+async function toggleFollow() {
+    const btn = document.getElementById('btn-follow');
+    const res = await authFetch(`/api/social/follow/${profileUserId}/`, { method: 'POST' });
+    if (res.ok) {
+        const data = await res.json();
+        if (data.following) {
+            btn.className = 'btn btn-outline-light btn-sm px-4';
+            btn.innerHTML = '<i class="bi bi-person-check me-1"></i>Siguiendo';
+            showToast('Ahora sigues a este usuario');
+        } else {
+            btn.className = 'btn btn-gold btn-sm px-4';
+            btn.innerHTML = '<i class="bi bi-person-plus me-1"></i>Seguir';
+            showToast('Dejaste de seguir');
+        }
+    }
+}
+
+// ─── Render Post Card (same as hobbies but with profile context) ──
+function renderPostCard(post) {
+    const author = post.author || {};
+    const initial = (author.first_name || author.username || '?')[0].toUpperCase();
+    const avatarHtml = author.avatar ? `<img src="${author.avatar}" alt="">` : initial;
+    const displayName = author.display_name || author.first_name || author.username;
+    const timeAgo = formatTimeAgo(post.created_at);
+    const me = JSON.parse(localStorage.getItem('user_data') || '{}');
+    const isMe = me.id === author.id;
+
+    let imagesHtml = '';
+    if (post.images && post.images.length > 0) {
+        if (post.images.length === 1) {
+            imagesHtml = `<div class="post-card-images"><img src="${post.images[0].image}" alt=""></div>`;
+        } else {
+            const gridClass = post.images.length >= 3 ? 'grid-3' : 'grid-2';
+            const imgs = post.images.slice(0, 4).map(i => `<img src="${i.image}" alt="">`).join('');
+            imagesHtml = `<div class="post-card-images"><div class="image-grid ${gridClass}">${imgs}</div></div>`;
+        }
+    }
+
+    const reactionEmoji = post.my_reaction ? REACTIONS[post.my_reaction] || '👍' : '';
+    const likedClass = post.my_reaction ? 'liked' : '';
+
+    let menuHtml = '';
+    if (isMe) {
+        const hiddenLabel = post.is_hidden ? 'Mostrar' : 'Ocultar';
+        menuHtml = `
+        <div class="post-dropdown">
+            <div class="post-menu" onclick="toggleMenu(this)"><i class="bi bi-three-dots"></i></div>
+            <div class="post-dropdown-menu">
+                <button onclick="toggleHidePost(${post.id}, this)"><i class="bi bi-eye-slash"></i> ${hiddenLabel}</button>
+                <button class="text-danger" onclick="deletePost(${post.id})"><i class="bi bi-trash"></i> Eliminar</button>
+            </div>
+        </div>`;
+    }
+
+    const hiddenBadge = post.is_hidden ? '<span class="badge bg-secondary ms-2" style="font-size:0.7rem;">Oculto</span>' : '';
+    const typeLabel = post.post_type === 'hobby' ? '<span class="badge bg-warning text-dark ms-2" style="font-size:0.7rem;">Hobby</span>' : '';
+
+    return `
+    <div class="post-card" id="post-${post.id}" style="${post.is_hidden ? 'opacity:0.5;' : ''}">
+        <div class="post-card-header">
+            <a href="/profile/${author.id}/" class="avatar-sm">${avatarHtml}</a>
+            <div class="author-info">
+                <a href="/profile/${author.id}/" class="author-name">${displayName}</a>${hiddenBadge}${typeLabel}
+                <div class="post-time">${timeAgo}</div>
+            </div>
+            ${menuHtml}
+        </div>
+        <div class="post-card-body">
+            ${post.title ? `<div class="post-title">${escapeHtml(post.title)}</div>` : ''}
+            <div class="post-text">${escapeHtml(post.content)}</div>
+        </div>
+        ${imagesHtml}
+        <div class="post-card-stats">
+            <div class="reactions-count">
+                ${post.reaction_count > 0 ? '👍 ' + post.reaction_count : ''}
+            </div>
+            <div>
+                ${post.comment_count > 0 ? post.comment_count + ' comentario' + (post.comment_count > 1 ? 's' : '') : ''}
+            </div>
+        </div>
+        <div class="post-card-actions">
+            <button class="action-btn ${likedClass}" onclick="react(${post.id},'like')" data-reaction="${post.my_reaction || ''}">
+                <i class="bi ${post.my_reaction ? 'bi-hand-thumbs-up-fill' : 'bi-hand-thumbs-up'}"></i>
+                <span>${reactionEmoji || 'Me gusta'}</span>
+            </button>
+            <a href="/post/${post.id}/" class="action-btn" style="text-decoration:none;">
+                <i class="bi bi-chat"></i>
+                <span>Comentar</span>
+            </a>
+            <button class="action-btn" onclick="savePost(${post.id})">
+                <i class="bi ${post.is_saved ? 'bi-bookmark-fill' : 'bi-bookmark'}"></i>
+                <span>${post.is_saved ? 'Guardado' : 'Guardar'}</span>
+            </button>
+        </div>
+    </div>`;
+}
+
+// ─── Shared functions ────────────────────────────────────
+async function react(postId, type) {
+    const card = document.getElementById('post-' + postId);
+    const btn = card.querySelector('.action-btn[data-reaction]');
+    const current = btn.dataset.reaction;
+    if (current === type) {
+        await authFetch(`/api/posts/${postId}/react/`, { method: 'DELETE' });
+        btn.dataset.reaction = '';
+        btn.classList.remove('liked');
+        btn.querySelector('i').className = 'bi bi-hand-thumbs-up';
+        btn.querySelector('span').textContent = 'Me gusta';
+    } else {
+        await authFetch(`/api/posts/${postId}/react/`, {
+            method: 'POST', body: JSON.stringify({ reaction_type: type })
+        });
+        btn.dataset.reaction = type;
+        btn.classList.add('liked');
+        btn.querySelector('i').className = 'bi bi-hand-thumbs-up-fill';
+        btn.querySelector('span').textContent = REACTIONS[type];
+    }
+}
+
+async function savePost(postId) {
+    const res = await authFetch(`/api/posts/${postId}/save/`, { method: 'POST' });
+    if (res.ok) {
+        const data = await res.json();
+        const card = document.getElementById('post-' + postId);
+        const btn = card.querySelectorAll('.action-btn')[2];
+        btn.querySelector('i').className = data.saved ? 'bi bi-bookmark-fill' : 'bi bi-bookmark';
+        btn.querySelector('span').textContent = data.saved ? 'Guardado' : 'Guardar';
+        showToast(data.saved ? 'Guardada' : 'Removida de guardados');
+    }
+}
+
+function toggleMenu(el) {
+    const menu = el.nextElementSibling;
+    document.querySelectorAll('.post-dropdown-menu.show').forEach(m => {
+        if (m !== menu) m.classList.remove('show');
+    });
+    menu.classList.toggle('show');
+}
+
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.post-dropdown'))
+        document.querySelectorAll('.post-dropdown-menu.show').forEach(m => m.classList.remove('show'));
+});
+
+async function toggleHidePost(postId) {
+    const res = await authFetch(`/api/posts/${postId}/hide/`, { method: 'POST' });
+    if (res.ok) {
+        const data = await res.json();
+        const card = document.getElementById('post-' + postId);
+        card.style.opacity = data.is_hidden ? '0.5' : '1';
+        showToast(data.is_hidden ? 'Publicacion oculta' : 'Publicacion visible');
+    }
+}
+
+async function deletePost(postId) {
+    if (!confirm('Seguro que deseas eliminar esta publicacion?')) return;
+    const res = await authFetch(`/api/posts/${postId}/`, { method: 'DELETE' });
+    if (res.ok || res.status === 204) {
+        document.getElementById('post-' + postId).remove();
+        showToast('Publicacion eliminada');
+    }
+}
+
+function formatTimeAgo(dateStr) {
+    const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
+    if (diff < 60) return 'Ahora';
+    if (diff < 3600) return Math.floor(diff / 60) + ' min';
+    if (diff < 86400) return Math.floor(diff / 3600) + ' h';
+    if (diff < 604800) return Math.floor(diff / 86400) + ' d';
+    return new Date(dateStr).toLocaleDateString('es');
+}
+
+function escapeHtml(text) {
+    const d = document.createElement('div');
+    d.textContent = text;
+    return d.innerHTML;
+}
+
+function showToast(message) {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = 'toast-iddam';
+    toast.textContent = message;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+</script>
+{% endblock %}

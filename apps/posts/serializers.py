@@ -48,7 +48,7 @@ class PostSerializer(serializers.ModelSerializer):
         model = Post
         fields = [
             'id', 'author', 'post_type', 'title', 'content',
-            'images', 'is_pinned', 'is_church_official',
+            'images', 'is_pinned', 'is_church_official', 'is_hidden',
             'reaction_count', 'comment_count', 'my_reaction',
             'is_saved', 'created_at', 'updated_at',
         ]

@@ -9,6 +9,7 @@ class Post(models.Model):
         ('testimony', 'Testimonio'),
         ('news', 'Novedad'),
         ('devotional', 'Devocional'),
+        ('hobby', 'Hobby'),
     ]
 
     author = models.ForeignKey(
@@ -20,6 +21,7 @@ class Post(models.Model):
     content = models.TextField()
     is_pinned = models.BooleanField(default=False)
     is_church_official = models.BooleanField(default=False)
+    is_hidden = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

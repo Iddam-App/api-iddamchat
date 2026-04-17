@@ -162,6 +162,30 @@ class UserPostsView(generics.ListAPIView):
     serializer_class = PostSerializer
 
     def get_queryset(self):
-        return Post.objects.filter(
+        qs = Post.objects.filter(
             author_id=self.kwargs['user_id'],
         ).select_related('author').prefetch_related('images', 'reactions')
+        # If viewing someone else's profile, hide hidden posts
+        if self.request.user.pk != self.kwargs['user_id']:
+            qs = qs.filter(is_hidden=False)
+        return qs
+
+
+class HobbiesFeedView(generics.ListAPIView):
+    """Public feed of all hobby-type posts."""
+    serializer_class = PostSerializer
+
+    def get_queryset(self):
+        return Post.objects.filter(
+            post_type='hobby', is_hidden=False,
+        ).select_related('author').prefetch_related('images', 'reactions').order_by('-created_at')
+
+
+class ToggleHidePostView(APIView):
+    def post(self, request, pk):
+        post = generics.get_object_or_404(Post, pk=pk)
+        if post.author != request.user:
+            raise PermissionDenied('No puedes modificar este post.')
+        post.is_hidden = not post.is_hidden
+        post.save(update_fields=['is_hidden'])
+        return Response({'is_hidden': post.is_hidden})
