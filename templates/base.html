@@ -9,7 +9,6 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="{% static 'css/iddamchat.css' %}" rel="stylesheet">
     <script>
-    // Apply saved theme immediately to prevent flash
     (function() {
         var theme = localStorage.getItem('iddam_theme') || 'light';
         if (theme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
@@ -19,51 +18,24 @@
 <body>
 
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-iddam sticky-top">
+    <nav class="navbar navbar-iddam sticky-top">
         <div class="container">
             <a class="navbar-brand" href="/">
                 <img src="{% static 'img/logo_brown.png' %}" alt="COGWA">
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
-                <!-- Guest nav -->
-                <ul class="navbar-nav gap-1 align-items-center" id="nav-guest">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/login/">Iniciar Sesion</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link btn btn-gold btn-sm text-white px-3" href="/register/">Registrarse</a>
-                    </li>
-                    <li class="nav-item ms-2">
-                        <button class="theme-toggle" id="theme-toggle-guest" title="Cambiar tema">
-                            <i class="bi bi-moon-fill"></i>
-                        </button>
-                    </li>
-                </ul>
-                <!-- Logged-in nav (hidden by default) -->
-                <ul class="navbar-nav gap-2 align-items-center" id="nav-user" style="display:none;">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/hobbies/"><i class="bi bi-palette me-1"></i>Hobbies</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/profile/"><i class="bi bi-person me-1"></i>Mi Perfil</a>
-                    </li>
-                    <li class="nav-item">
-                        <span class="nav-link fw-semibold text-gold" id="nav-username"></span>
-                    </li>
-                    <li class="nav-item">
-                        <button class="theme-toggle" id="theme-toggle-user" title="Cambiar tema">
-                            <i class="bi bi-moon-fill"></i>
-                        </button>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-danger" href="#" onclick="logout(); return false;">
-                            <i class="bi bi-box-arrow-right"></i> Salir
-                        </a>
-                    </li>
-                </ul>
+            <!-- Guest nav -->
+            <div class="d-flex align-items-center gap-2" id="nav-guest">
+                <a class="nav-link" href="/login/" style="font-weight:500; color:var(--text-secondary);">Iniciar Sesion</a>
+                <a class="btn btn-gold btn-sm text-white px-3" href="/register/">Registrarse</a>
+                <button class="theme-toggle" id="theme-toggle-guest" title="Cambiar tema">
+                    <i class="bi bi-moon-fill"></i>
+                </button>
+            </div>
+            <!-- Logged-in nav (minimal: just icons) -->
+            <div class="d-flex align-items-center gap-2" id="nav-user" style="display:none !important;">
+                <button class="theme-toggle" id="theme-toggle-user" title="Cambiar tema">
+                    <i class="bi bi-moon-fill"></i>
+                </button>
             </div>
         </div>
     </nav>
@@ -73,15 +45,72 @@
         {% block content %}{% endblock %}
     </main>
 
-    <!-- Footer -->
-    <footer class="footer-iddam">
+    <!-- Footer (hidden when logged in via JS) -->
+    <footer class="footer-iddam" id="site-footer">
         <div class="container">
             <img src="{% static 'img/logo_white.png' %}" alt="COGWA"><br>
             <span>&copy; 2026 Iglesia de Dios, Una Asociacion Mundial &mdash; IddamChat</span>
         </div>
     </footer>
 
+    <!-- Bottom Navigation (logged-in only, injected by JS) -->
+    <nav class="bottom-nav" id="bottom-nav" style="display:none;">
+        <a href="/feed/" class="nav-tab" data-page="feed">
+            <i class="bi bi-house-door"></i>
+            <span>Inicio</span>
+        </a>
+        <a href="/hobbies/" class="nav-tab" data-page="hobbies">
+            <i class="bi bi-compass"></i>
+            <span>Explorar</span>
+        </a>
+        <button class="nav-tab create-tab" data-bs-toggle="modal" data-bs-target="#createPostModal">
+            <i class="bi bi-plus-square"></i>
+            <span>Crear</span>
+        </button>
+        <a href="/hosting/" class="nav-tab" data-page="hosting">
+            <i class="bi bi-house-heart"></i>
+            <span>Hospedaje</span>
+        </a>
+        <a href="/profile/" class="nav-tab" data-page="profile">
+            <i class="bi bi-person-circle"></i>
+            <span>Perfil</span>
+        </a>
+    </nav>
+
+    <!-- Global Create Post Modal -->
+    <div class="modal fade" id="createPostModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-plus-circle me-2"></i>Nueva Publicacion</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="text" class="form-control mb-3" id="post-title" placeholder="Titulo (opcional)" style="border-radius:10px;">
+                    <textarea id="post-content" placeholder="Que quieres compartir?"></textarea>
+                    <div class="image-preview-container" id="image-previews"></div>
+                </div>
+                <div class="modal-footer justify-content-between">
+                    <div class="d-flex gap-2">
+                        <label class="btn btn-outline-secondary btn-sm" style="border-radius:8px; cursor:pointer;">
+                            <i class="bi bi-image me-1"></i>Foto
+                            <input type="file" id="post-images" multiple accept="image/*" style="display:none;">
+                        </label>
+                        <select class="form-select form-select-sm" id="post-type" style="border-radius:8px; width:auto;">
+                            <option value="general">General</option>
+                            <option value="hobby">Hobby</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-gradient btn-sm px-4" id="btn-publish" style="border-radius:8px;">
+                        Publicar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{% static 'js/iddamchat.js' %}"></script>
     <script>
     // ─── Theme Toggle ───
     (function() {
@@ -91,7 +120,6 @@
             } else {
                 document.documentElement.removeAttribute('data-theme');
             }
-            // Update all toggle button icons
             document.querySelectorAll('.theme-toggle i').forEach(function(icon) {
                 icon.className = theme === 'dark' ? 'bi bi-sun-fill' : 'bi bi-moon-fill';
             });
@@ -103,78 +131,148 @@
             applyTheme(current === 'dark' ? 'light' : 'dark');
         }
 
-        // Apply saved theme
         var saved = localStorage.getItem('iddam_theme') || 'light';
         applyTheme(saved);
 
-        // Bind click to all toggle buttons
         document.querySelectorAll('.theme-toggle').forEach(function(btn) {
             btn.addEventListener('click', toggleTheme);
         });
     })();
-    </script>
-    <script>
-    // ─── Auth helpers (available on all pages) ───
-    const API = '';
-    function getToken() { return localStorage.getItem('access_token'); }
-    function isLoggedIn() { return !!getToken(); }
 
-    async function authFetch(url, opts = {}) {
-        opts.headers = opts.headers || {};
-        opts.headers['Authorization'] = 'Bearer ' + getToken();
-        if (!(opts.body instanceof FormData)) {
-            opts.headers['Content-Type'] = opts.headers['Content-Type'] || 'application/json';
-        }
-        let res = await fetch(API + url, opts);
-        if (res.status === 401) {
-            // Try refresh
-            const refreshRes = await fetch(API + '/api/auth/token/refresh/', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ refresh: localStorage.getItem('refresh_token') })
-            });
-            if (refreshRes.ok) {
-                const data = await refreshRes.json();
-                localStorage.setItem('access_token', data.access);
-                if (data.refresh) localStorage.setItem('refresh_token', data.refresh);
-                opts.headers['Authorization'] = 'Bearer ' + data.access;
-                res = await fetch(API + url, opts);
-            } else {
-                logout();
-                return res;
-            }
-        }
-        return res;
-    }
-
-    function logout() {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('user_data');
-        window.location.href = '/login/';
-    }
-
-    // Update navbar based on auth state
-    (async function updateNav() {
+    // ─── Nav & Bottom Nav Setup ───
+    (async function initNav() {
         if (isLoggedIn()) {
             document.getElementById('nav-guest').style.display = 'none';
-            document.getElementById('nav-user').style.display = 'flex';
+            const navUser = document.getElementById('nav-user');
+            navUser.style.cssText = 'display:flex !important;';
+
+            // Show bottom nav & add body class
+            document.getElementById('bottom-nav').style.display = 'flex';
+            document.body.classList.add('has-bottom-nav');
+
+            // Hide footer
+            document.getElementById('site-footer').style.display = 'none';
+
+            // Highlight active tab
+            const path = window.location.pathname;
+            document.querySelectorAll('.bottom-nav .nav-tab[data-page]').forEach(tab => {
+                const page = tab.dataset.page;
+                if (page === 'feed' && (path === '/feed/' || path === '/')) tab.classList.add('active');
+                else if (page === 'hobbies' && path.startsWith('/hobbies')) tab.classList.add('active');
+                else if (page === 'hosting' && path.startsWith('/hosting')) tab.classList.add('active');
+                else if (page === 'profile' && path.startsWith('/profile')) tab.classList.add('active');
+            });
+
+            // Fetch user data if needed
             let userData = localStorage.getItem('user_data');
-            if (userData) {
-                userData = JSON.parse(userData);
-                document.getElementById('nav-username').textContent = userData.first_name || userData.username;
-            } else {
+            if (!userData) {
                 try {
                     const res = await authFetch('/api/auth/me/');
                     if (res.ok) {
                         const u = await res.json();
                         localStorage.setItem('user_data', JSON.stringify(u));
-                        document.getElementById('nav-username').textContent = u.first_name || u.username;
                     }
                 } catch(e) {}
             }
+
+            // Setup global create post
+            setupGlobalCreatePost();
         }
     })();
+
+    // ─── Global Create Post ───
+    let selectedImages = [];
+
+    function setupGlobalCreatePost() {
+        const input = document.getElementById('post-images');
+        if (!input) return;
+        input.addEventListener('change', () => {
+            const container = document.getElementById('image-previews');
+            for (const file of input.files) {
+                if (selectedImages.length >= 4) break;
+                selectedImages.push(file);
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const idx = selectedImages.indexOf(file);
+                    container.insertAdjacentHTML('beforeend', `
+                        <div class="preview-thumb" data-idx="${idx}">
+                            <img src="${e.target.result}" alt="">
+                            <button class="remove-btn" onclick="removeImage(${idx}, this)">&times;</button>
+                        </div>
+                    `);
+                };
+                reader.readAsDataURL(file);
+            }
+            input.value = '';
+        });
+
+        document.getElementById('btn-publish').addEventListener('click', publishPost);
+    }
+
+    function removeImage(idx, btn) {
+        selectedImages[idx] = null;
+        btn.closest('.preview-thumb').remove();
+    }
+
+    async function publishPost() {
+        const title = document.getElementById('post-title').value.trim();
+        const content = document.getElementById('post-content').value.trim();
+        const postType = document.getElementById('post-type').value;
+
+        if (!content) {
+            showToast('Escribe algo para publicar');
+            return;
+        }
+
+        const btn = document.getElementById('btn-publish');
+        btn.disabled = true;
+        btn.textContent = 'Publicando...';
+
+        const formData = new FormData();
+        formData.append('post_type', postType);
+        if (title) formData.append('title', title);
+        formData.append('content', content);
+
+        selectedImages.filter(Boolean).forEach(file => {
+            formData.append('images', file);
+        });
+
+        try {
+            const res = await authFetch('/api/posts/create/', {
+                method: 'POST',
+                body: formData,
+                headers: { 'Authorization': 'Bearer ' + getToken() }
+            });
+
+            if (res.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('createPostModal')).hide();
+                document.getElementById('post-title').value = '';
+                document.getElementById('post-content').value = '';
+                document.getElementById('image-previews').innerHTML = '';
+                document.getElementById('post-type').value = 'general';
+                selectedImages = [];
+
+                showToast('Publicacion creada!');
+
+                // Reload feed if on feed/hobbies page
+                if (typeof loadFeed === 'function') {
+                    document.getElementById('posts-feed').innerHTML = '';
+                    currentPage = 1;
+                    loadFeed();
+                } else {
+                    window.location.reload();
+                }
+            } else {
+                const data = await res.json();
+                showToast(data.detail || 'Error al publicar');
+            }
+        } catch(e) {
+            showToast('Error de conexion');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Publicar';
+        }
+    }
     </script>
     {% block scripts %}{% endblock %}
 </body>

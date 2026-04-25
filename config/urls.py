@@ -5,7 +5,8 @@ from django.urls import include, path
 
 from apps.core.views_web import (
     landing_view, login_view, register_view,
-    hobbies_view, profile_view, post_detail_view,
+    feed_view, hobbies_view, profile_view, edit_profile_view,
+    post_detail_view,
 )
 
 urlpatterns = [
@@ -13,8 +14,10 @@ urlpatterns = [
     path('', landing_view, name='landing'),
     path('login/', login_view, name='login'),
     path('register/', register_view, name='register'),
+    path('feed/', feed_view, name='feed'),
     path('hobbies/', hobbies_view, name='hobbies'),
     path('profile/', profile_view, name='my_profile'),
+    path('profile/edit/', edit_profile_view, name='edit_profile'),
     path('profile/<int:user_id>/', profile_view, name='user_profile'),
     path('post/<int:pk>/', post_detail_view, name='post_detail'),
 

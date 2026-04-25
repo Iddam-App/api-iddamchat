@@ -45,43 +45,44 @@
                     <input type="number" class="form-control" id="age" placeholder="25" min="1" max="120">
                 </div>
                 <div class="col-md-3 mb-3">
-                    <label for="country" class="form-label">Pais</label>
-                    <select class="form-control" id="country">
-                        <option value="">-- Seleccionar --</option>
-                        <option value="AR">Argentina</option>
-                        <option value="BO">Bolivia</option>
-                        <option value="BR">Brasil</option>
-                        <option value="CL">Chile</option>
-                        <option value="CO">Colombia</option>
-                        <option value="CR">Costa Rica</option>
-                        <option value="CU">Cuba</option>
-                        <option value="EC">Ecuador</option>
-                        <option value="SV">El Salvador</option>
-                        <option value="ES">Espana</option>
-                        <option value="US">Estados Unidos</option>
-                        <option value="GT">Guatemala</option>
-                        <option value="HN">Honduras</option>
-                        <option value="MX">Mexico</option>
-                        <option value="NI">Nicaragua</option>
-                        <option value="PA">Panama</option>
-                        <option value="PY">Paraguay</option>
-                        <option value="PE">Peru</option>
-                        <option value="PR">Puerto Rico</option>
-                        <option value="DO">Rep. Dominicana</option>
-                        <option value="UY">Uruguay</option>
-                        <option value="VE">Venezuela</option>
-                        <option value="OTHER">Otro</option>
-                    </select>
+                    <label for="country" class="form-label">País</label>
+                    <input type="text" class="form-control" id="country" list="country-list" placeholder="Escribe tu país" autocomplete="off">
+                    <input type="hidden" id="country-value">
+                    <datalist id="country-list">
+                        <option value="Argentina" data-code="AR">
+                        <option value="Bolivia" data-code="BO">
+                        <option value="Brasil" data-code="BR">
+                        <option value="Chile" data-code="CL">
+                        <option value="Colombia" data-code="CO">
+                        <option value="Costa Rica" data-code="CR">
+                        <option value="Cuba" data-code="CU">
+                        <option value="Ecuador" data-code="EC">
+                        <option value="El Salvador" data-code="SV">
+                        <option value="España" data-code="ES">
+                        <option value="Estados Unidos" data-code="US">
+                        <option value="Guatemala" data-code="GT">
+                        <option value="Honduras" data-code="HN">
+                        <option value="México" data-code="MX">
+                        <option value="Nicaragua" data-code="NI">
+                        <option value="Panamá" data-code="PA">
+                        <option value="Paraguay" data-code="PY">
+                        <option value="Perú" data-code="PE">
+                        <option value="Puerto Rico" data-code="PR">
+                        <option value="Rep. Dominicana" data-code="DO">
+                        <option value="Uruguay" data-code="UY">
+                        <option value="Venezuela" data-code="VE">
+                        <option value="Otro" data-code="OTHER">
+                    </datalist>
                 </div>
             </div>
             <div class="row">
                 <div class="col-md-6 mb-3">
-                    <label for="password" class="form-label">Contrasena *</label>
+                    <label for="password" class="form-label">Contraseña *</label>
                     <input type="password" class="form-control" id="password" placeholder="Minimo 8 caracteres" required>
                 </div>
                 <div class="col-md-6 mb-3">
-                    <label for="password_confirm" class="form-label">Confirmar Contrasena *</label>
-                    <input type="password" class="form-control" id="password_confirm" placeholder="Repite la contrasena" required>
+                    <label for="password_confirm" class="form-label">Confirmar Contraseña *</label>
+                    <input type="password" class="form-control" id="password_confirm" placeholder="Repite la contraseña" required>
                 </div>
             </div>
 
@@ -116,10 +117,14 @@ document.getElementById('register-form').addEventListener('submit', async functi
     // Optional fields
     const nickname = document.getElementById('nickname').value.trim();
     const age = document.getElementById('age').value;
-    const country = document.getElementById('country').value.trim();
+    const countryInput = document.getElementById('country').value.trim();
     if (nickname) fields.nickname = nickname;
     if (age) fields.age = parseInt(age);
-    if (country) fields.country = country;
+    if (countryInput) {
+        // Map country name to ISO code
+        const countryCode = getCountryCode(countryInput);
+        if (countryCode) fields.country = countryCode;
+    }
 
     // Basic validation
     if (!fields.email || !fields.username || !fields.first_name || !fields.last_name || !fields.password) {
@@ -128,12 +133,12 @@ document.getElementById('register-form').addEventListener('submit', async functi
     }
 
     if (fields.password !== fields.password_confirm) {
-        showAlert('Las contrasenas no coinciden.', 'warning');
+        showAlert('Las contraseñas no coinciden.', 'warning');
         return;
     }
 
     if (fields.password.length < 8) {
-        showAlert('La contrasena debe tener al menos 8 caracteres.', 'warning');
+        showAlert('La contraseña debe tener al menos 8 caracteres.', 'warning');
         return;
     }
 
@@ -150,8 +155,12 @@ document.getElementById('register-form').addEventListener('submit', async functi
         const data = await res.json();
 
         if (res.ok || res.status === 201) {
-            showAlert('Cuenta creada exitosamente! Ya puedes iniciar sesion.', 'success');
-            document.getElementById('register-form').reset();
+            // Auto-login: save tokens and redirect
+            localStorage.setItem('access_token', data.tokens.access);
+            localStorage.setItem('refresh_token', data.tokens.refresh);
+            localStorage.setItem('user_data', JSON.stringify(data.user));
+            window.location.href = '/feed/';
+            return;
         } else {
             // Parse DRF error format
             let messages = [];
@@ -173,6 +182,15 @@ function showAlert(message, type) {
     const alertBox = document.getElementById('alert-box');
     alertBox.className = 'alert-box alert alert-' + type + ' show';
     alertBox.textContent = message;
+}
+
+const countryMap = {};
+document.querySelectorAll('#country-list option').forEach(opt => {
+    countryMap[opt.value.toLowerCase()] = opt.dataset.code;
+});
+
+function getCountryCode(name) {
+    return countryMap[name.toLowerCase()] || '';
 }
 </script>
 {% endblock %}

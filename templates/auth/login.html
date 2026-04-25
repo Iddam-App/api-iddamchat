@@ -20,8 +20,8 @@
                 <input type="email" class="form-control" id="email" placeholder="tu@correo.com" required>
             </div>
             <div class="mb-3">
-                <label for="password" class="form-label">Contrasena</label>
-                <input type="password" class="form-control" id="password" placeholder="Tu contrasena" required>
+                <label for="password" class="form-label">Contraseña</label>
+                <input type="password" class="form-control" id="password" placeholder="Tu contraseña" required>
             </div>
             <button type="submit" class="btn btn-gold" id="btn-submit">
                 Iniciar Sesion
@@ -74,8 +74,8 @@ document.getElementById('login-form').addEventListener('submit', async function(
                 localStorage.setItem('user_data', JSON.stringify(user));
             }
 
-            // Redirect to hobbies feed
-            window.location.href = '/hobbies/';
+            // Redirect to feed
+            window.location.href = '/feed/';
         } else {
             const msg = data.detail || Object.values(data).flat().join(' ') || 'Credenciales incorrectas.';
             showAlert(msg, 'danger');
