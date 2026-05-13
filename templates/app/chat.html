@@ -90,7 +90,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <input type="text" class="form-control mb-3" id="new-chat-search" placeholder="Buscar usuario..." style="border-radius:12px;">
+                <input type="text" class="form-control mb-3" id="new-chat-search" placeholder="Buscar por nombre de usuario..." style="border-radius:12px;">
                 <div id="new-chat-results" style="max-height:300px; overflow-y:auto;"></div>
             </div>
         </div>
@@ -447,8 +447,8 @@
 }
 .new-chat-user:hover { background: var(--hover-bg); }
 .new-chat-user .ncu-avatar {
-    width: 44px;
-    height: 44px;
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
     background: linear-gradient(135deg, var(--gold-light), var(--gold-dark));
     display: flex;
@@ -456,6 +456,7 @@
     justify-content: center;
     color: #fff;
     font-weight: 700;
+    font-size: 1.1rem;
     overflow: hidden;
 }
 .new-chat-user .ncu-avatar img {
@@ -463,8 +464,9 @@
     height: 100%;
     object-fit: cover;
 }
-.new-chat-user .ncu-name { font-weight: 600; color: var(--text-primary); font-size: 0.95rem; }
-.new-chat-user .ncu-username { font-size: 0.8rem; color: var(--text-muted); }
+.new-chat-user .ncu-info { flex: 1; min-width: 0; }
+.new-chat-user .ncu-username { font-weight: 600; color: var(--text-primary); font-size: 0.95rem; }
+.new-chat-user .ncu-name { font-size: 0.82rem; color: var(--text-muted); }
 
 /* ─── Mobile: stacked layout ─────────────────────────────── */
 @media (max-width: 768px) {
@@ -841,15 +843,15 @@ async function searchUsers(query) {
         }
 
         results.innerHTML = users.map(u => {
-            const name = u.display_name || u.first_name || u.username;
-            const initial = (name[0] || '?').toUpperCase();
+            const initial = ((u.first_name || u.username || '?')[0]).toUpperCase();
             const avatarInner = u.avatar ? `<img src="${u.avatar}" alt="">` : initial;
+            const fullName = u.display_name || [u.first_name, u.last_name].filter(Boolean).join(' ');
             return `
             <div class="new-chat-user" onclick="selectNewChatUser(${u.id})">
                 <div class="ncu-avatar">${avatarInner}</div>
-                <div>
-                    <div class="ncu-name">${escapeHtml(name)}</div>
-                    <div class="ncu-username">@${escapeHtml(u.username)}</div>
+                <div class="ncu-info">
+                    <div class="ncu-username">${escapeHtml(u.username)}</div>
+                    <div class="ncu-name">${escapeHtml(fullName || u.username)}</div>
                 </div>
             </div>`;
         }).join('');

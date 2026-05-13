@@ -16,7 +16,7 @@
     <div class="explore-search-bar">
         <div class="position-relative">
             <i class="bi bi-search explore-search-icon"></i>
-            <input type="text" class="form-control" id="explore-search" placeholder="Buscar personas, congregaciones...">
+            <input type="text" class="form-control" id="explore-search" placeholder="Buscar por nombre de usuario...">
         </div>
         <div id="search-results" style="display:none;"></div>
     </div>
@@ -101,8 +101,8 @@
 }
 .search-user-item:hover { background: var(--hover-bg); }
 .search-user-item .su-avatar {
-    width: 44px;
-    height: 44px;
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
     background: linear-gradient(135deg, var(--gold-light), var(--gold-dark));
     display: flex;
@@ -110,7 +110,7 @@
     justify-content: center;
     color: #fff;
     font-weight: 700;
-    font-size: 1rem;
+    font-size: 1.1rem;
     flex-shrink: 0;
     overflow: hidden;
 }
@@ -119,19 +119,21 @@
     height: 100%;
     object-fit: cover;
 }
-.search-user-item .su-info { flex: 1; }
-.search-user-item .su-name {
+.search-user-item .su-info { flex: 1; min-width: 0; }
+.search-user-item .su-username {
     font-weight: 600;
     color: var(--text-primary);
     font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
-.search-user-item .su-detail {
-    font-size: 0.8rem;
+.search-user-item .su-name {
+    font-size: 0.82rem;
     color: var(--text-muted);
-}
-.search-user-item .su-actions {
-    display: flex;
-    gap: 0.3rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 </style>
 
@@ -196,20 +198,17 @@ async function searchUsers(query) {
         }
 
         results.innerHTML = users.map(u => {
-            const name = u.display_name || u.first_name || u.username;
-            const initial = (name[0] || '?').toUpperCase();
+            const initial = ((u.first_name || u.username || '?')[0]).toUpperCase();
             const avatarInner = u.avatar ? `<img src="${u.avatar}" alt="">` : initial;
-            const detail = [u.congregation, u.city, u.country].filter(Boolean).join(' · ') || '@' + u.username;
+            const fullName = u.display_name || [u.first_name, u.last_name].filter(Boolean).join(' ');
+            const detail = [fullName, u.congregation].filter(Boolean).join(' · ');
 
             return `
             <a href="/profile/${u.id}/" class="search-user-item">
                 <div class="su-avatar">${avatarInner}</div>
                 <div class="su-info">
-                    <div class="su-name">${escapeHtml(name)}</div>
-                    <div class="su-detail">${escapeHtml(detail)}</div>
-                </div>
-                <div class="su-actions">
-                    <span class="btn btn-outline-secondary btn-sm" style="border-radius:8px; font-size:0.75rem; padding:0.2rem 0.5rem;">Ver perfil</span>
+                    <div class="su-username">${escapeHtml(u.username)}</div>
+                    <div class="su-name">${escapeHtml(detail)}</div>
                 </div>
             </a>`;
         }).join('');
