@@ -1439,6 +1439,44 @@ body.has-bottom-nav main {
     }
 }
 
+/* ─── Nav Icon Button (Chat, etc.) ──────────────────────────────── */
+.nav-icon-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 1.2rem;
+    transition: all 0.2s;
+}
+
+.nav-icon-btn:hover,
+.nav-icon-btn.active {
+    color: var(--accent-primary);
+}
+
+.nav-badge {
+    position: absolute;
+    top: -2px;
+    right: -4px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 10px;
+    background: var(--ig-pink);
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--navbar-bg);
+}
+
 /* ─── Theme Toggle Button ───────────────────────────────────────── */
 .theme-toggle {
     background: none;

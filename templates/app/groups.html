@@ -1,0 +1,772 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Grupos — IddamChat{% endblock %}
+
+{% block content %}
+<div class="feed-container">
+    <div class="feed-header">
+        <h2><i class="bi bi-people me-2"></i>Grupos</h2>
+        <button class="btn btn-gradient btn-sm" onclick="openCreateGroupModal()">
+            <i class="bi bi-plus-lg me-1"></i>Crear
+        </button>
+    </div>
+
+    <!-- Tabs -->
+    <div class="hosting-tabs" style="margin-bottom:1rem;">
+        <button class="hosting-tab active" data-tab="browse" onclick="switchGroupTab('browse')"><i class="bi bi-search"></i> Explorar</button>
+        <button class="hosting-tab" data-tab="my-groups" onclick="switchGroupTab('my-groups')"><i class="bi bi-bookmark"></i> Mis Grupos</button>
+    </div>
+
+    <!-- Filters (browse tab) -->
+    <div class="group-filters" id="group-filters">
+        <div class="d-flex gap-2 flex-wrap mb-3">
+            <button class="group-type-chip active" data-type="" onclick="filterGroupType(this, '')">Todos</button>
+            <button class="group-type-chip" data-type="country" onclick="filterGroupType(this, 'country')">Pais</button>
+            <button class="group-type-chip" data-type="youth" onclick="filterGroupType(this, 'youth')">Jovenes</button>
+            <button class="group-type-chip" data-type="musical" onclick="filterGroupType(this, 'musical')">Musical</button>
+            <button class="group-type-chip" data-type="study" onclick="filterGroupType(this, 'study')">Estudio</button>
+            <button class="group-type-chip" data-type="general" onclick="filterGroupType(this, 'general')">General</button>
+        </div>
+    </div>
+
+    <!-- Groups List -->
+    <div class="feed-spinner" id="groups-spinner">
+        <div class="spinner-border" role="status"></div>
+        <p class="mt-2">Cargando grupos...</p>
+    </div>
+
+    <div id="groups-list"></div>
+
+    <div class="empty-state" id="groups-empty" style="display:none;">
+        <i class="bi bi-people"></i>
+        <h5>No se encontraron grupos</h5>
+        <p>Crea uno para empezar</p>
+    </div>
+
+    <!-- Group Detail View (replaces list) -->
+    <div id="group-detail-view" style="display:none;">
+        <a href="#" class="back-link" onclick="closeGroupDetail(); return false;">
+            <i class="bi bi-arrow-left"></i> Volver a grupos
+        </a>
+
+        <!-- Group Header -->
+        <div class="group-detail-header" id="gd-header">
+            <div class="group-detail-cover" id="gd-cover"></div>
+            <div class="group-detail-info">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <h4 id="gd-name" style="margin:0; font-weight:700;"></h4>
+                    <span class="meta-badge" id="gd-type-badge"></span>
+                    <span class="meta-badge" id="gd-private-badge" style="display:none;"><i class="bi bi-lock me-1"></i>Privado</span>
+                </div>
+                <p id="gd-description" style="color:var(--text-secondary); font-size:0.9rem; margin:0.5rem 0;"></p>
+                <div class="d-flex align-items-center gap-3 flex-wrap" style="font-size:0.85rem; color:var(--text-muted);">
+                    <span><i class="bi bi-people me-1"></i><span id="gd-member-count">0</span> miembros</span>
+                    <span id="gd-country-info"></span>
+                </div>
+                <div class="mt-2" id="gd-actions"></div>
+            </div>
+        </div>
+
+        <!-- Group Tabs -->
+        <div class="hosting-tabs mt-3">
+            <button class="hosting-tab active" onclick="switchDetailTab('posts')"><i class="bi bi-chat-square-text"></i> Posts</button>
+            <button class="hosting-tab" onclick="switchDetailTab('members')"><i class="bi bi-people"></i> Miembros</button>
+        </div>
+
+        <!-- Group Posts -->
+        <div id="gd-panel-posts">
+            <div class="group-post-input" id="gd-post-input" style="display:none;">
+                <textarea class="form-control mb-2" id="gd-post-content" placeholder="Escribe algo para el grupo..." rows="2"></textarea>
+                <div class="d-flex justify-content-between align-items-center">
+                    <label class="btn btn-outline-secondary btn-sm" style="border-radius:8px; cursor:pointer;">
+                        <i class="bi bi-image me-1"></i>Foto
+                        <input type="file" id="gd-post-image" accept="image/*" style="display:none;">
+                    </label>
+                    <button class="btn btn-gradient btn-sm" onclick="publishGroupPost()">Publicar</button>
+                </div>
+            </div>
+
+            <div id="gd-posts-list"></div>
+            <div class="empty-state" id="gd-posts-empty" style="display:none;">
+                <i class="bi bi-chat-square-text"></i>
+                <h5>Sin publicaciones</h5>
+                <p>Se el primero en publicar en este grupo</p>
+            </div>
+        </div>
+
+        <!-- Group Members -->
+        <div id="gd-panel-members" style="display:none;">
+            <div id="gd-members-list"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Group Modal -->
+<div class="modal fade" id="createGroupModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-people me-2"></i>Crear Grupo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Nombre del grupo</label>
+                    <input type="text" class="form-control" id="cg-name" placeholder="Ej: Jovenes Chile" maxlength="150">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Tipo</label>
+                    <select class="form-select" id="cg-type">
+                        <option value="general">General</option>
+                        <option value="country">Pais</option>
+                        <option value="youth">Jovenes</option>
+                        <option value="musical">Musical</option>
+                        <option value="study">Estudio</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Descripcion</label>
+                    <textarea class="form-control" id="cg-description" rows="3" placeholder="De que se trata el grupo..."></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Pais (opcional)</label>
+                    <input type="text" class="form-control" id="cg-country" placeholder="Ej: CL, AR, MX">
+                </div>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="cg-private">
+                    <label class="form-check-label" for="cg-private">Grupo privado (requiere aprobacion)</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-gradient w-100" id="btn-create-group" onclick="createGroup()">
+                    <i class="bi bi-plus-lg me-1"></i>Crear Grupo
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+/* ─── Group Cards ────────────────────────────────────────── */
+.group-card {
+    background: var(--card-bg);
+    border-radius: 20px;
+    box-shadow: 0 1px 8px rgba(0,0,0,0.05);
+    overflow: hidden;
+    margin-bottom: 0.8rem;
+    cursor: pointer;
+    transition: box-shadow 0.2s;
+}
+.group-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+.group-card-cover {
+    height: 80px;
+    background: linear-gradient(135deg, var(--dark-bg) 0%, var(--dark-bg-light) 100%);
+    position: relative;
+}
+.group-card-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.group-card-avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, var(--gold-light), var(--gold-dark));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 1.2rem;
+    position: absolute;
+    bottom: -20px;
+    left: 16px;
+    border: 3px solid var(--card-bg);
+    overflow: hidden;
+}
+.group-card-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.group-card-body {
+    padding: 1.6rem 1rem 1rem;
+}
+.group-card-body h5 {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--text-primary);
+    margin-bottom: 0.2rem;
+}
+.group-card-body .group-card-desc {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: 0.4rem;
+}
+.group-card-body .group-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.group-type-chip {
+    border: 1.5px solid var(--border-color);
+    background: var(--card-bg);
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.82rem;
+    padding: 0.35rem 0.8rem;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.group-type-chip:hover { border-color: var(--accent-primary); color: var(--accent-primary); }
+.group-type-chip.active {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: #fff;
+}
+
+/* ─── Group Detail ───────────────────────────────────────── */
+.group-detail-header {
+    background: var(--card-bg);
+    border-radius: 20px;
+    box-shadow: 0 1px 8px rgba(0,0,0,0.05);
+    overflow: hidden;
+}
+.group-detail-cover {
+    height: 140px;
+    background: linear-gradient(135deg, var(--dark-bg) 0%, var(--dark-bg-light) 100%);
+}
+.group-detail-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.group-detail-info {
+    padding: 1.2rem 1.5rem;
+}
+
+/* Group posts */
+.group-post-input {
+    background: var(--card-bg);
+    border-radius: 20px;
+    box-shadow: 0 1px 8px rgba(0,0,0,0.05);
+    padding: 1rem;
+    margin-bottom: 0.8rem;
+}
+.group-post-input textarea {
+    border-radius: 12px;
+    border: 1.5px solid var(--input-border);
+    background: var(--input-bg);
+    color: var(--text-primary);
+    resize: none;
+    font-size: 0.9rem;
+}
+.group-post-input textarea:focus {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(131,58,180,0.15);
+}
+.gp-card {
+    background: var(--card-bg);
+    border-radius: 20px;
+    box-shadow: 0 1px 8px rgba(0,0,0,0.05);
+    padding: 1rem 1.2rem;
+    margin-bottom: 0.8rem;
+}
+.gp-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.6rem;
+}
+.gp-card-header .gp-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold-light), var(--gold-dark));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.8rem;
+    overflow: hidden;
+}
+.gp-card-header .gp-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.gp-card-content {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+.gp-card-content img {
+    width: 100%;
+    border-radius: 12px;
+    margin-top: 0.5rem;
+    max-height: 400px;
+    object-fit: cover;
+}
+
+/* Group members */
+.gm-item {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+.gm-item:last-child { border-bottom: none; }
+.gm-item .gm-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold-light), var(--gold-dark));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+.gm-item .gm-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.gm-item .gm-info { flex: 1; }
+.gm-item .gm-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+}
+.gm-item .gm-role {
+    font-size: 0.78rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+}
+.gm-role.admin { background: #fff3cd; color: #856404; }
+.gm-role.mod { background: #cce5ff; color: #004085; }
+[data-theme="dark"] .gm-role.admin { background: #3d3500; color: #ffc107; }
+[data-theme="dark"] .gm-role.mod { background: #0a2540; color: #5bc0de; }
+
+/* Create group form */
+#createGroupModal .form-label {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+#createGroupModal .form-control,
+#createGroupModal .form-select {
+    border-radius: 10px;
+    border: 1.5px solid var(--input-border);
+    background: var(--input-bg);
+    color: var(--text-primary);
+}
+#createGroupModal .form-control:focus,
+#createGroupModal .form-select:focus {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(131,58,180,0.15);
+}
+</style>
+
+<script>
+const GROUP_TYPE_LABELS = {
+    country: 'Pais',
+    musical: 'Musical',
+    youth: 'Jovenes',
+    study: 'Estudio',
+    general: 'General'
+};
+
+let allGroups = [];
+let currentGroupType = '';
+let currentGroupTab = 'browse';
+let activeGroupId = null;
+let activeGroupData = null;
+let me = {};
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (!isLoggedIn()) { window.location.href = '/login/'; return; }
+    me = JSON.parse(localStorage.getItem('user_data') || '{}');
+    loadGroups();
+});
+
+// ─── Tab Switching ───
+function switchGroupTab(tab) {
+    currentGroupTab = tab;
+    document.querySelectorAll('.hosting-tabs .hosting-tab').forEach((t, i) => {
+        t.classList.toggle('active', i === (tab === 'browse' ? 0 : 1));
+    });
+
+    document.getElementById('group-filters').style.display = tab === 'browse' ? 'block' : 'none';
+    loadGroups();
+}
+
+function filterGroupType(btn, type) {
+    currentGroupType = type;
+    document.querySelectorAll('.group-type-chip').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    loadGroups();
+}
+
+// ─── Load Groups ───
+async function loadGroups() {
+    const spinner = document.getElementById('groups-spinner');
+    const list = document.getElementById('groups-list');
+    const empty = document.getElementById('groups-empty');
+
+    // Hide detail view
+    document.getElementById('group-detail-view').style.display = 'none';
+    list.style.display = 'block';
+    spinner.style.display = 'block';
+    list.innerHTML = '';
+    empty.style.display = 'none';
+
+    let url = '/api/groups/';
+    const params = [];
+    if (currentGroupType) params.push('group_type=' + currentGroupType);
+    if (params.length) url += '?' + params.join('&');
+
+    try {
+        const res = await authFetch(url);
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+        allGroups = data.results || data;
+
+        spinner.style.display = 'none';
+
+        let groups = allGroups;
+        if (currentGroupTab === 'my-groups') {
+            groups = groups.filter(g => g.is_member);
+        }
+
+        if (groups.length === 0) {
+            empty.style.display = 'block';
+            return;
+        }
+
+        groups.forEach(group => {
+            list.insertAdjacentHTML('beforeend', renderGroupCard(group));
+        });
+    } catch(e) {
+        spinner.style.display = 'none';
+        showToast('Error al cargar grupos');
+        console.error(e);
+    }
+}
+
+function renderGroupCard(group) {
+    const initial = (group.name[0] || '?').toUpperCase();
+    const avatarInner = group.avatar ? `<img src="${group.avatar}" alt="">` : initial;
+    const coverInner = group.cover ? `<img src="${group.cover}" alt="">` : '';
+    const typeLabel = GROUP_TYPE_LABELS[group.group_type] || group.group_type;
+    const memberBadge = group.is_member ? '<span style="color:var(--accent-primary); font-weight:600;">Miembro</span>' : '';
+
+    return `
+    <div class="group-card" onclick="openGroupDetail(${group.id})">
+        <div class="group-card-cover">
+            ${coverInner}
+            <div class="group-card-avatar">${avatarInner}</div>
+        </div>
+        <div class="group-card-body">
+            <h5>${escapeHtml(group.name)}</h5>
+            ${group.description ? `<div class="group-card-desc">${escapeHtml(group.description)}</div>` : ''}
+            <div class="group-card-meta">
+                <span><i class="bi bi-people me-1"></i>${group.member_count} miembros</span>
+                <span class="meta-badge">${typeLabel}</span>
+                ${group.is_private ? '<span><i class="bi bi-lock"></i> Privado</span>' : ''}
+                ${memberBadge}
+            </div>
+        </div>
+    </div>`;
+}
+
+// ─── Group Detail ───
+async function openGroupDetail(groupId) {
+    activeGroupId = groupId;
+    document.getElementById('groups-list').style.display = 'none';
+    document.getElementById('groups-empty').style.display = 'none';
+    document.getElementById('group-filters').style.display = 'none';
+    document.getElementById('group-detail-view').style.display = 'block';
+
+    try {
+        const res = await authFetch(`/api/groups/${groupId}/`);
+        if (!res.ok) throw new Error('Failed');
+        activeGroupData = await res.json();
+        renderGroupDetail(activeGroupData);
+        loadGroupPosts();
+    } catch(e) {
+        showToast('Error al cargar grupo');
+        console.error(e);
+    }
+}
+
+function renderGroupDetail(group) {
+    // Cover
+    const coverEl = document.getElementById('gd-cover');
+    coverEl.innerHTML = group.cover ? `<img src="${group.cover}" alt="">` : '';
+
+    // Info
+    document.getElementById('gd-name').textContent = group.name;
+    document.getElementById('gd-description').textContent = group.description || '';
+    document.getElementById('gd-member-count').textContent = group.member_count || 0;
+    document.getElementById('gd-type-badge').textContent = GROUP_TYPE_LABELS[group.group_type] || group.group_type;
+
+    const privateBadge = document.getElementById('gd-private-badge');
+    privateBadge.style.display = group.is_private ? 'inline-flex' : 'none';
+
+    const countryInfo = document.getElementById('gd-country-info');
+    countryInfo.innerHTML = group.country ? `<i class="bi bi-geo-alt me-1"></i>${group.country}` : '';
+
+    // Actions
+    const actions = document.getElementById('gd-actions');
+    if (group.is_member) {
+        actions.innerHTML = `
+            <button class="btn btn-outline-secondary btn-sm px-3" style="border-radius:8px;" onclick="leaveGroup(${group.id})">
+                <i class="bi bi-box-arrow-right me-1"></i>Salir del grupo
+            </button>`;
+        document.getElementById('gd-post-input').style.display = 'block';
+    } else {
+        actions.innerHTML = `
+            <button class="btn btn-gradient btn-sm px-4" onclick="joinGroup(${group.id})">
+                <i class="bi bi-plus-lg me-1"></i>Unirse
+            </button>`;
+        document.getElementById('gd-post-input').style.display = 'none';
+    }
+}
+
+function closeGroupDetail() {
+    activeGroupId = null;
+    activeGroupData = null;
+    document.getElementById('group-detail-view').style.display = 'none';
+    document.getElementById('groups-list').style.display = 'block';
+    if (currentGroupTab === 'browse') {
+        document.getElementById('group-filters').style.display = 'block';
+    }
+    loadGroups();
+}
+
+function switchDetailTab(tab) {
+    const tabs = document.querySelectorAll('#group-detail-view .hosting-tab');
+    tabs.forEach((t, i) => t.classList.toggle('active', i === (tab === 'posts' ? 0 : 1)));
+    document.getElementById('gd-panel-posts').style.display = tab === 'posts' ? 'block' : 'none';
+    document.getElementById('gd-panel-members').style.display = tab === 'members' ? 'block' : 'none';
+    if (tab === 'members') loadGroupMembers();
+}
+
+// ─── Group Posts ───
+async function loadGroupPosts() {
+    const list = document.getElementById('gd-posts-list');
+    const empty = document.getElementById('gd-posts-empty');
+    list.innerHTML = '<div class="feed-spinner"><div class="spinner-border spinner-border-sm"></div></div>';
+    empty.style.display = 'none';
+
+    try {
+        const res = await authFetch(`/api/groups/${activeGroupId}/posts/`);
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+        const posts = data.results || data;
+
+        if (posts.length === 0) {
+            list.innerHTML = '';
+            empty.style.display = 'block';
+            return;
+        }
+
+        list.innerHTML = posts.map(post => {
+            const a = post.author || {};
+            const name = a.display_name || a.first_name || a.username || '';
+            const initial = (name[0] || '?').toUpperCase();
+            const avatarInner = a.avatar ? `<img src="${a.avatar}" alt="">` : initial;
+            const time = formatTimeAgo(post.created_at);
+            const pinBadge = post.is_pinned ? '<span class="meta-badge" style="background:#fff3cd; color:#856404;"><i class="bi bi-pin-angle me-1"></i>Fijado</span>' : '';
+
+            return `
+            <div class="gp-card">
+                <div class="gp-card-header">
+                    <a href="/profile/${a.id}/" class="gp-avatar">${avatarInner}</a>
+                    <div style="flex:1;">
+                        <a href="/profile/${a.id}/" style="font-weight:700; color:var(--text-primary); text-decoration:none; font-size:0.9rem;">${escapeHtml(name)}</a>
+                        ${pinBadge}
+                        <div style="font-size:0.78rem; color:var(--text-muted);">${time}</div>
+                    </div>
+                </div>
+                <div class="gp-card-content">
+                    ${escapeHtml(post.content)}
+                    ${post.image ? `<img src="${post.image}" alt="">` : ''}
+                </div>
+            </div>`;
+        }).join('');
+    } catch(e) {
+        list.innerHTML = '';
+        console.error(e);
+    }
+}
+
+async function publishGroupPost() {
+    const content = document.getElementById('gd-post-content').value.trim();
+    if (!content) { showToast('Escribe algo'); return; }
+
+    const imageInput = document.getElementById('gd-post-image');
+    const image = imageInput.files[0];
+
+    let body, headers;
+    if (image) {
+        body = new FormData();
+        body.append('content', content);
+        body.append('image', image);
+        headers = { 'Authorization': 'Bearer ' + getToken() };
+    } else {
+        body = JSON.stringify({ content });
+    }
+
+    try {
+        const res = await authFetch(`/api/groups/${activeGroupId}/posts/`, {
+            method: 'POST',
+            body,
+            ...(image ? { headers } : {})
+        });
+        if (res.ok) {
+            document.getElementById('gd-post-content').value = '';
+            imageInput.value = '';
+            showToast('Publicado');
+            loadGroupPosts();
+        } else {
+            const data = await res.json();
+            showToast(data.detail || 'Error al publicar');
+        }
+    } catch(e) {
+        showToast('Error de conexion');
+    }
+}
+
+// ─── Group Members ───
+async function loadGroupMembers() {
+    const list = document.getElementById('gd-members-list');
+    list.innerHTML = '<div class="feed-spinner"><div class="spinner-border spinner-border-sm"></div></div>';
+
+    try {
+        const res = await authFetch(`/api/groups/${activeGroupId}/members/`);
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+        const members = data.results || data;
+
+        list.innerHTML = members.map(m => {
+            const u = m.user || {};
+            const name = u.display_name || u.first_name || u.username || 'Usuario';
+            const initial = (name[0] || '?').toUpperCase();
+            const avatarInner = u.avatar ? `<img src="${u.avatar}" alt="">` : initial;
+            let roleHtml = '';
+            if (m.role === 'admin') roleHtml = '<span class="gm-role admin">Admin</span>';
+            else if (m.role === 'mod') roleHtml = '<span class="gm-role mod">Mod</span>';
+
+            return `
+            <div class="gm-item">
+                <a href="/profile/${u.id}/" class="gm-avatar">${avatarInner}</a>
+                <div class="gm-info">
+                    <a href="/profile/${u.id}/" class="gm-name" style="text-decoration:none;">${escapeHtml(name)}</a>
+                    <div style="font-size:0.8rem; color:var(--text-muted);">@${u.username || ''}</div>
+                </div>
+                ${roleHtml}
+            </div>`;
+        }).join('');
+    } catch(e) {
+        list.innerHTML = '';
+        console.error(e);
+    }
+}
+
+// ─── Join / Leave ───
+async function joinGroup(groupId) {
+    try {
+        const res = await authFetch(`/api/groups/${groupId}/join/`, { method: 'POST' });
+        if (res.ok) {
+            const data = await res.json();
+            showToast(data.detail);
+            openGroupDetail(groupId);
+        }
+    } catch(e) {
+        showToast('Error de conexion');
+    }
+}
+
+async function leaveGroup(groupId) {
+    if (!confirm('Seguro que quieres salir del grupo?')) return;
+    try {
+        const res = await authFetch(`/api/groups/${groupId}/leave/`, { method: 'POST' });
+        if (res.ok) {
+            showToast('Saliste del grupo');
+            closeGroupDetail();
+        }
+    } catch(e) {
+        showToast('Error de conexion');
+    }
+}
+
+// ─── Create Group ───
+function openCreateGroupModal() {
+    document.getElementById('cg-name').value = '';
+    document.getElementById('cg-type').value = 'general';
+    document.getElementById('cg-description').value = '';
+    document.getElementById('cg-country').value = '';
+    document.getElementById('cg-private').checked = false;
+    new bootstrap.Modal(document.getElementById('createGroupModal')).show();
+}
+
+async function createGroup() {
+    const name = document.getElementById('cg-name').value.trim();
+    if (!name) { showToast('El grupo necesita un nombre'); return; }
+
+    const btn = document.getElementById('btn-create-group');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Creando...';
+
+    try {
+        const res = await authFetch('/api/groups/', {
+            method: 'POST',
+            body: JSON.stringify({
+                name,
+                group_type: document.getElementById('cg-type').value,
+                description: document.getElementById('cg-description').value.trim(),
+                country: document.getElementById('cg-country').value.trim(),
+                is_private: document.getElementById('cg-private').checked,
+            })
+        });
+
+        if (res.ok) {
+            const group = await res.json();
+            bootstrap.Modal.getInstance(document.getElementById('createGroupModal')).hide();
+            showToast('Grupo creado');
+            loadGroups();
+        } else {
+            const data = await res.json();
+            showToast(Object.values(data).flat().join(', ') || 'Error al crear');
+        }
+    } catch(e) {
+        showToast('Error de conexion');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-plus-lg me-1"></i>Crear Grupo';
+    }
+}
+</script>
+{% endblock %}

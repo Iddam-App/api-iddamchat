@@ -33,5 +33,13 @@ def hosting_view(request):
     return render(request, 'app/hosting.html')
 
 
+def chat_view(request, user_id=None):
+    return render(request, 'app/chat.html')
+
+
+def groups_view(request):
+    return render(request, 'app/groups.html')
+
+
 def post_detail_view(request, pk):
     return render(request, 'app/post_detail.html')

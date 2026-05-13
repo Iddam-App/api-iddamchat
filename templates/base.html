@@ -33,6 +33,10 @@
             </div>
             <!-- Logged-in nav (minimal: just icons) -->
             <div class="d-flex align-items-center gap-2" id="nav-user" style="display:none !important;">
+                <a href="/chat/" class="nav-icon-btn" id="nav-chat-btn" title="Mensajes">
+                    <i class="bi bi-send"></i>
+                    <span class="nav-badge" id="nav-unread-badge" style="display:none;">0</span>
+                </a>
                 <button class="theme-toggle" id="theme-toggle-user" title="Cambiar tema">
                     <i class="bi bi-moon-fill"></i>
                 </button>
@@ -67,9 +71,9 @@
             <i class="bi bi-plus-square"></i>
             <span>Crear</span>
         </button>
-        <a href="/hosting/" class="nav-tab" data-page="hosting">
-            <i class="bi bi-house-heart"></i>
-            <span>Hospedaje</span>
+        <a href="/groups/" class="nav-tab" data-page="groups">
+            <i class="bi bi-people"></i>
+            <span>Grupos</span>
         </a>
         <a href="/profile/" class="nav-tab" data-page="profile">
             <i class="bi bi-person-circle"></i>
@@ -159,9 +163,17 @@
                 const page = tab.dataset.page;
                 if (page === 'feed' && (path === '/feed/' || path === '/')) tab.classList.add('active');
                 else if (page === 'hobbies' && path.startsWith('/hobbies')) tab.classList.add('active');
-                else if (page === 'hosting' && path.startsWith('/hosting')) tab.classList.add('active');
+                else if (page === 'groups' && path.startsWith('/groups')) tab.classList.add('active');
                 else if (page === 'profile' && path.startsWith('/profile')) tab.classList.add('active');
             });
+
+            // Highlight chat icon if on chat page
+            if (path.startsWith('/chat')) {
+                document.getElementById('nav-chat-btn').classList.add('active');
+            }
+
+            // Load unread count
+            loadUnreadCount();
 
             // Fetch user data if needed
             let userData = localStorage.getItem('user_data');
@@ -179,6 +191,24 @@
             setupGlobalCreatePost();
         }
     })();
+
+    // ─── Unread Messages Badge ───
+    async function loadUnreadCount() {
+        try {
+            const res = await authFetch('/api/chat/unread/');
+            if (!res.ok) return;
+            const data = await res.json();
+            const badge = document.getElementById('nav-unread-badge');
+            if (data.unread_count > 0) {
+                badge.textContent = data.unread_count > 99 ? '99+' : data.unread_count;
+                badge.style.display = 'flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        } catch(e) {}
+    }
+    // Poll unread every 15 seconds
+    if (isLoggedIn()) setInterval(loadUnreadCount, 15000);
 
     // ─── Global Create Post ───
     let selectedImages = [];

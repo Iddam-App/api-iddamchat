@@ -5,8 +5,8 @@ from django.urls import include, path
 
 from apps.core.views_web import (
     landing_view, login_view, register_view,
-    feed_view, hobbies_view, hosting_view, profile_view, edit_profile_view,
-    post_detail_view,
+    feed_view, hobbies_view, hosting_view, chat_view, groups_view,
+    profile_view, edit_profile_view, post_detail_view,
 )
 
 urlpatterns = [
@@ -17,6 +17,9 @@ urlpatterns = [
     path('feed/', feed_view, name='feed'),
     path('hobbies/', hobbies_view, name='hobbies'),
     path('hosting/', hosting_view, name='hosting'),
+    path('chat/', chat_view, name='chat'),
+    path('chat/<int:user_id>/', chat_view, name='chat_with_user'),
+    path('groups/', groups_view, name='groups'),
     path('profile/', profile_view, name='my_profile'),
     path('profile/edit/', edit_profile_view, name='edit_profile'),
     path('profile/<int:user_id>/', profile_view, name='user_profile'),
