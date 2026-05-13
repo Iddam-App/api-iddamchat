@@ -29,5 +29,9 @@ def edit_profile_view(request):
     return render(request, 'app/edit_profile.html')
 
 
+def hosting_view(request):
+    return render(request, 'app/hosting.html')
+
+
 def post_detail_view(request, pk):
     return render(request, 'app/post_detail.html')

@@ -1,0 +1,963 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Hospedaje — IddamChat{% endblock %}
+
+{% block content %}
+<div class="feed-container">
+    <div class="feed-header">
+        <h2><i class="bi bi-house-heart me-2"></i>Hospedaje</h2>
+    </div>
+
+    <!-- Tabs -->
+    <div class="hosting-tabs">
+        <button class="hosting-tab active" data-tab="browse"><i class="bi bi-search"></i> Buscar</button>
+        <button class="hosting-tab" data-tab="my-profile"><i class="bi bi-house-door"></i> Mi Perfil</button>
+        <button class="hosting-tab" data-tab="my-requests"><i class="bi bi-send"></i> Enviadas</button>
+        <button class="hosting-tab" data-tab="received"><i class="bi bi-inbox"></i> Recibidas</button>
+    </div>
+
+    <!-- ═══ TAB: Browse Hosts ═══ -->
+    <div class="hosting-panel" id="panel-browse">
+        <!-- Filters -->
+        <div class="hosting-filter-bar">
+            <input type="text" class="form-control" id="filter-city" placeholder="Filtrar por ciudad...">
+            <select class="form-select" id="filter-country">
+                <option value="">Todos los paises</option>
+            </select>
+            <button class="btn btn-gradient btn-sm" id="btn-search-hosts"><i class="bi bi-search"></i></button>
+        </div>
+
+        <div class="feed-spinner" id="hosts-spinner">
+            <div class="spinner-border" role="status"></div>
+            <p class="mt-2">Buscando anfitriones...</p>
+        </div>
+
+        <div id="hosts-list"></div>
+
+        <div class="empty-state" id="hosts-empty" style="display:none;">
+            <i class="bi bi-house-heart"></i>
+            <h5>No se encontraron anfitriones</h5>
+            <p>Prueba con otros filtros o vuelve mas tarde</p>
+        </div>
+    </div>
+
+    <!-- ═══ TAB: My Host Profile ═══ -->
+    <div class="hosting-panel" id="panel-my-profile" style="display:none;">
+        <div class="info-card">
+            <h5><i class="bi bi-gear me-2"></i>Mi Perfil de Anfitrion</h5>
+            <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1rem;">Configura tu perfil para ofrecer hospedaje a hermanos que visiten tu ciudad.</p>
+
+            <div class="mb-3">
+                <label class="form-label">Disponible para recibir huespedes</label>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="host-available" checked>
+                    <label class="form-check-label" for="host-available" id="host-available-label">Disponible</label>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-sm-6">
+                    <label class="form-label">Ciudad</label>
+                    <input type="text" class="form-control" id="host-city" placeholder="Tu ciudad">
+                </div>
+                <div class="col-sm-6">
+                    <label class="form-label">Pais</label>
+                    <input type="text" class="form-control" id="host-country" placeholder="Ej: CL, AR, MX">
+                </div>
+            </div>
+
+            <div class="mt-3">
+                <label class="form-label">Capacidad maxima de huespedes</label>
+                <input type="number" class="form-control" id="host-max-guests" min="1" max="20" value="1">
+            </div>
+
+            <div class="mt-3">
+                <label class="form-label">Descripcion del hospedaje</label>
+                <textarea class="form-control" id="host-description" rows="3" placeholder="Describe tu hogar, ubicacion, etc."></textarea>
+            </div>
+
+            <div class="mt-3">
+                <label class="form-label">Comodidades</label>
+                <textarea class="form-control" id="host-amenities" rows="2" placeholder="WiFi, estacionamiento, cocina, etc."></textarea>
+            </div>
+
+            <div class="mt-3">
+                <label class="form-label">Reglas</label>
+                <textarea class="form-control" id="host-rules" rows="2" placeholder="No mascotas, no fumar, etc."></textarea>
+            </div>
+
+            <button class="btn btn-gradient mt-3 w-100" id="btn-save-profile">
+                <i class="bi bi-check-lg me-1"></i>Guardar Perfil
+            </button>
+        </div>
+    </div>
+
+    <!-- ═══ TAB: My Requests (sent) ═══ -->
+    <div class="hosting-panel" id="panel-my-requests" style="display:none;">
+        <div class="feed-spinner" id="my-requests-spinner">
+            <div class="spinner-border" role="status"></div>
+            <p class="mt-2">Cargando solicitudes...</p>
+        </div>
+
+        <div id="my-requests-list"></div>
+
+        <div class="empty-state" id="my-requests-empty" style="display:none;">
+            <i class="bi bi-send"></i>
+            <h5>No has enviado solicitudes</h5>
+            <p>Busca anfitriones y envia una solicitud de hospedaje</p>
+        </div>
+    </div>
+
+    <!-- ═══ TAB: Received Requests ═══ -->
+    <div class="hosting-panel" id="panel-received" style="display:none;">
+        <div class="feed-spinner" id="received-spinner">
+            <div class="spinner-border" role="status"></div>
+            <p class="mt-2">Cargando solicitudes...</p>
+        </div>
+
+        <div id="received-list"></div>
+
+        <div class="empty-state" id="received-empty" style="display:none;">
+            <i class="bi bi-inbox"></i>
+            <h5>No has recibido solicitudes</h5>
+            <p>Cuando alguien solicite hospedaje contigo, aparecera aqui</p>
+        </div>
+    </div>
+</div>
+
+<!-- Request Modal -->
+<div class="modal fade" id="requestModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-send me-2"></i>Solicitar Hospedaje</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="req-host-id">
+                <p class="mb-3" style="font-size:0.9rem; color:var(--text-secondary);">
+                    Enviando solicitud a <strong id="req-host-name"></strong>
+                </p>
+                <div class="row g-3 mb-3">
+                    <div class="col-6">
+                        <label class="form-label">Fecha llegada</label>
+                        <input type="date" class="form-control" id="req-arrival">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Fecha salida</label>
+                        <input type="date" class="form-control" id="req-departure">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Numero de huespedes</label>
+                    <input type="number" class="form-control" id="req-guests" min="1" value="1">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Mensaje para el anfitrion</label>
+                    <textarea class="form-control" id="req-message" rows="3" placeholder="Presentate y explica el motivo de tu visita..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-gradient w-100" id="btn-send-request">
+                    <i class="bi bi-send me-1"></i>Enviar Solicitud
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Messages Modal -->
+<div class="modal fade" id="messagesModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-chat-dots me-2"></i>Mensajes</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="messages-body" style="min-height:200px; max-height:400px; overflow-y:auto;">
+            </div>
+            <div class="modal-footer">
+                <input type="hidden" id="msg-request-id">
+                <div class="d-flex w-100 gap-2">
+                    <input type="text" class="form-control" id="msg-content" placeholder="Escribe un mensaje...">
+                    <button class="btn btn-gradient" id="btn-send-msg"><i class="bi bi-send"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+.hosting-tabs {
+    display: flex;
+    gap: 0.3rem;
+    margin-bottom: 1rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.hosting-tabs::-webkit-scrollbar { display: none; }
+
+.hosting-tab {
+    flex-shrink: 0;
+    border: none;
+    background: var(--card-bg);
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 0.55rem 1rem;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+.hosting-tab:hover { color: var(--accent-primary); }
+.hosting-tab.active {
+    background: var(--ig-gradient);
+    color: #fff;
+}
+
+.hosting-filter-bar {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+.hosting-filter-bar .form-control,
+.hosting-filter-bar .form-select {
+    border-radius: 12px;
+    border: 1.5px solid var(--input-border);
+    background: var(--input-bg);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    padding: 0.5rem 0.8rem;
+}
+.hosting-filter-bar .form-control:focus,
+.hosting-filter-bar .form-select:focus {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(131,58,180,0.15);
+}
+
+/* Host Card */
+.host-card {
+    background: var(--card-bg);
+    border-radius: 20px;
+    box-shadow: 0 1px 8px rgba(0,0,0,0.05);
+    padding: 1.2rem;
+    margin-bottom: 0.8rem;
+    transition: box-shadow 0.2s;
+}
+.host-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+.host-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin-bottom: 0.8rem;
+}
+.host-card-header .host-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold-light), var(--gold-dark));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    overflow: hidden;
+    text-decoration: none;
+}
+.host-card-header .host-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.host-card-header .host-info { flex: 1; }
+.host-card-header .host-name {
+    font-weight: 700;
+    color: var(--text-primary);
+    font-size: 1rem;
+    text-decoration: none;
+}
+.host-card-header .host-name:hover { color: var(--accent-primary); }
+.host-card-header .host-location {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+.host-card-body {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+.host-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.6rem;
+}
+.host-card-meta .meta-badge {
+    font-size: 0.78rem;
+    background: var(--hover-bg);
+    color: var(--text-secondary);
+    padding: 0.25rem 0.6rem;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+.host-card-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.8rem;
+}
+
+/* Request Card */
+.request-card {
+    background: var(--card-bg);
+    border-radius: 20px;
+    box-shadow: 0 1px 8px rgba(0,0,0,0.05);
+    padding: 1.2rem;
+    margin-bottom: 0.8rem;
+    transition: box-shadow 0.2s;
+}
+.request-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+.request-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin-bottom: 0.6rem;
+}
+.request-card-header .req-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold-light), var(--gold-dark));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 1rem;
+    flex-shrink: 0;
+    overflow: hidden;
+    text-decoration: none;
+}
+.request-card-header .req-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.request-status {
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0.2rem 0.6rem;
+    border-radius: 10px;
+    display: inline-block;
+}
+.request-status.pending { background: #fff3cd; color: #856404; }
+.request-status.accepted { background: #d4edda; color: #155724; }
+.request-status.rejected { background: #f8d7da; color: #721c24; }
+.request-status.cancelled { background: #e2e3e5; color: #383d41; }
+.request-status.completed { background: #cce5ff; color: #004085; }
+
+[data-theme="dark"] .request-status.pending { background: #3d3500; color: #ffc107; }
+[data-theme="dark"] .request-status.accepted { background: #0a3622; color: #28a745; }
+[data-theme="dark"] .request-status.rejected { background: #3b1015; color: #dc3545; }
+[data-theme="dark"] .request-status.cancelled { background: #2a2a2a; color: #999; }
+[data-theme="dark"] .request-status.completed { background: #0a2540; color: #5bc0de; }
+
+.request-dates {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-top: 0.3rem;
+}
+.request-message {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-top: 0.5rem;
+    padding: 0.6rem 0.8rem;
+    background: var(--hover-bg);
+    border-radius: 12px;
+    line-height: 1.4;
+}
+.request-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.8rem;
+}
+
+/* Messages in modal */
+.msg-bubble {
+    margin-bottom: 0.6rem;
+    max-width: 80%;
+}
+.msg-bubble.mine {
+    margin-left: auto;
+}
+.msg-bubble .msg-sender {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 0.15rem;
+}
+.msg-bubble .msg-text {
+    padding: 0.5rem 0.8rem;
+    border-radius: 14px;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+.msg-bubble:not(.mine) .msg-text {
+    background: var(--hover-bg);
+    color: var(--text-primary);
+    border-bottom-left-radius: 4px;
+}
+.msg-bubble.mine .msg-text {
+    background: var(--accent-primary);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+}
+.msg-bubble .msg-time {
+    font-size: 0.7rem;
+    color: var(--text-light);
+    margin-top: 0.15rem;
+}
+.msg-bubble.mine .msg-time { text-align: right; }
+
+/* Profile form within info-card */
+#panel-my-profile .form-label {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+#panel-my-profile .form-control,
+#panel-my-profile .form-select {
+    border-radius: 10px;
+    border: 1.5px solid var(--input-border);
+    background: var(--input-bg);
+    color: var(--text-primary);
+    padding: 0.6rem 1rem;
+}
+#panel-my-profile .form-control:focus,
+#panel-my-profile .form-select:focus {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(131,58,180,0.15);
+}
+#panel-my-profile textarea.form-control {
+    resize: vertical;
+    min-height: 60px;
+}
+.form-check-input:checked {
+    background-color: var(--accent-primary);
+    border-color: var(--accent-primary);
+}
+</style>
+
+<script>
+const STATUS_LABELS = {
+    pending: 'Pendiente',
+    accepted: 'Aceptada',
+    rejected: 'Rechazada',
+    cancelled: 'Cancelada',
+    completed: 'Completada'
+};
+
+let currentTab = 'browse';
+let me = {};
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (!isLoggedIn()) { window.location.href = '/login/'; return; }
+
+    me = JSON.parse(localStorage.getItem('user_data') || '{}');
+
+    // Tab switching
+    document.querySelectorAll('.hosting-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.hosting-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            const target = tab.dataset.tab;
+            document.querySelectorAll('.hosting-panel').forEach(p => p.style.display = 'none');
+            document.getElementById('panel-' + target).style.display = 'block';
+
+            if (target !== currentTab) {
+                currentTab = target;
+                if (target === 'browse') loadHosts();
+                else if (target === 'my-profile') loadMyProfile();
+                else if (target === 'my-requests') loadMyRequests();
+                else if (target === 'received') loadReceived();
+            }
+        });
+    });
+
+    // Search
+    document.getElementById('btn-search-hosts').addEventListener('click', loadHosts);
+    document.getElementById('filter-city').addEventListener('keydown', e => {
+        if (e.key === 'Enter') loadHosts();
+    });
+    document.getElementById('filter-country').addEventListener('change', loadHosts);
+
+    // Save profile
+    document.getElementById('btn-save-profile').addEventListener('click', saveHostProfile);
+
+    // Availability toggle label
+    document.getElementById('host-available').addEventListener('change', function() {
+        document.getElementById('host-available-label').textContent = this.checked ? 'Disponible' : 'No disponible';
+    });
+
+    // Send request
+    document.getElementById('btn-send-request').addEventListener('click', sendRequest);
+
+    // Send message
+    document.getElementById('btn-send-msg').addEventListener('click', sendMessage);
+    document.getElementById('msg-content').addEventListener('keydown', e => {
+        if (e.key === 'Enter') sendMessage();
+    });
+
+    // Set min dates
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('req-arrival').min = today;
+    document.getElementById('req-departure').min = today;
+
+    // Load country options
+    loadCountryOptions();
+
+    // Initial load
+    loadHosts();
+});
+
+// ─── Country Options ───
+function loadCountryOptions() {
+    const countries = [
+        ['AR', 'Argentina'], ['BO', 'Bolivia'], ['BR', 'Brasil'], ['CA', 'Canada'],
+        ['CL', 'Chile'], ['CO', 'Colombia'], ['CR', 'Costa Rica'], ['CU', 'Cuba'],
+        ['EC', 'Ecuador'], ['SV', 'El Salvador'], ['US', 'Estados Unidos'],
+        ['GT', 'Guatemala'], ['HN', 'Honduras'], ['MX', 'Mexico'],
+        ['NI', 'Nicaragua'], ['PA', 'Panama'], ['PY', 'Paraguay'], ['PE', 'Peru'],
+        ['DO', 'Rep. Dominicana'], ['UY', 'Uruguay'], ['VE', 'Venezuela'],
+    ];
+    const sel = document.getElementById('filter-country');
+    countries.forEach(([code, name]) => {
+        sel.insertAdjacentHTML('beforeend', `<option value="${code}">${name}</option>`);
+    });
+}
+
+// ─── Load Hosts ───
+async function loadHosts() {
+    const spinner = document.getElementById('hosts-spinner');
+    const list = document.getElementById('hosts-list');
+    const empty = document.getElementById('hosts-empty');
+
+    spinner.style.display = 'block';
+    list.innerHTML = '';
+    empty.style.display = 'none';
+
+    const city = document.getElementById('filter-city').value.trim();
+    const country = document.getElementById('filter-country').value;
+
+    let url = '/api/hosting/hosts/?';
+    if (city) url += 'search=' + encodeURIComponent(city) + '&';
+    if (country) url += 'address_country=' + encodeURIComponent(country) + '&';
+
+    try {
+        const res = await authFetch(url);
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+        const hosts = data.results || data;
+
+        spinner.style.display = 'none';
+
+        if (hosts.length === 0) {
+            empty.style.display = 'block';
+            return;
+        }
+
+        hosts.forEach(host => {
+            // Don't show own profile in browse
+            if (host.user && host.user.id === me.id) return;
+            list.insertAdjacentHTML('beforeend', renderHostCard(host));
+        });
+
+        if (list.children.length === 0) {
+            empty.style.display = 'block';
+        }
+    } catch(e) {
+        spinner.style.display = 'none';
+        showToast('Error al cargar anfitriones');
+        console.error(e);
+    }
+}
+
+function renderHostCard(host) {
+    const u = host.user || {};
+    const initial = (u.first_name || u.username || '?')[0].toUpperCase();
+    const avatarInner = u.avatar ? `<img src="${u.avatar}" alt="">` : initial;
+    const displayName = u.display_name || u.first_name || u.username || 'Anfitrion';
+    const location = [host.address_city, host.address_country].filter(Boolean).join(', ');
+
+    let metaHtml = '';
+    metaHtml += `<span class="meta-badge"><i class="bi bi-people"></i> ${host.max_guests} huesped${host.max_guests > 1 ? 'es' : ''}</span>`;
+    if (host.amenities) {
+        const amenList = host.amenities.split(',').map(a => a.trim()).filter(Boolean).slice(0, 3);
+        amenList.forEach(a => {
+            metaHtml += `<span class="meta-badge"><i class="bi bi-check-circle"></i> ${escapeHtml(a)}</span>`;
+        });
+    }
+
+    return `
+    <div class="host-card">
+        <div class="host-card-header">
+            <a href="/profile/${u.id}/" class="host-avatar">${avatarInner}</a>
+            <div class="host-info">
+                <a href="/profile/${u.id}/" class="host-name">${escapeHtml(displayName)}</a>
+                <div class="host-location"><i class="bi bi-geo-alt me-1"></i>${escapeHtml(location)}</div>
+            </div>
+        </div>
+        ${host.description ? `<div class="host-card-body">${escapeHtml(host.description)}</div>` : ''}
+        <div class="host-card-meta">${metaHtml}</div>
+        ${host.rules ? `<div style="font-size:0.82rem; color:var(--text-muted); margin-top:0.4rem;"><i class="bi bi-info-circle me-1"></i>${escapeHtml(host.rules)}</div>` : ''}
+        <div class="host-card-actions">
+            <button class="btn btn-gradient btn-sm px-3" onclick="openRequestModal(${u.id}, '${escapeHtml(displayName).replace(/'/g, "\\'")}')">
+                <i class="bi bi-send me-1"></i>Solicitar Hospedaje
+            </button>
+            <a href="/profile/${u.id}/" class="btn btn-outline-secondary btn-sm px-3" style="border-radius:8px;">
+                <i class="bi bi-person me-1"></i>Ver Perfil
+            </a>
+        </div>
+    </div>`;
+}
+
+// ─── My Host Profile ───
+async function loadMyProfile() {
+    try {
+        const res = await authFetch('/api/hosting/my-profile/');
+        if (!res.ok) throw new Error('Failed');
+        const profile = await res.json();
+
+        document.getElementById('host-available').checked = profile.is_available;
+        document.getElementById('host-available-label').textContent = profile.is_available ? 'Disponible' : 'No disponible';
+        document.getElementById('host-city').value = profile.address_city || '';
+        document.getElementById('host-country').value = profile.address_country || '';
+        document.getElementById('host-max-guests').value = profile.max_guests || 1;
+        document.getElementById('host-description').value = profile.description || '';
+        document.getElementById('host-amenities').value = profile.amenities || '';
+        document.getElementById('host-rules').value = profile.rules || '';
+    } catch(e) {
+        console.error(e);
+    }
+}
+
+async function saveHostProfile() {
+    const btn = document.getElementById('btn-save-profile');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Guardando...';
+
+    const body = {
+        is_available: document.getElementById('host-available').checked,
+        address_city: document.getElementById('host-city').value.trim(),
+        address_country: document.getElementById('host-country').value.trim(),
+        max_guests: parseInt(document.getElementById('host-max-guests').value) || 1,
+        description: document.getElementById('host-description').value.trim(),
+        amenities: document.getElementById('host-amenities').value.trim(),
+        rules: document.getElementById('host-rules').value.trim(),
+    };
+
+    try {
+        const res = await authFetch('/api/hosting/my-profile/', {
+            method: 'PATCH',
+            body: JSON.stringify(body)
+        });
+        if (res.ok) {
+            showToast('Perfil de anfitrion guardado');
+        } else {
+            const data = await res.json();
+            showToast(Object.values(data).flat().join(', ') || 'Error al guardar');
+        }
+    } catch(e) {
+        showToast('Error de conexion');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Guardar Perfil';
+    }
+}
+
+// ─── Hosting Requests ───
+function openRequestModal(hostId, hostName) {
+    document.getElementById('req-host-id').value = hostId;
+    document.getElementById('req-host-name').textContent = hostName;
+    document.getElementById('req-arrival').value = '';
+    document.getElementById('req-departure').value = '';
+    document.getElementById('req-guests').value = 1;
+    document.getElementById('req-message').value = '';
+    new bootstrap.Modal(document.getElementById('requestModal')).show();
+}
+
+async function sendRequest() {
+    const btn = document.getElementById('btn-send-request');
+    const hostId = document.getElementById('req-host-id').value;
+    const arrival = document.getElementById('req-arrival').value;
+    const departure = document.getElementById('req-departure').value;
+    const numGuests = parseInt(document.getElementById('req-guests').value) || 1;
+    const message = document.getElementById('req-message').value.trim();
+
+    if (!arrival || !departure) {
+        showToast('Selecciona las fechas de llegada y salida');
+        return;
+    }
+    if (arrival >= departure) {
+        showToast('La fecha de salida debe ser posterior a la de llegada');
+        return;
+    }
+    if (!message) {
+        showToast('Escribe un mensaje para el anfitrion');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Enviando...';
+
+    try {
+        const res = await authFetch('/api/hosting/request/', {
+            method: 'POST',
+            body: JSON.stringify({
+                host: hostId,
+                arrival_date: arrival,
+                departure_date: departure,
+                num_guests: numGuests,
+                message: message
+            })
+        });
+
+        if (res.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('requestModal')).hide();
+            showToast('Solicitud enviada correctamente');
+        } else {
+            const data = await res.json();
+            showToast(Object.values(data).flat().join(', ') || 'Error al enviar');
+        }
+    } catch(e) {
+        showToast('Error de conexion');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-send me-1"></i>Enviar Solicitud';
+    }
+}
+
+// ─── My Requests (sent) ───
+async function loadMyRequests() {
+    const spinner = document.getElementById('my-requests-spinner');
+    const list = document.getElementById('my-requests-list');
+    const empty = document.getElementById('my-requests-empty');
+
+    spinner.style.display = 'block';
+    list.innerHTML = '';
+    empty.style.display = 'none';
+
+    try {
+        const res = await authFetch('/api/hosting/my-requests/');
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+        const requests = data.results || data;
+
+        spinner.style.display = 'none';
+
+        if (requests.length === 0) {
+            empty.style.display = 'block';
+            return;
+        }
+
+        requests.forEach(req => {
+            list.insertAdjacentHTML('beforeend', renderRequestCard(req, 'sent'));
+        });
+    } catch(e) {
+        spinner.style.display = 'none';
+        showToast('Error al cargar solicitudes');
+        console.error(e);
+    }
+}
+
+// ─── Received Requests ───
+async function loadReceived() {
+    const spinner = document.getElementById('received-spinner');
+    const list = document.getElementById('received-list');
+    const empty = document.getElementById('received-empty');
+
+    spinner.style.display = 'block';
+    list.innerHTML = '';
+    empty.style.display = 'none';
+
+    try {
+        const res = await authFetch('/api/hosting/received/');
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+        const requests = data.results || data;
+
+        spinner.style.display = 'none';
+
+        if (requests.length === 0) {
+            empty.style.display = 'block';
+            return;
+        }
+
+        requests.forEach(req => {
+            list.insertAdjacentHTML('beforeend', renderRequestCard(req, 'received'));
+        });
+    } catch(e) {
+        spinner.style.display = 'none';
+        showToast('Error al cargar solicitudes');
+        console.error(e);
+    }
+}
+
+function renderRequestCard(req, type) {
+    const other = type === 'sent' ? req.host : req.guest;
+    const otherName = other ? (other.display_name || other.first_name || other.username || 'Usuario') : 'Usuario';
+    const initial = (otherName[0] || '?').toUpperCase();
+    const avatarInner = other && other.avatar ? `<img src="${other.avatar}" alt="">` : initial;
+    const roleLabel = type === 'sent' ? 'Anfitrion' : 'Huesped';
+    const statusLabel = STATUS_LABELS[req.status] || req.status;
+    const msgCount = (req.messages || []).length;
+
+    let actionsHtml = '';
+    if (type === 'received' && req.status === 'pending') {
+        actionsHtml = `
+            <button class="btn btn-sm px-3" style="background:#28a745; color:#fff; border-radius:8px;" onclick="respondRequest(${req.id}, 'accepted')">
+                <i class="bi bi-check-lg me-1"></i>Aceptar
+            </button>
+            <button class="btn btn-outline-danger btn-sm px-3" style="border-radius:8px;" onclick="respondRequest(${req.id}, 'rejected')">
+                <i class="bi bi-x-lg me-1"></i>Rechazar
+            </button>`;
+    }
+    actionsHtml += `
+        <button class="btn btn-outline-secondary btn-sm px-3" style="border-radius:8px;" onclick="openMessages(${req.id})">
+            <i class="bi bi-chat-dots me-1"></i>Mensajes${msgCount > 0 ? ' (' + msgCount + ')' : ''}
+        </button>`;
+
+    return `
+    <div class="request-card" id="request-${req.id}">
+        <div class="request-card-header">
+            <a href="/profile/${other ? other.id : ''}/" class="req-avatar">${avatarInner}</a>
+            <div style="flex:1;">
+                <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                    <a href="/profile/${other ? other.id : ''}/" style="font-weight:700; color:var(--text-primary); text-decoration:none;">${escapeHtml(otherName)}</a>
+                    <span style="font-size:0.78rem; color:var(--text-muted);">${roleLabel}</span>
+                    <span class="request-status ${req.status}">${statusLabel}</span>
+                </div>
+                <div class="request-dates">
+                    <span><i class="bi bi-calendar-event me-1"></i>${req.arrival_date} → ${req.departure_date}</span>
+                    <span><i class="bi bi-people me-1"></i>${req.num_guests} huesped${req.num_guests > 1 ? 'es' : ''}</span>
+                </div>
+            </div>
+        </div>
+        ${req.message ? `<div class="request-message">${escapeHtml(req.message)}</div>` : ''}
+        <div class="request-actions">${actionsHtml}</div>
+    </div>`;
+}
+
+// ─── Respond to Request ───
+async function respondRequest(reqId, action) {
+    try {
+        const res = await authFetch(`/api/hosting/request/${reqId}/${action}/`, { method: 'POST' });
+        if (res.ok) {
+            showToast(action === 'accepted' ? 'Solicitud aceptada' : 'Solicitud rechazada');
+            loadReceived();
+        } else {
+            showToast('Error al responder');
+        }
+    } catch(e) {
+        showToast('Error de conexion');
+    }
+}
+
+// ─── Messages ───
+async function openMessages(reqId) {
+    document.getElementById('msg-request-id').value = reqId;
+    const body = document.getElementById('messages-body');
+    body.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm"></div></div>';
+    new bootstrap.Modal(document.getElementById('messagesModal')).show();
+
+    try {
+        // Fetch latest request data to get messages
+        const sentRes = await authFetch('/api/hosting/my-requests/');
+        const recvRes = await authFetch('/api/hosting/received/');
+        let allRequests = [];
+        if (sentRes.ok) {
+            const d = await sentRes.json();
+            allRequests = allRequests.concat(d.results || d);
+        }
+        if (recvRes.ok) {
+            const d = await recvRes.json();
+            allRequests = allRequests.concat(d.results || d);
+        }
+
+        const req = allRequests.find(r => r.id === reqId);
+        const messages = req ? (req.messages || []) : [];
+
+        body.innerHTML = '';
+
+        if (messages.length === 0) {
+            body.innerHTML = '<div class="text-center py-3" style="color:var(--text-muted); font-size:0.9rem;">No hay mensajes aun. Inicia la conversacion.</div>';
+            return;
+        }
+
+        messages.forEach(msg => {
+            const isMine = msg.sender && msg.sender.id === me.id;
+            const senderName = msg.sender ? (msg.sender.display_name || msg.sender.first_name || msg.sender.username) : '';
+            body.insertAdjacentHTML('beforeend', `
+                <div class="msg-bubble ${isMine ? 'mine' : ''}">
+                    <div class="msg-sender">${escapeHtml(senderName)}</div>
+                    <div class="msg-text">${escapeHtml(msg.content)}</div>
+                    <div class="msg-time">${formatTimeAgo(msg.created_at)}</div>
+                </div>
+            `);
+        });
+
+        body.scrollTop = body.scrollHeight;
+    } catch(e) {
+        body.innerHTML = '<div class="text-center text-danger py-3">Error al cargar mensajes</div>';
+        console.error(e);
+    }
+}
+
+async function sendMessage() {
+    const reqId = document.getElementById('msg-request-id').value;
+    const input = document.getElementById('msg-content');
+    const content = input.value.trim();
+
+    if (!content) return;
+
+    const btn = document.getElementById('btn-send-msg');
+    btn.disabled = true;
+
+    try {
+        const res = await authFetch(`/api/hosting/request/${reqId}/message/`, {
+            method: 'POST',
+            body: JSON.stringify({ content: content })
+        });
+
+        if (res.ok) {
+            input.value = '';
+            // Refresh messages
+            await openMessages(parseInt(reqId));
+        } else {
+            showToast('Error al enviar mensaje');
+        }
+    } catch(e) {
+        showToast('Error de conexion');
+    } finally {
+        btn.disabled = false;
+    }
+}
+</script>
+{% endblock %}

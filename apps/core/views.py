@@ -78,6 +78,24 @@ class ChangePasswordView(APIView):
         return Response({'detail': 'Contraseña actualizada.'})
 
 
+class DeleteAccountView(APIView):
+    def post(self, request):
+        password = request.data.get('password', '')
+        if not password:
+            return Response(
+                {'detail': 'Debes confirmar tu contraseña.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not request.user.check_password(password):
+            return Response(
+                {'detail': 'Contraseña incorrecta.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        request.user.is_active = False
+        request.user.save(update_fields=['is_active'])
+        return Response({'detail': 'Cuenta eliminada.'})
+
+
 class UserSearchView(generics.ListAPIView):
     serializer_class = UserSerializer
 

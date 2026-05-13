@@ -12,6 +12,7 @@ urlpatterns = [
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('me/', views.MeView.as_view(), name='me'),
     path('me/password/', views.ChangePasswordView.as_view(), name='change_password'),
+    path('me/delete/', views.DeleteAccountView.as_view(), name='delete_account'),
 
     # Users
     path('users/search/', views.UserSearchView.as_view(), name='user_search'),
