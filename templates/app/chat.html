@@ -830,7 +830,7 @@ async function searchUsers(query) {
     }
 
     try {
-        const res = await authFetch(`/api/auth/users/search/?search=${encodeURIComponent(query)}`);
+        const res = await authFetch(`/api/auth/users/search/?q=${encodeURIComponent(query)}`);
         if (!res.ok) throw new Error('Failed');
         const data = await res.json();
         const users = (data.results || data).filter(u => u.id !== me.id);

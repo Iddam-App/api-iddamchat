@@ -1,15 +1,24 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Hobbies — IddamChat{% endblock %}
+{% block title %}Explorar — IddamChat{% endblock %}
 
 {% block content %}
 <div class="feed-container">
     <div class="feed-header">
-        <h2><i class="bi bi-palette me-2"></i>Explorar</h2>
+        <h2><i class="bi bi-compass me-2"></i>Explorar</h2>
         <a href="/hosting/" class="btn btn-outline-gold btn-sm" style="border-radius:12px;">
             <i class="bi bi-house-heart me-1"></i>Hospedaje
         </a>
+    </div>
+
+    <!-- User Search Bar -->
+    <div class="explore-search-bar">
+        <div class="position-relative">
+            <i class="bi bi-search explore-search-icon"></i>
+            <input type="text" class="form-control" id="explore-search" placeholder="Buscar personas, congregaciones...">
+        </div>
+        <div id="search-results" style="display:none;"></div>
     </div>
 
     <!-- Create post box -->
@@ -45,8 +54,90 @@
 {% endblock %}
 
 {% block scripts %}
+<style>
+.explore-search-bar {
+    margin-bottom: 1rem;
+    position: relative;
+}
+.explore-search-bar .form-control {
+    border-radius: 20px;
+    background: var(--card-bg);
+    border: 1.5px solid var(--border-color);
+    padding: 0.6rem 1rem 0.6rem 2.5rem;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+.explore-search-bar .form-control:focus {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(131,58,180,0.15);
+}
+.explore-search-icon {
+    position: absolute;
+    left: 0.9rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    z-index: 1;
+}
+#search-results {
+    background: var(--card-bg);
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    margin-top: 0.4rem;
+    max-height: 350px;
+    overflow-y: auto;
+    padding: 0.4rem;
+}
+.search-user-item {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.6rem 0.8rem;
+    border-radius: 12px;
+    text-decoration: none;
+    transition: background 0.15s;
+}
+.search-user-item:hover { background: var(--hover-bg); }
+.search-user-item .su-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold-light), var(--gold-dark));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 1rem;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+.search-user-item .su-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.search-user-item .su-info { flex: 1; }
+.search-user-item .su-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+}
+.search-user-item .su-detail {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+.search-user-item .su-actions {
+    display: flex;
+    gap: 0.3rem;
+}
+</style>
+
 <script>
 let currentPage = 1;
+let searchTimer;
 
 document.addEventListener('DOMContentLoaded', () => {
     if (!isLoggedIn()) { window.location.href = '/login/'; return; }
@@ -62,8 +153,74 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loadFeed();
     document.getElementById('btn-load-more').addEventListener('click', loadFeed);
+
+    // User search
+    const searchInput = document.getElementById('explore-search');
+    searchInput.addEventListener('input', () => {
+        clearTimeout(searchTimer);
+        const q = searchInput.value.trim();
+        if (q.length < 2) {
+            document.getElementById('search-results').style.display = 'none';
+            return;
+        }
+        searchTimer = setTimeout(() => searchUsers(q), 300);
+    });
+
+    searchInput.addEventListener('blur', () => {
+        setTimeout(() => {
+            document.getElementById('search-results').style.display = 'none';
+        }, 200);
+    });
+
+    searchInput.addEventListener('focus', () => {
+        if (searchInput.value.trim().length >= 2) {
+            document.getElementById('search-results').style.display = 'block';
+        }
+    });
 });
 
+// ─── User Search ───
+async function searchUsers(query) {
+    const results = document.getElementById('search-results');
+
+    try {
+        const res = await authFetch(`/api/auth/users/search/?q=${encodeURIComponent(query)}`);
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+        const users = data.results || data;
+
+        if (users.length === 0) {
+            results.innerHTML = '<div style="padding:1rem; text-align:center; color:var(--text-muted); font-size:0.85rem;">No se encontraron usuarios</div>';
+            results.style.display = 'block';
+            return;
+        }
+
+        results.innerHTML = users.map(u => {
+            const name = u.display_name || u.first_name || u.username;
+            const initial = (name[0] || '?').toUpperCase();
+            const avatarInner = u.avatar ? `<img src="${u.avatar}" alt="">` : initial;
+            const detail = [u.congregation, u.city, u.country].filter(Boolean).join(' · ') || '@' + u.username;
+
+            return `
+            <a href="/profile/${u.id}/" class="search-user-item">
+                <div class="su-avatar">${avatarInner}</div>
+                <div class="su-info">
+                    <div class="su-name">${escapeHtml(name)}</div>
+                    <div class="su-detail">${escapeHtml(detail)}</div>
+                </div>
+                <div class="su-actions">
+                    <span class="btn btn-outline-secondary btn-sm" style="border-radius:8px; font-size:0.75rem; padding:0.2rem 0.5rem;">Ver perfil</span>
+                </div>
+            </a>`;
+        }).join('');
+
+        results.style.display = 'block';
+    } catch(e) {
+        console.error(e);
+    }
+}
+
+// ─── Load Feed ───
 async function loadFeed() {
     const spinner = document.getElementById('feed-spinner');
     if (currentPage === 1) spinner.style.display = 'block';

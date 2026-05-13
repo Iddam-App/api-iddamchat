@@ -115,9 +115,15 @@
         <!-- Content -->
         <div class="story-viewer-content" id="sv-content"></div>
 
-        <!-- View count (own stories) -->
-        <div class="story-viewer-views" id="sv-views" style="display:none;">
-            <i class="bi bi-eye me-1"></i><span id="sv-view-count">0</span> vistas
+        <!-- Bottom bar: views (own) or reaction (others) -->
+        <div class="story-viewer-bottom" id="sv-bottom">
+            <div class="story-viewer-views" id="sv-views" style="display:none;">
+                <i class="bi bi-eye me-1"></i><span id="sv-view-count">0</span> vistas
+            </div>
+            <div class="story-viewer-react" id="sv-react" style="display:none;">
+                <input type="text" class="sv-reply-input" id="sv-reply-input" placeholder="Responder a la historia...">
+                <button class="sv-heart-btn" id="sv-heart-btn" onclick="reactToStory()"><i class="bi bi-heart"></i></button>
+            </div>
         </div>
 
         <!-- Navigation -->
@@ -378,19 +384,55 @@
     word-break: break-word;
 }
 
-/* Views */
-.story-viewer-views {
+/* Bottom bar */
+.story-viewer-bottom {
     position: absolute;
-    bottom: 16px;
-    left: 50%;
-    transform: translateX(-50%);
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 12px;
+    z-index: 3;
+    display: flex;
+    justify-content: center;
+}
+.story-viewer-views {
     color: rgba(255,255,255,0.8);
     font-size: 0.85rem;
     background: rgba(0,0,0,0.4);
     padding: 0.4rem 1rem;
     border-radius: 20px;
-    z-index: 3;
 }
+.story-viewer-react {
+    display: flex;
+    gap: 0.5rem;
+    width: 100%;
+    max-width: 400px;
+}
+.sv-reply-input {
+    flex: 1;
+    border: 1.5px solid rgba(255,255,255,0.3);
+    background: rgba(0,0,0,0.3);
+    color: #fff;
+    border-radius: 22px;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.sv-reply-input::placeholder { color: rgba(255,255,255,0.5); }
+.sv-reply-input:focus { border-color: rgba(255,255,255,0.6); }
+.sv-heart-btn {
+    border: none;
+    background: none;
+    color: #fff;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0 0.3rem;
+    transition: transform 0.2s, color 0.2s;
+}
+.sv-heart-btn:hover { transform: scale(1.2); }
+.sv-heart-btn.liked { color: var(--ig-pink); }
+.sv-heart-btn.liked i { font-weight: 900; }
 
 /* Navigation */
 .story-nav {
@@ -504,9 +546,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // Publish story
     document.getElementById('btn-publish-story').addEventListener('click', publishStory);
 
+    // Pause story when reply input is focused
+    document.getElementById('sv-reply-input').addEventListener('focus', () => {
+        if (!storyPaused) toggleStoryPause();
+    });
+    document.getElementById('sv-reply-input').addEventListener('blur', () => {
+        if (storyPaused) toggleStoryPause();
+    });
+
     // Keyboard nav for story viewer
     document.addEventListener('keydown', (e) => {
         if (document.getElementById('story-viewer').style.display === 'none') return;
+        // Don't hijack keys when typing in reply input
+        if (document.activeElement === document.getElementById('sv-reply-input')) {
+            if (e.key === 'Enter') { e.preventDefault(); replyToStory(); }
+            return;
+        }
         if (e.key === 'ArrowRight') nextStory();
         else if (e.key === 'ArrowLeft') prevStory();
         else if (e.key === 'Escape') closeStoryViewer();
@@ -729,13 +784,19 @@ function showCurrentStory() {
         contentEl.innerHTML = `<div class="story-text-display" style="background:${story.background_color || '#2EA3F2'};">${escapeHtml(story.text)}</div>`;
     }
 
-    // Views (own stories)
+    // Bottom bar: views (own) or react (others)
     const viewsEl = document.getElementById('sv-views');
+    const reactEl = document.getElementById('sv-react');
     if (u.id === me.id) {
         viewsEl.style.display = 'block';
+        reactEl.style.display = 'none';
         document.getElementById('sv-view-count').textContent = story.view_count || 0;
     } else {
         viewsEl.style.display = 'none';
+        reactEl.style.display = 'flex';
+        document.getElementById('sv-reply-input').value = '';
+        document.getElementById('sv-heart-btn').classList.remove('liked');
+        document.getElementById('sv-heart-btn').innerHTML = '<i class="bi bi-heart"></i>';
     }
 
     // Progress bar
@@ -830,6 +891,69 @@ function prevStory() {
     } else {
         // At the very beginning, restart current
         showCurrentStory();
+    }
+}
+
+// ─── Story Reactions (sends DM to author) ───
+async function reactToStory() {
+    const group = storyGroups[currentGroupIdx];
+    if (!group) return;
+    const story = group.stories[currentStoryIdx];
+    if (!story) return;
+    const u = group.user;
+
+    // Animate heart
+    const btn = document.getElementById('sv-heart-btn');
+    btn.classList.add('liked');
+    btn.innerHTML = '<i class="bi bi-heart-fill"></i>';
+
+    // Start conversation and send heart reaction
+    try {
+        const startRes = await authFetch('/api/chat/conversations/start/', {
+            method: 'POST',
+            body: JSON.stringify({ user_id: u.id })
+        });
+        if (startRes.ok) {
+            const conv = await startRes.json();
+            const reactionMsg = story.image
+                ? 'Le ha encantado tu historia ❤️'
+                : 'Le ha encantado tu historia: "' + (story.text || '').substring(0, 50) + '" ❤️';
+            await authFetch(`/api/chat/conversations/${conv.id}/send/`, {
+                method: 'POST',
+                body: JSON.stringify({ content: reactionMsg })
+            });
+            showToast('Reaccion enviada');
+        }
+    } catch(e) {
+        console.error(e);
+    }
+}
+
+async function replyToStory() {
+    const input = document.getElementById('sv-reply-input');
+    const text = input.value.trim();
+    if (!text) return;
+
+    const group = storyGroups[currentGroupIdx];
+    if (!group) return;
+    const u = group.user;
+
+    try {
+        const startRes = await authFetch('/api/chat/conversations/start/', {
+            method: 'POST',
+            body: JSON.stringify({ user_id: u.id })
+        });
+        if (startRes.ok) {
+            const conv = await startRes.json();
+            await authFetch(`/api/chat/conversations/${conv.id}/send/`, {
+                method: 'POST',
+                body: JSON.stringify({ content: text })
+            });
+            input.value = '';
+            showToast('Respuesta enviada');
+        }
+    } catch(e) {
+        showToast('Error al enviar');
     }
 }
 
