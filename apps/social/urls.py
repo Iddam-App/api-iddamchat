@@ -16,4 +16,9 @@ urlpatterns = [
     path('follow/<int:user_id>/', views.FollowToggleView.as_view(), name='follow_toggle'),
     path('followers/', views.FollowersListView.as_view(), name='followers'),
     path('following/', views.FollowingListView.as_view(), name='following'),
+
+    # Follow requests (private accounts)
+    path('follow-requests/pending/', views.PendingFollowRequestsView.as_view(), name='follow_requests_pending'),
+    path('follow-requests/sent/', views.SentFollowRequestsView.as_view(), name='follow_requests_sent'),
+    path('follow-requests/<int:pk>/<str:action>/', views.RespondFollowRequestView.as_view(), name='respond_follow_request'),
 ]

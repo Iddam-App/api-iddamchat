@@ -55,3 +55,20 @@ class Message(models.Model):
 
     def __str__(self):
         return f"{self.sender}: {self.content[:50]}"
+
+
+class MessageTranslation(models.Model):
+    """Cached translation of a message."""
+    message = models.ForeignKey(
+        Message, on_delete=models.CASCADE, related_name='translations',
+    )
+    target_language = models.CharField(max_length=10)
+    translated_text = models.TextField()
+    source_language = models.CharField(max_length=10, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('message', 'target_language')
+
+    def __str__(self):
+        return f"Translation of msg {self.message_id} to {self.target_language}"

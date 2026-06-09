@@ -2,8 +2,10 @@ from rest_framework import serializers
 
 from .models import (
     BibleBook, BibleChapter, BibleTag, BibleVerse,
+    BookHighlight, BookPageNote, BookReadingLog, BookSubtitle,
     FavoriteVerse, HighlightCategory, HighlightTag,
-    ReadingProgress, StudyNote, VerseAnnotation, VerseHighlight,
+    ReadingProgress, StudyBook, StudyFolder, StudyNote,
+    VerseAnnotation, VerseHighlight,
 )
 
 
@@ -100,3 +102,75 @@ class StudyNoteSerializer(serializers.ModelSerializer):
         model = StudyNote
         fields = ['id', 'category', 'title', 'content', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+# ─── Study Folders ─────────────────────────────────────────────────
+
+class StudyFolderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StudyFolder
+        fields = ['id', 'name', 'color', 'order']
+        read_only_fields = ['id']
+
+
+# ─── Study Books / PDF ─────────────────────────────────────────────
+
+class BookReadingLogSerializer(serializers.ModelSerializer):
+    pages_read = serializers.ReadOnlyField()
+
+    class Meta:
+        model = BookReadingLog
+        fields = ['id', 'page_start', 'page_end', 'notes', 'pages_read', 'date']
+        read_only_fields = ['id', 'date']
+
+
+class BookPageNoteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BookPageNote
+        fields = ['id', 'page_number', 'content', 'category', 'folder',
+                  'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class BookHighlightSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BookHighlight
+        fields = ['id', 'page_number', 'selected_text', 'rect_data',
+                  'annotation', 'title', 'color', 'category', 'folder',
+                  'created_at']
+        read_only_fields = ['id', 'created_at']
+
+
+class BookSubtitleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BookSubtitle
+        fields = ['id', 'page_number', 'y_position', 'title', 'created_at']
+        read_only_fields = ['id', 'created_at']
+
+
+class StudyBookSerializer(serializers.ModelSerializer):
+    progress_percent = serializers.ReadOnlyField()
+
+    class Meta:
+        model = StudyBook
+        fields = [
+            'id', 'title', 'author_name', 'category', 'description',
+            'cover_image', 'total_pages', 'current_page', 'daily_goal',
+            'is_finished', 'progress_percent', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'total_pages', 'created_at', 'updated_at']
+
+
+class StudyBookDetailSerializer(serializers.ModelSerializer):
+    reading_logs = BookReadingLogSerializer(many=True, read_only=True)
+    progress_percent = serializers.ReadOnlyField()
+
+    class Meta:
+        model = StudyBook
+        fields = [
+            'id', 'title', 'author_name', 'category', 'description',
+            'cover_image', 'total_pages', 'current_page', 'daily_goal',
+            'is_finished', 'progress_percent', 'reading_logs',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'total_pages', 'created_at', 'updated_at']

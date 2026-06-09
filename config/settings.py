@@ -19,6 +19,13 @@ env = environ.Env(
     AWS_STORAGE_BUCKET_NAME=(str, ''),
     AWS_S3_REGION_NAME=(str, 'us-east-1'),
     AWS_S3_CUSTOM_DOMAIN=(str, ''),  # CloudFront domain
+    # Google Translate
+    GOOGLE_TRANSLATE_API_KEY=(str, ''),
+    # R2 Storage (for PDF books)
+    R2_ACCOUNT_ID=(str, ''),
+    R2_ACCESS_KEY_ID=(str, ''),
+    R2_SECRET_ACCESS_KEY=(str, ''),
+    R2_BUCKET_NAME=(str, ''),
 )
 
 env_file = BASE_DIR / '.env'
@@ -60,6 +67,7 @@ LOCAL_APPS = [
     'apps.bible',
     'apps.notes',
     'apps.content',
+    'apps.notifications',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -204,3 +212,12 @@ if not DEBUG:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
     SECURE_SSL_REDIRECT = True
+
+# ─── Google Translate ──────────────────────────────────────────────
+GOOGLE_TRANSLATE_API_KEY = env('GOOGLE_TRANSLATE_API_KEY')
+
+# ─── R2 Storage (PDF Books) ───────────────────────────────────────
+R2_ACCOUNT_ID = env('R2_ACCOUNT_ID')
+R2_ACCESS_KEY_ID = env('R2_ACCESS_KEY_ID')
+R2_SECRET_ACCESS_KEY = env('R2_SECRET_ACCESS_KEY')
+R2_BUCKET_NAME = env('R2_BUCKET_NAME')

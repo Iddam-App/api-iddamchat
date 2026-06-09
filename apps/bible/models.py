@@ -177,3 +177,157 @@ class StudyNote(models.Model):
 
     def __str__(self):
         return self.title
+
+
+# ─── Study Folders ─────────────────────────────────────────────────
+
+class StudyFolder(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='study_folders',
+    )
+    name = models.CharField(max_length=100)
+    color = models.CharField(max_length=7, default='#93C5FD')
+    order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        unique_together = ('user', 'name')
+        ordering = ['order']
+
+    def __str__(self):
+        return f"{self.name} ({self.user})"
+
+
+# ─── Study Books / PDF ─────────────────────────────────────────────
+
+BOOK_CATEGORY_CHOICES = [
+    ('teologia', 'Teología'),
+    ('profecia', 'Profecía'),
+    ('historia', 'Historia'),
+    ('devocional', 'Devocional'),
+    ('apologetica', 'Apologética'),
+    ('biblia', 'Estudio Bíblico'),
+    ('liderazgo', 'Liderazgo'),
+    ('otro', 'Otro'),
+]
+
+
+class StudyBook(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='study_books',
+    )
+    title = models.CharField(max_length=300)
+    author_name = models.CharField(max_length=255, blank=True)
+    category = models.CharField(
+        max_length=20, choices=BOOK_CATEGORY_CHOICES, blank=True,
+    )
+    description = models.TextField(blank=True)
+    cover_image = models.ImageField(upload_to='books/covers/%Y/%m/', blank=True)
+    pdf_key = models.CharField(max_length=500, blank=True)
+    pdf_filename = models.CharField(max_length=255, blank=True)
+    total_pages = models.PositiveIntegerField(default=0)
+    current_page = models.PositiveIntegerField(default=0)
+    daily_goal = models.PositiveIntegerField(default=10)
+    is_finished = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+
+    def __str__(self):
+        return f"{self.title} ({self.user})"
+
+    @property
+    def progress_percent(self):
+        if self.total_pages == 0:
+            return 0
+        return min(100, round(self.current_page / self.total_pages * 100))
+
+
+class BookReadingLog(models.Model):
+    book = models.ForeignKey(
+        StudyBook, on_delete=models.CASCADE, related_name='reading_logs',
+    )
+    date = models.DateField(auto_now_add=True)
+    page_start = models.PositiveIntegerField()
+    page_end = models.PositiveIntegerField()
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['-date']
+
+    def __str__(self):
+        return f"{self.book.title}: pp. {self.page_start}-{self.page_end}"
+
+    @property
+    def pages_read(self):
+        return self.page_end - self.page_start
+
+
+class BookPageNote(models.Model):
+    book = models.ForeignKey(
+        StudyBook, on_delete=models.CASCADE, related_name='page_notes',
+    )
+    page_number = models.PositiveIntegerField()
+    content = models.TextField()
+    category = models.ForeignKey(
+        HighlightCategory, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='book_page_notes',
+    )
+    folder = models.ForeignKey(
+        StudyFolder, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='book_page_notes',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['page_number', 'created_at']
+
+    def __str__(self):
+        return f"{self.book.title} p.{self.page_number}: {self.content[:50]}"
+
+
+class BookHighlight(models.Model):
+    book = models.ForeignKey(
+        StudyBook, on_delete=models.CASCADE, related_name='highlights',
+    )
+    category = models.ForeignKey(
+        HighlightCategory, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='book_highlights',
+    )
+    folder = models.ForeignKey(
+        StudyFolder, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='book_highlights',
+    )
+    page_number = models.PositiveIntegerField()
+    selected_text = models.TextField()
+    rect_data = models.JSONField(default=list)
+    annotation = models.TextField(blank=True)
+    title = models.CharField(max_length=200, blank=True)
+    color = models.CharField(max_length=7, default='#FDE047')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['page_number', 'created_at']
+
+    def __str__(self):
+        return f"{self.book.title} p.{self.page_number}: {self.selected_text[:50]}"
+
+
+class BookSubtitle(models.Model):
+    book = models.ForeignKey(
+        StudyBook, on_delete=models.CASCADE, related_name='subtitles',
+    )
+    page_number = models.PositiveIntegerField()
+    y_position = models.FloatField(default=0.5)
+    title = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['page_number', 'y_position']
+
+    def __str__(self):
+        return f"{self.book.title} p.{self.page_number}: {self.title}"

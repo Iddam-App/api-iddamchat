@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from apps.core.serializers import UserMinimalSerializer
 
-from .models import Follow, FriendRequest, Friendship
+from .models import Follow, FollowRequest, FriendRequest, Friendship
 
 
 class FriendRequestSerializer(serializers.ModelSerializer):
@@ -49,3 +49,13 @@ class FollowSerializer(serializers.ModelSerializer):
     class Meta:
         model = Follow
         fields = ['id', 'follower', 'followed', 'created_at']
+
+
+class FollowRequestSerializer(serializers.ModelSerializer):
+    from_user = UserMinimalSerializer(read_only=True)
+    to_user = UserMinimalSerializer(read_only=True)
+
+    class Meta:
+        model = FollowRequest
+        fields = ['id', 'from_user', 'to_user', 'status', 'created_at']
+        read_only_fields = ['id', 'from_user', 'to_user', 'status', 'created_at']

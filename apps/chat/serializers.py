@@ -36,7 +36,11 @@ class ConversationSerializer(serializers.ModelSerializer):
         return UserMinimalSerializer(other, context=self.context).data
 
     def get_last_message(self, obj):
-        msg = obj.messages.order_by('-created_at').first()
+        # Use prefetched data if available (from annotated queryset)
+        if hasattr(obj, '_prefetched_last_message'):
+            msg = obj._prefetched_last_message
+        else:
+            msg = obj.messages.order_by('-created_at').first()
         if msg:
             return {
                 'content': msg.content[:100],
@@ -47,5 +51,8 @@ class ConversationSerializer(serializers.ModelSerializer):
         return None
 
     def get_unread_count(self, obj):
+        # Use annotated value if available
+        if hasattr(obj, '_unread_count'):
+            return obj._unread_count
         request = self.context['request']
         return obj.messages.filter(is_read=False).exclude(sender=request.user).count()

@@ -57,12 +57,16 @@ class PostSerializer(serializers.ModelSerializer):
     def get_my_reaction(self, obj):
         request = self.context.get('request')
         if request and request.user.is_authenticated:
-            reaction = obj.reactions.filter(user=request.user).first()
-            if reaction:
-                return reaction.reaction_type
+            # Use prefetched reactions if available
+            for reaction in obj.reactions.all():
+                if reaction.user_id == request.user.pk:
+                    return reaction.reaction_type
         return None
 
     def get_is_saved(self, obj):
+        # Use annotated value if available
+        if hasattr(obj, '_is_saved'):
+            return obj._is_saved
         request = self.context.get('request')
         if request and request.user.is_authenticated:
             return obj.saved_by.filter(user=request.user).exists()

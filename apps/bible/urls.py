@@ -36,4 +36,21 @@ urlpatterns = [
     # Study notes
     path('study-notes/', views.StudyNoteListCreateView.as_view(), name='study_notes'),
     path('study-notes/<int:pk>/', views.StudyNoteDetailView.as_view(), name='study_note_detail'),
+
+    # Study Folders
+    path('folders/', views.StudyFolderListCreateView.as_view(), name='study_folders'),
+    path('folders/<int:pk>/', views.StudyFolderDetailView.as_view(), name='study_folder_detail'),
+
+    # Study Books / PDF
+    path('books-study/', views.StudyBookListCreateView.as_view(), name='study_book_list'),
+    path('books-study/<int:pk>/', views.StudyBookDetailView.as_view(), name='study_book_detail'),
+    path('books-study/<int:pk>/upload-pdf/', views.StudyBookUploadPDFView.as_view(), name='study_book_upload_pdf'),
+    path('books-study/<int:pk>/pdf/', views.StudyBookPDFView.as_view(), name='study_book_pdf'),
+    path('books-study/<int:pk>/reading-logs/', views.BookReadingLogListCreateView.as_view(), name='book_reading_logs'),
+    path('books-study/<int:pk>/page-notes/', views.BookPageNoteListCreateView.as_view(), name='book_page_notes'),
+    path('books-study/page-notes/<int:pk>/', views.BookPageNoteDetailView.as_view(), name='book_page_note_detail'),
+    path('books-study/<int:pk>/highlights/', views.BookHighlightListCreateView.as_view(), name='book_highlights'),
+    path('books-study/highlights/<int:pk>/', views.BookHighlightDetailView.as_view(), name='book_highlight_detail'),
+    path('books-study/<int:pk>/subtitles/', views.BookSubtitleListCreateView.as_view(), name='book_subtitles'),
+    path('books-study/subtitles/<int:pk>/', views.BookSubtitleDeleteView.as_view(), name='book_subtitle_delete'),
 ]

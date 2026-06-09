@@ -2,6 +2,8 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
+from .models import UserLanguage
+
 User = get_user_model()
 
 
@@ -11,7 +13,7 @@ class UserMinimalSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'first_name', 'last_name', 'nickname',
-                  'avatar', 'country', 'display_name']
+                  'avatar', 'country', 'display_name', 'is_private']
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -23,9 +25,17 @@ class UserSerializer(serializers.ModelSerializer):
             'id', 'username', 'email', 'first_name', 'last_name',
             'nickname', 'age', 'country', 'city', 'avatar',
             'instagram', 'phone', 'bio', 'congregation',
-            'is_host_available', 'display_name', 'created_at',
+            'is_host_available', 'is_private', 'preferred_language',
+            'display_name', 'created_at',
         ]
         read_only_fields = ['id', 'email', 'created_at']
+
+
+class UserLanguageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserLanguage
+        fields = ['id', 'language_code', 'language_name', 'is_native', 'proficiency']
+        read_only_fields = ['id']
 
 
 class RegisterSerializer(serializers.ModelSerializer):

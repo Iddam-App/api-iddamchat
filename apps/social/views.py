@@ -4,10 +4,13 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Follow, FriendRequest, Friendship
+from apps.notifications.services import create_notification
+
+from .models import Follow, FollowRequest, FriendRequest, Friendship
 from .serializers import (
-    FollowSerializer, FriendRequestCreateSerializer,
-    FriendRequestSerializer, FriendshipSerializer,
+    FollowRequestSerializer, FollowSerializer,
+    FriendRequestCreateSerializer, FriendRequestSerializer,
+    FriendshipSerializer,
 )
 
 User = get_user_model()
@@ -32,6 +35,12 @@ class SendFriendRequestView(APIView):
         fr = FriendRequest.objects.create(
             from_user=request.user, to_user=to_user,
             message=serializer.validated_data.get('message', ''),
+        )
+        create_notification(
+            recipient=to_user, sender=request.user,
+            notification_type='friend_request',
+            message=f'{request.user.display_name} te envió solicitud de amistad.',
+            content_type='friend_request', content_id=fr.pk,
         )
         return Response(
             FriendRequestSerializer(fr, context={'request': request}).data,
@@ -64,6 +73,12 @@ class RespondFriendRequestView(APIView):
         )
         if action == 'accept':
             fr.accept()
+            create_notification(
+                recipient=fr.from_user, sender=request.user,
+                notification_type='friend_request_accepted',
+                message=f'{request.user.display_name} aceptó tu solicitud de amistad.',
+                content_type='friend_request', content_id=fr.pk,
+            )
         elif action == 'reject':
             fr.reject()
         else:
@@ -92,12 +107,46 @@ class FollowToggleView(APIView):
                 {'detail': 'No puedes seguirte a ti mismo.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        follow, created = Follow.objects.get_or_create(
+
+        # Check if already following -> unfollow
+        existing_follow = Follow.objects.filter(
             follower=request.user, followed=target,
-        )
-        if not created:
-            follow.delete()
+        ).first()
+        if existing_follow:
+            existing_follow.delete()
             return Response({'detail': 'Dejaste de seguir.', 'following': False})
+
+        # If target is private, create follow request instead
+        if target.is_private:
+            # Cancel existing pending request if toggling
+            existing_request = FollowRequest.objects.filter(
+                from_user=request.user, to_user=target, status='pending',
+            ).first()
+            if existing_request:
+                existing_request.delete()
+                return Response({'detail': 'Solicitud cancelada.', 'requested': False})
+
+            fr = FollowRequest.objects.create(
+                from_user=request.user, to_user=target,
+            )
+            create_notification(
+                recipient=target, sender=request.user,
+                notification_type='follow_request',
+                message=f'{request.user.display_name} quiere seguirte.',
+                content_type='follow_request', content_id=fr.pk,
+            )
+            return Response(
+                {'detail': 'Solicitud de seguimiento enviada.', 'requested': True},
+                status=status.HTTP_201_CREATED,
+            )
+
+        # Public account: direct follow
+        Follow.objects.create(follower=request.user, followed=target)
+        create_notification(
+            recipient=target, sender=request.user,
+            notification_type='follow',
+            message=f'{request.user.display_name} te empezó a seguir.',
+        )
         return Response({'detail': 'Ahora sigues a este usuario.', 'following': True})
 
 
@@ -117,3 +166,48 @@ class FollowingListView(generics.ListAPIView):
         return Follow.objects.filter(
             follower=self.request.user,
         ).select_related('follower', 'followed')
+
+
+# ─── Follow Request Views ──────────────────────────────────────────
+
+class PendingFollowRequestsView(generics.ListAPIView):
+    """Follow requests received by the current user."""
+    serializer_class = FollowRequestSerializer
+
+    def get_queryset(self):
+        return FollowRequest.objects.filter(
+            to_user=self.request.user, status='pending',
+        ).select_related('from_user', 'to_user')
+
+
+class SentFollowRequestsView(generics.ListAPIView):
+    """Follow requests sent by the current user."""
+    serializer_class = FollowRequestSerializer
+
+    def get_queryset(self):
+        return FollowRequest.objects.filter(
+            from_user=self.request.user, status='pending',
+        ).select_related('from_user', 'to_user')
+
+
+class RespondFollowRequestView(APIView):
+    def post(self, request, pk, action):
+        fr = generics.get_object_or_404(
+            FollowRequest, pk=pk, to_user=request.user, status='pending',
+        )
+        if action == 'accept':
+            fr.accept()
+            create_notification(
+                recipient=fr.from_user, sender=request.user,
+                notification_type='follow_request_accepted',
+                message=f'{request.user.display_name} aceptó tu solicitud de seguimiento.',
+                content_type='follow_request', content_id=fr.pk,
+            )
+        elif action == 'reject':
+            fr.reject()
+        else:
+            return Response(
+                {'detail': 'Acción no válida.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(FollowRequestSerializer(fr, context={'request': request}).data)

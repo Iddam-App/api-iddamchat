@@ -24,9 +24,13 @@ class StorySerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at']
 
     def get_view_count(self, obj):
+        if hasattr(obj, '_view_count'):
+            return obj._view_count
         return obj.views.count()
 
     def get_is_viewed(self, obj):
+        if hasattr(obj, '_is_viewed'):
+            return obj._is_viewed
         request = self.context.get('request')
         if request and request.user.is_authenticated:
             return obj.views.filter(viewer=request.user).exists()

@@ -30,6 +30,12 @@ class User(AbstractUser):
     congregation = models.CharField('Congregación', max_length=150, blank=True)
     is_host_available = models.BooleanField('Disponible como hospedaje', default=False)
 
+    # Privacy
+    is_private = models.BooleanField('Cuenta privada', default=False)
+
+    # Language
+    preferred_language = models.CharField('Idioma preferido', max_length=10, default='es')
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -47,3 +53,30 @@ class User(AbstractUser):
         if self.nickname:
             return f"{self.first_name} ({self.nickname})"
         return self.get_full_name()
+
+
+class UserLanguage(models.Model):
+    PROFICIENCY_CHOICES = [
+        ('native', 'Nativo'),
+        ('fluent', 'Fluido'),
+        ('intermediate', 'Intermedio'),
+        ('beginner', 'Principiante'),
+    ]
+
+    user = models.ForeignKey(
+        'User', on_delete=models.CASCADE,
+        related_name='languages',
+    )
+    language_code = models.CharField(max_length=10)
+    language_name = models.CharField(max_length=50)
+    is_native = models.BooleanField(default=False)
+    proficiency = models.CharField(
+        max_length=15, choices=PROFICIENCY_CHOICES, default='intermediate',
+    )
+
+    class Meta:
+        unique_together = ('user', 'language_code')
+        ordering = ['-is_native', 'language_name']
+
+    def __str__(self):
+        return f"{self.user} - {self.language_name}"

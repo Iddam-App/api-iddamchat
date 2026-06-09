@@ -40,6 +40,7 @@ urlpatterns = [
     path('api/content/', include('apps.content.urls', namespace='content')),
     path('api/chat/', include('apps.chat.urls', namespace='chat')),
     path('api/moderation/', include('apps.moderation.urls', namespace='moderation')),
+    path('api/notifications/', include('apps.notifications.urls', namespace='notifications')),
 ]
 
 if settings.DEBUG:

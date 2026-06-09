@@ -5,11 +5,19 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from .models import UserLanguage
 from .serializers import (
-    ChangePasswordSerializer, RegisterSerializer, UserSerializer,
+    ChangePasswordSerializer, RegisterSerializer, UserLanguageSerializer,
+    UserMinimalSerializer, UserSerializer,
 )
 
 User = get_user_model()
+
+
+def _is_following(user, target):
+    """Check if user follows target."""
+    from apps.social.models import Follow
+    return Follow.objects.filter(follower=user, followed=target).exists()
 
 
 class RegisterView(generics.CreateAPIView):
@@ -97,7 +105,7 @@ class DeleteAccountView(APIView):
 
 
 class UserSearchView(generics.ListAPIView):
-    serializer_class = UserSerializer
+    serializer_class = UserMinimalSerializer
 
     def get_queryset(self):
         q = self.request.query_params.get('q', '').strip()
@@ -118,3 +126,52 @@ class UserProfileView(generics.RetrieveAPIView):
     serializer_class = UserSerializer
     queryset = User.objects.filter(is_active=True)
     lookup_field = 'pk'
+
+    def retrieve(self, request, *args, **kwargs):
+        user = self.get_object()
+
+        # If private and not following, return limited info
+        if user.is_private and user != request.user and not _is_following(request.user, user):
+            return Response({
+                'id': user.pk,
+                'username': user.username,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'nickname': user.nickname,
+                'avatar': user.avatar.url if user.avatar else None,
+                'country': user.country,
+                'display_name': user.display_name,
+                'is_private': True,
+                'is_restricted': True,
+            })
+
+        serializer = self.get_serializer(user)
+        return Response(serializer.data)
+
+
+# ─── Language Views ────────────────────────────────────────────────
+
+class UserLanguageListCreateView(generics.ListCreateAPIView):
+    serializer_class = UserLanguageSerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        return UserLanguage.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class UserLanguageDeleteView(generics.DestroyAPIView):
+    serializer_class = UserLanguageSerializer
+
+    def get_queryset(self):
+        return UserLanguage.objects.filter(user=self.request.user)
+
+
+class AvailableLanguagesView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        from .constants import AVAILABLE_LANGUAGES
+        return Response(AVAILABLE_LANGUAGES)

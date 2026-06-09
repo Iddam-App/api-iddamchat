@@ -6,8 +6,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.moderation.filter import check_and_flag
+from apps.notifications.services import create_notification
 
-from .models import Conversation, Message
+from .models import Conversation, Message, MessageTranslation
 from .serializers import ConversationSerializer, MessageSerializer
 
 User = get_user_model()
@@ -17,9 +18,15 @@ class ConversationListView(generics.ListAPIView):
     serializer_class = ConversationSerializer
 
     def get_queryset(self):
+        from django.db.models import Prefetch
         return Conversation.objects.filter(
             Q(user1=self.request.user) | Q(user2=self.request.user),
-        ).select_related('user1', 'user2')
+        ).select_related('user1', 'user2').prefetch_related(
+            Prefetch(
+                'messages',
+                queryset=Message.objects.order_by('-created_at'),
+            ),
+        )
 
 
 class ConversationStartView(APIView):
@@ -126,6 +133,15 @@ class MessageSendView(APIView):
 
         conv.save(update_fields=['updated_at'])
 
+        # Notify the other user
+        other_user = conv.user2 if conv.user1 == user else conv.user1
+        create_notification(
+            recipient=other_user, sender=user,
+            notification_type='dm_message',
+            message=f'{user.display_name} te envió un mensaje.',
+            content_type='conversation', content_id=conv.pk,
+        )
+
         return Response(
             MessageSerializer(msg, context={'request': request}).data,
             status=status.HTTP_201_CREATED,
@@ -141,3 +157,58 @@ class UnreadCountView(APIView):
             is_read=False,
         ).exclude(sender=request.user).count()
         return Response({'unread_count': count})
+
+
+class TranslateMessageView(APIView):
+    def post(self, request, message_id):
+        msg = generics.get_object_or_404(Message, pk=message_id)
+        conv = msg.conversation
+        user = request.user
+
+        # Verify user is part of the conversation
+        if user not in (conv.user1, conv.user2):
+            return Response(
+                {'detail': 'No autorizado.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        target_language = request.data.get(
+            'target_language', user.preferred_language or 'es',
+        )
+
+        # Check cache
+        cached = MessageTranslation.objects.filter(
+            message=msg, target_language=target_language,
+        ).first()
+        if cached:
+            return Response({
+                'translated_text': cached.translated_text,
+                'source_language': cached.source_language,
+                'target_language': target_language,
+                'cached': True,
+            })
+
+        # Translate
+        from .translation import translate_text
+        try:
+            result = translate_text(msg.content, target_language)
+        except Exception as e:
+            return Response(
+                {'detail': f'Error de traducción: {str(e)}'},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        # Cache the translation
+        translation = MessageTranslation.objects.create(
+            message=msg,
+            target_language=target_language,
+            translated_text=result['translated_text'],
+            source_language=result['detected_source_language'],
+        )
+
+        return Response({
+            'translated_text': translation.translated_text,
+            'source_language': translation.source_language,
+            'target_language': target_language,
+            'cached': False,
+        })
