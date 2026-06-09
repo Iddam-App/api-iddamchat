@@ -81,6 +81,10 @@
                     </div>
                 </div>
             </div>
+            <div class="upload-progress" id="story-upload-progress">
+                <div class="upload-progress-track"><div class="upload-progress-fill"></div></div>
+                <div class="upload-progress-text">0%</div>
+            </div>
             <div class="modal-footer">
                 <button class="btn btn-gradient w-100" id="btn-publish-story">
                     <i class="bi bi-send me-1"></i>Publicar Historia
@@ -619,17 +623,17 @@ async function publishStory() {
         if (!storyImageFile) { showToast('Selecciona una foto'); return; }
 
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Publicando...';
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Subiendo...';
+        showUploadProgress('story-upload-progress');
 
         const formData = new FormData();
         formData.append('image', storyImageFile);
 
         try {
-            const res = await authFetch('/api/profiles/stories/create/', {
-                method: 'POST',
-                body: formData,
-                headers: { 'Authorization': 'Bearer ' + getToken() }
+            const res = await uploadWithProgress('/api/profiles/stories/create/', formData, (pct) => {
+                updateUploadProgress('story-upload-progress', pct);
             });
+            hideUploadProgress('story-upload-progress');
             if (res.ok) {
                 bootstrap.Modal.getInstance(document.getElementById('storyCreateModal')).hide();
                 storyImageFile = null;
@@ -643,6 +647,7 @@ async function publishStory() {
                 showToast('Error al publicar historia');
             }
         } catch(e) {
+            hideUploadProgress('story-upload-progress');
             showToast('Error de conexion');
         } finally {
             btn.disabled = false;

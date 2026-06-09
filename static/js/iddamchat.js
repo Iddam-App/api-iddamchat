@@ -43,6 +43,74 @@ function logout() {
     window.location.href = '/login/';
 }
 
+// ─── Upload with Progress (uses XHR for upload.onprogress) ───
+function uploadWithProgress(url, formData, onProgress, method) {
+    method = method || 'POST';
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open(method, API + url);
+        xhr.setRequestHeader('Authorization', 'Bearer ' + getToken());
+
+        xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable && onProgress) {
+                onProgress(Math.round((e.loaded / e.total) * 100));
+            }
+        };
+
+        xhr.onload = () => {
+            if (xhr.status === 401) {
+                // Token expired — refresh and retry once
+                fetch(API + '/api/auth/token/refresh/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ refresh: localStorage.getItem('refresh_token') })
+                }).then(r => r.ok ? r.json() : Promise.reject()).then(data => {
+                    localStorage.setItem('access_token', data.access);
+                    if (data.refresh) localStorage.setItem('refresh_token', data.refresh);
+                    const xhr2 = new XMLHttpRequest();
+                    xhr2.open(method, API + url);
+                    xhr2.setRequestHeader('Authorization', 'Bearer ' + data.access);
+                    xhr2.upload.onprogress = xhr.upload.onprogress;
+                    xhr2.onload = () => resolve({ status: xhr2.status, json: () => JSON.parse(xhr2.responseText) });
+                    xhr2.onerror = () => reject(new Error('Network error'));
+                    xhr2.send(formData);
+                }).catch(() => { logout(); reject(new Error('Auth failed')); });
+            } else {
+                resolve({
+                    status: xhr.status,
+                    ok: xhr.status >= 200 && xhr.status < 300,
+                    json: () => JSON.parse(xhr.responseText),
+                });
+            }
+        };
+
+        xhr.onerror = () => reject(new Error('Network error'));
+        xhr.send(formData);
+    });
+}
+
+// ─── Upload Progress Bar Helper ──────────────────────────
+function showUploadProgress(containerId) {
+    let bar = document.getElementById(containerId);
+    if (!bar) return;
+    bar.style.display = 'block';
+    bar.querySelector('.upload-progress-fill').style.width = '0%';
+    bar.querySelector('.upload-progress-text').textContent = '0%';
+}
+
+function updateUploadProgress(containerId, percent) {
+    let bar = document.getElementById(containerId);
+    if (!bar) return;
+    bar.querySelector('.upload-progress-fill').style.width = percent + '%';
+    bar.querySelector('.upload-progress-text').textContent = percent + '%';
+}
+
+function hideUploadProgress(containerId) {
+    let bar = document.getElementById(containerId);
+    if (!bar) return;
+    bar.style.display = 'none';
+}
+
 // ─── Utilities ────────────────────────────────────────────
 function formatTimeAgo(dateStr) {
     const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;

@@ -94,6 +94,10 @@
                     <textarea id="post-content" placeholder="Que quieres compartir?"></textarea>
                     <div class="image-preview-container" id="image-previews"></div>
                 </div>
+                <div class="upload-progress" id="post-upload-progress">
+                    <div class="upload-progress-track"><div class="upload-progress-fill"></div></div>
+                    <div class="upload-progress-text">0%</div>
+                </div>
                 <div class="modal-footer justify-content-between">
                     <div class="d-flex gap-2">
                         <label class="btn btn-outline-secondary btn-sm" style="border-radius:8px; cursor:pointer;">
@@ -256,23 +260,35 @@
 
         const btn = document.getElementById('btn-publish');
         btn.disabled = true;
-        btn.textContent = 'Publicando...';
 
         const formData = new FormData();
         formData.append('post_type', postType);
         if (title) formData.append('title', title);
         formData.append('content', content);
 
+        const hasImages = selectedImages.filter(Boolean).length > 0;
         selectedImages.filter(Boolean).forEach(file => {
             formData.append('images', file);
         });
 
         try {
-            const res = await authFetch('/api/posts/create/', {
-                method: 'POST',
-                body: formData,
-                headers: { 'Authorization': 'Bearer ' + getToken() }
-            });
+            let res;
+            if (hasImages) {
+                btn.textContent = 'Subiendo...';
+                showUploadProgress('post-upload-progress');
+                res = await uploadWithProgress('/api/posts/create/', formData, (pct) => {
+                    updateUploadProgress('post-upload-progress', pct);
+                });
+            } else {
+                btn.textContent = 'Publicando...';
+                res = await authFetch('/api/posts/create/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'Authorization': 'Bearer ' + getToken() }
+                });
+            }
+
+            hideUploadProgress('post-upload-progress');
 
             if (res.ok) {
                 bootstrap.Modal.getInstance(document.getElementById('createPostModal')).hide();
@@ -293,10 +309,11 @@
                     window.location.reload();
                 }
             } else {
-                const data = await res.json();
+                const data = await Promise.resolve(res.json());
                 showToast(data.detail || 'Error al publicar');
             }
         } catch(e) {
+            hideUploadProgress('post-upload-progress');
             showToast('Error de conexion');
         } finally {
             btn.disabled = false;

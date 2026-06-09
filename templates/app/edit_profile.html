@@ -89,6 +89,10 @@
             </div>
         </div>
 
+        <div class="upload-progress" id="profile-upload-progress">
+            <div class="upload-progress-track"><div class="upload-progress-fill"></div></div>
+            <div class="upload-progress-text">0%</div>
+        </div>
         <button class="btn btn-gradient w-100" id="btn-save" onclick="saveProfile()">
             <i class="bi bi-check-lg me-1"></i>Guardar Cambios
         </button>
@@ -182,7 +186,6 @@ async function loadCurrentProfile() {
 async function saveProfile() {
     const btn = document.getElementById('btn-save');
     btn.disabled = true;
-    btn.textContent = 'Guardando...';
 
     const formData = new FormData();
     formData.append('first_name', document.getElementById('edit-first-name').value.trim());
@@ -203,23 +206,35 @@ async function saveProfile() {
     }
 
     try {
-        const res = await authFetch('/api/auth/me/', {
-            method: 'PUT',
-            body: formData,
-            headers: { 'Authorization': 'Bearer ' + getToken() }
-        });
+        let res;
+        if (avatarFile) {
+            btn.textContent = 'Subiendo foto...';
+            showUploadProgress('profile-upload-progress');
+            res = await uploadWithProgress('/api/auth/me/', formData, (pct) => {
+                updateUploadProgress('profile-upload-progress', pct);
+            }, 'PUT');
+            hideUploadProgress('profile-upload-progress');
+        } else {
+            btn.textContent = 'Guardando...';
+            res = await authFetch('/api/auth/me/', {
+                method: 'PUT',
+                body: formData,
+                headers: { 'Authorization': 'Bearer ' + getToken() }
+            });
+        }
 
         if (res.ok) {
-            const user = await res.json();
+            const user = await Promise.resolve(res.json());
             localStorage.setItem('user_data', JSON.stringify(user));
             showToast('Perfil actualizado');
             avatarFile = null;
         } else {
-            const data = await res.json();
+            const data = await Promise.resolve(res.json());
             const msg = Object.values(data).flat().join(' ') || 'Error al guardar';
             showToast(msg);
         }
     } catch(e) {
+        hideUploadProgress('profile-upload-progress');
         showToast('Error de conexion');
     } finally {
         btn.disabled = false;
