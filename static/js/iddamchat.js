@@ -10,25 +10,51 @@ function getToken() { return localStorage.getItem('access_token'); }
 function isLoggedIn() { return !!getToken(); }
 
 async function authFetch(url, opts = {}) {
-    opts.headers = opts.headers || {};
+    // Build headers, preserving any already-set headers
+    if (!opts.headers) opts.headers = {};
     opts.headers['Authorization'] = 'Bearer ' + getToken();
+    // Only set Content-Type for non-FormData bodies
     if (!(opts.body instanceof FormData)) {
-        opts.headers['Content-Type'] = opts.headers['Content-Type'] || 'application/json';
+        if (!opts.headers['Content-Type']) {
+            opts.headers['Content-Type'] = 'application/json';
+        }
+    } else {
+        // Ensure Content-Type is NOT set for FormData (browser sets boundary)
+        delete opts.headers['Content-Type'];
     }
-    let res = await fetch(API + url, opts);
+
+    let res;
+    try {
+        res = await fetch(API + url, opts);
+    } catch (e) {
+        console.error('authFetch network error:', e);
+        throw e;
+    }
+
     if (res.status === 401) {
-        const refreshRes = await fetch(API + '/api/auth/token/refresh/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refresh: localStorage.getItem('refresh_token') })
-        });
-        if (refreshRes.ok) {
-            const data = await refreshRes.json();
-            localStorage.setItem('access_token', data.access);
-            if (data.refresh) localStorage.setItem('refresh_token', data.refresh);
-            opts.headers['Authorization'] = 'Bearer ' + data.access;
-            res = await fetch(API + url, opts);
-        } else {
+        const refreshToken = localStorage.getItem('refresh_token');
+        if (!refreshToken) {
+            logout();
+            return res;
+        }
+        try {
+            const refreshRes = await fetch(API + '/api/auth/token/refresh/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refresh: refreshToken })
+            });
+            if (refreshRes.ok) {
+                const data = await refreshRes.json();
+                localStorage.setItem('access_token', data.access);
+                if (data.refresh) localStorage.setItem('refresh_token', data.refresh);
+                opts.headers['Authorization'] = 'Bearer ' + data.access;
+                res = await fetch(API + url, opts);
+            } else {
+                logout();
+                return res;
+            }
+        } catch (e) {
+            console.error('Token refresh failed:', e);
             logout();
             return res;
         }
@@ -64,14 +90,21 @@ function uploadWithProgress(url, formData, onProgress, method) {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ refresh: localStorage.getItem('refresh_token') })
-                }).then(r => r.ok ? r.json() : Promise.reject()).then(data => {
+                }).then(r => {
+                    if (!r.ok) throw new Error('Refresh failed');
+                    return r.json();
+                }).then(data => {
                     localStorage.setItem('access_token', data.access);
                     if (data.refresh) localStorage.setItem('refresh_token', data.refresh);
                     const xhr2 = new XMLHttpRequest();
                     xhr2.open(method, API + url);
                     xhr2.setRequestHeader('Authorization', 'Bearer ' + data.access);
                     xhr2.upload.onprogress = xhr.upload.onprogress;
-                    xhr2.onload = () => resolve({ status: xhr2.status, json: () => JSON.parse(xhr2.responseText) });
+                    xhr2.onload = () => resolve({
+                        status: xhr2.status,
+                        ok: xhr2.status >= 200 && xhr2.status < 300,
+                        json: () => JSON.parse(xhr2.responseText),
+                    });
                     xhr2.onerror = () => reject(new Error('Network error'));
                     xhr2.send(formData);
                 }).catch(() => { logout(); reject(new Error('Auth failed')); });
@@ -91,29 +124,35 @@ function uploadWithProgress(url, formData, onProgress, method) {
 
 // ─── Upload Progress Bar Helper ──────────────────────────
 function showUploadProgress(containerId) {
-    let bar = document.getElementById(containerId);
+    const bar = document.getElementById(containerId);
     if (!bar) return;
     bar.style.display = 'block';
-    bar.querySelector('.upload-progress-fill').style.width = '0%';
-    bar.querySelector('.upload-progress-text').textContent = '0%';
+    const fill = bar.querySelector('.upload-progress-fill');
+    const text = bar.querySelector('.upload-progress-text');
+    if (fill) fill.style.width = '0%';
+    if (text) text.textContent = '0%';
 }
 
 function updateUploadProgress(containerId, percent) {
-    let bar = document.getElementById(containerId);
+    const bar = document.getElementById(containerId);
     if (!bar) return;
-    bar.querySelector('.upload-progress-fill').style.width = percent + '%';
-    bar.querySelector('.upload-progress-text').textContent = percent + '%';
+    const fill = bar.querySelector('.upload-progress-fill');
+    const text = bar.querySelector('.upload-progress-text');
+    if (fill) fill.style.width = percent + '%';
+    if (text) text.textContent = percent + '%';
 }
 
 function hideUploadProgress(containerId) {
-    let bar = document.getElementById(containerId);
+    const bar = document.getElementById(containerId);
     if (!bar) return;
     bar.style.display = 'none';
 }
 
 // ─── Utilities ────────────────────────────────────────────
 function formatTimeAgo(dateStr) {
+    if (!dateStr) return '';
     const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
+    if (isNaN(diff)) return '';
     if (diff < 60) return 'Ahora';
     if (diff < 3600) return Math.floor(diff / 60) + ' min';
     if (diff < 86400) return Math.floor(diff / 3600) + ' h';
@@ -122,6 +161,7 @@ function formatTimeAgo(dateStr) {
 }
 
 function escapeHtml(text) {
+    if (!text) return '';
     const d = document.createElement('div');
     d.textContent = text;
     return d.innerHTML;
@@ -139,7 +179,12 @@ function showToast(message) {
     toast.className = 'toast-iddam';
     toast.textContent = message;
     container.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
+    setTimeout(() => {
+        toast.style.transition = 'opacity 0.3s, transform 0.3s';
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(8px)';
+        setTimeout(() => toast.remove(), 300);
+    }, 2700);
 }
 
 // ─── Post Card Rendering ─────────────────────────────────
@@ -175,14 +220,14 @@ function renderPostCard(post, opts = {}) {
         <div class="post-dropdown">
             <div class="post-menu" onclick="toggleMenu(this)"><i class="bi bi-three-dots"></i></div>
             <div class="post-dropdown-menu">
-                <button onclick="toggleHidePost(${post.id}, this)"><i class="bi bi-eye-slash"></i> ${hiddenLabel}</button>
+                <button onclick="toggleHidePost(${post.id})"><i class="bi bi-eye-slash"></i> ${hiddenLabel}</button>
                 <button class="text-danger" onclick="deletePost(${post.id})"><i class="bi bi-trash"></i> Eliminar</button>
             </div>
         </div>`;
     }
 
-    const hiddenBadge = post.is_hidden ? '<span class="badge bg-secondary ms-2" style="font-size:0.7rem;">Oculto</span>' : '';
-    const typeLabel = opts.showType && post.post_type === 'hobby' ? '<span class="badge bg-warning text-dark ms-2" style="font-size:0.7rem;">Hobby</span>' : '';
+    const hiddenBadge = post.is_hidden ? '<span class="meta-badge ms-2" style="font-size:0.68rem; opacity:0.7;">Oculto</span>' : '';
+    const typeLabel = opts.showType && post.post_type === 'hobby' ? '<span class="meta-badge ms-2" style="font-size:0.68rem;">Hobby</span>' : '';
     const timeExtra = opts.showTypeInline && post.post_type === 'hobby' ? ' · Hobby' : '';
 
     // Comment button: link vs focus
@@ -202,7 +247,7 @@ function renderPostCard(post, opts = {}) {
         <div class="post-card-header">
             <a href="/profile/${author.id}/" class="avatar-sm">${avatarHtml}</a>
             <div class="author-info">
-                <a href="/profile/${author.id}/" class="author-name">${displayName}</a>${hiddenBadge}${typeLabel}
+                <a href="/profile/${author.id}/" class="author-name">${escapeHtml(displayName)}</a>${hiddenBadge}${typeLabel}
                 <div class="post-time">${timeAgo}${timeExtra}</div>
             </div>
             ${menuHtml}
@@ -231,7 +276,7 @@ function renderPostCard(post, opts = {}) {
                 </button>
             </div>
             ${commentBtn}
-            <button class="action-btn" onclick="savePost(${post.id})" style="flex:1;">
+            <button class="action-btn" onclick="savePost(${post.id})" style="flex:1;" data-action="save">
                 <i class="bi ${post.is_saved ? 'bi-bookmark-fill' : 'bi-bookmark'}"></i>
                 <span>${post.is_saved ? 'Guardado' : 'Guardar'}</span>
             </button>
@@ -243,7 +288,8 @@ function renderPostCard(post, opts = {}) {
 let pickerTimeout;
 function showPicker(postId) {
     clearTimeout(pickerTimeout);
-    document.getElementById('picker-' + postId).classList.add('show');
+    const el = document.getElementById('picker-' + postId);
+    if (el) el.classList.add('show');
 }
 function hidePicker(postId) {
     pickerTimeout = setTimeout(() => {
@@ -255,38 +301,54 @@ function hidePicker(postId) {
 async function react(postId, type) {
     hidePicker(postId);
     const card = document.getElementById('post-' + postId);
+    if (!card) return;
     const btn = card.querySelector('.action-btn[data-reaction]');
+    if (!btn) return;
     const current = btn.dataset.reaction;
 
-    if (current === type) {
-        await authFetch(`/api/posts/${postId}/react/`, { method: 'DELETE' });
-        btn.dataset.reaction = '';
-        btn.classList.remove('liked');
-        btn.querySelector('i').className = 'bi bi-hand-thumbs-up';
-        btn.querySelector('span').textContent = 'Me gusta';
-    } else {
-        await authFetch(`/api/posts/${postId}/react/`, {
-            method: 'POST',
-            body: JSON.stringify({ reaction_type: type })
-        });
-        btn.dataset.reaction = type;
-        btn.classList.add('liked');
-        btn.querySelector('i').className = 'bi bi-hand-thumbs-up-fill';
-        btn.querySelector('span').textContent = REACTIONS[type];
+    try {
+        if (current === type) {
+            const res = await authFetch(`/api/posts/${postId}/react/`, { method: 'DELETE' });
+            if (res.ok || res.status === 204) {
+                btn.dataset.reaction = '';
+                btn.classList.remove('liked');
+                btn.querySelector('i').className = 'bi bi-hand-thumbs-up';
+                btn.querySelector('span').textContent = 'Me gusta';
+            }
+        } else {
+            const res = await authFetch(`/api/posts/${postId}/react/`, {
+                method: 'POST',
+                body: JSON.stringify({ reaction_type: type })
+            });
+            if (res.ok) {
+                btn.dataset.reaction = type;
+                btn.classList.add('liked');
+                btn.querySelector('i').className = 'bi bi-hand-thumbs-up-fill';
+                btn.querySelector('span').textContent = REACTIONS[type];
+            }
+        }
+    } catch(e) {
+        showToast('Error de conexion');
     }
 }
 
 // ─── Save Post ────────────────────────────────────────────
 async function savePost(postId) {
-    const res = await authFetch(`/api/posts/${postId}/save/`, { method: 'POST' });
-    if (res.ok) {
-        const data = await res.json();
-        const card = document.getElementById('post-' + postId);
-        const btns = card.querySelectorAll('.post-card-actions .action-btn');
-        const saveBtn = btns[btns.length - 1];
-        saveBtn.querySelector('i').className = data.saved ? 'bi bi-bookmark-fill' : 'bi bi-bookmark';
-        saveBtn.querySelector('span').textContent = data.saved ? 'Guardado' : 'Guardar';
-        showToast(data.saved ? 'Publicacion guardada' : 'Removida de guardados');
+    try {
+        const res = await authFetch(`/api/posts/${postId}/save/`, { method: 'POST' });
+        if (res.ok) {
+            const data = await res.json();
+            const card = document.getElementById('post-' + postId);
+            if (!card) return;
+            const saveBtn = card.querySelector('.action-btn[data-action="save"]');
+            if (saveBtn) {
+                saveBtn.querySelector('i').className = data.saved ? 'bi bi-bookmark-fill' : 'bi bi-bookmark';
+                saveBtn.querySelector('span').textContent = data.saved ? 'Guardado' : 'Guardar';
+            }
+            showToast(data.saved ? 'Publicacion guardada' : 'Removida de guardados');
+        }
+    } catch(e) {
+        showToast('Error de conexion');
     }
 }
 
@@ -306,20 +368,34 @@ document.addEventListener('click', (e) => {
 });
 
 async function toggleHidePost(postId) {
-    const res = await authFetch(`/api/posts/${postId}/hide/`, { method: 'POST' });
-    if (res.ok) {
-        const data = await res.json();
-        const card = document.getElementById('post-' + postId);
-        card.style.opacity = data.is_hidden ? '0.5' : '1';
-        showToast(data.is_hidden ? 'Publicacion oculta' : 'Publicacion visible');
+    try {
+        const res = await authFetch(`/api/posts/${postId}/hide/`, { method: 'POST' });
+        if (res.ok) {
+            const data = await res.json();
+            const card = document.getElementById('post-' + postId);
+            if (card) card.style.opacity = data.is_hidden ? '0.5' : '1';
+            showToast(data.is_hidden ? 'Publicacion oculta' : 'Publicacion visible');
+        }
+    } catch(e) {
+        showToast('Error de conexion');
     }
 }
 
 async function deletePost(postId) {
-    if (!confirm('Seguro que deseas eliminar esta publicacion?')) return;
-    const res = await authFetch(`/api/posts/${postId}/`, { method: 'DELETE' });
-    if (res.ok || res.status === 204) {
-        document.getElementById('post-' + postId).remove();
-        showToast('Publicacion eliminada');
+    if (!window.confirm('Seguro que deseas eliminar esta publicacion?')) return;
+    try {
+        const res = await authFetch(`/api/posts/${postId}/`, { method: 'DELETE' });
+        if (res.ok || res.status === 204) {
+            const card = document.getElementById('post-' + postId);
+            if (card) {
+                card.style.transition = 'opacity 0.3s, transform 0.3s';
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(-8px)';
+                setTimeout(() => card.remove(), 300);
+            }
+            showToast('Publicacion eliminada');
+        }
+    } catch(e) {
+        showToast('Error de conexion');
     }
 }

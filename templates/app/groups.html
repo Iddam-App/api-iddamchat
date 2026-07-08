@@ -232,10 +232,10 @@
     cursor: pointer;
     transition: all 0.2s;
 }
-.group-type-chip:hover { border-color: var(--accent-primary); color: var(--accent-primary); }
+.group-type-chip:hover { border-color: var(--gold); color: var(--gold); }
 .group-type-chip.active {
-    background: var(--accent-primary);
-    border-color: var(--accent-primary);
+    background: var(--gold);
+    border-color: var(--gold);
     color: #fff;
 }
 
@@ -276,7 +276,7 @@
     font-size: 0.9rem;
 }
 .group-post-input textarea:focus {
-    border-color: var(--accent-primary);
+    border-color: var(--gold);
     box-shadow: 0 0 0 3px rgba(131,58,180,0.15);
 }
 .gp-card {
@@ -383,7 +383,7 @@
 }
 #createGroupModal .form-control:focus,
 #createGroupModal .form-select:focus {
-    border-color: var(--accent-primary);
+    border-color: var(--gold);
     box-shadow: 0 0 0 3px rgba(131,58,180,0.15);
 }
 </style>
@@ -479,7 +479,7 @@ function renderGroupCard(group) {
     const avatarInner = group.avatar ? `<img src="${group.avatar}" alt="">` : initial;
     const coverInner = group.cover ? `<img src="${group.cover}" alt="">` : '';
     const typeLabel = GROUP_TYPE_LABELS[group.group_type] || group.group_type;
-    const memberBadge = group.is_member ? '<span style="color:var(--accent-primary); font-weight:600;">Miembro</span>' : '';
+    const memberBadge = group.is_member ? '<span style="color:var(--gold); font-weight:600;">Miembro</span>' : '';
 
     return `
     <div class="group-card" onclick="openGroupDetail(${group.id})">

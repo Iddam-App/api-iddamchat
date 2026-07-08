@@ -191,38 +191,7 @@
 
 {% block scripts %}
 <style>
-.hosting-tabs {
-    display: flex;
-    gap: 0.3rem;
-    margin-bottom: 1rem;
-    overflow-x: auto;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-}
-.hosting-tabs::-webkit-scrollbar { display: none; }
-
-.hosting-tab {
-    flex-shrink: 0;
-    border: none;
-    background: var(--card-bg);
-    color: var(--text-secondary);
-    font-weight: 600;
-    font-size: 0.85rem;
-    padding: 0.55rem 1rem;
-    border-radius: 20px;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-}
-.hosting-tab:hover { color: var(--accent-primary); }
-.hosting-tab.active {
-    background: var(--ig-gradient);
-    color: #fff;
-}
-
+/* Hosting-specific styles (tabs are in main CSS) */
 .hosting-filter-bar {
     display: flex;
     gap: 0.5rem;
@@ -239,8 +208,8 @@
 }
 .hosting-filter-bar .form-control:focus,
 .hosting-filter-bar .form-select:focus {
-    border-color: var(--accent-primary);
-    box-shadow: 0 0 0 3px rgba(131,58,180,0.15);
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(139,115,85,0.15);
 }
 
 /* Host Card */
@@ -288,7 +257,7 @@
     font-size: 1rem;
     text-decoration: none;
 }
-.host-card-header .host-name:hover { color: var(--accent-primary); }
+.host-card-header .host-name:hover { color: var(--gold); }
 .host-card-header .host-location {
     font-size: 0.85rem;
     color: var(--text-muted);
@@ -425,7 +394,7 @@
     border-bottom-left-radius: 4px;
 }
 .msg-bubble.mine .msg-text {
-    background: var(--accent-primary);
+    background: var(--gold);
     color: #fff;
     border-bottom-right-radius: 4px;
 }
@@ -452,16 +421,16 @@
 }
 #panel-my-profile .form-control:focus,
 #panel-my-profile .form-select:focus {
-    border-color: var(--accent-primary);
-    box-shadow: 0 0 0 3px rgba(131,58,180,0.15);
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(139,115,85,0.15);
 }
 #panel-my-profile textarea.form-control {
     resize: vertical;
     min-height: 60px;
 }
 .form-check-input:checked {
-    background-color: var(--accent-primary);
-    border-color: var(--accent-primary);
+    background-color: var(--gold);
+    border-color: var(--gold);
 }
 </style>
 

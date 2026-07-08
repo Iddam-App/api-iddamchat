@@ -257,13 +257,13 @@ function togglePasswordSection() {
 async function changePassword() {
     const current = document.getElementById('pw-current').value;
     const newPw = document.getElementById('pw-new').value;
-    const confirm = document.getElementById('pw-confirm').value;
+    const confirmPw = document.getElementById('pw-confirm').value;
 
-    if (!current || !newPw || !confirm) {
+    if (!current || !newPw || !confirmPw) {
         showToast('Completa todos los campos');
         return;
     }
-    if (newPw !== confirm) {
+    if (newPw !== confirmPw) {
         showToast('Las contraseñas no coinciden');
         return;
     }
