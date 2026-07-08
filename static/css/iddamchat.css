@@ -1988,6 +1988,89 @@ body.has-bottom-nav main {
     color: var(--text-primary);
 }
 
+/* ─── Visibility Selector ────────────────────────────────────────── */
+.visibility-selector {
+    display: flex;
+    gap: 0.35rem;
+}
+
+.vis-btn {
+    flex: 1;
+    border: 1.5px solid var(--border-color);
+    background: var(--card-bg);
+    color: var(--text-secondary);
+    font-weight: 700;
+    font-size: 0.78rem;
+    padding: 0.45rem 0.5rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s var(--ease-out);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    font-family: inherit;
+}
+
+.vis-btn:hover {
+    border-color: var(--gold);
+    color: var(--gold);
+}
+
+.vis-btn.active {
+    background: var(--gold);
+    color: #fff;
+    border-color: var(--gold);
+}
+
+.vis-btn i {
+    font-size: 0.85rem;
+}
+
+/* ─── Bottom Nav Badge ───────────────────────────────────────────── */
+.bottom-nav .nav-tab {
+    position: relative;
+}
+
+.bottom-nav .bottom-unread-badge {
+    position: absolute;
+    top: 4px;
+    right: 50%;
+    transform: translateX(14px);
+    min-width: 15px;
+    height: 15px;
+    padding: 0 3px;
+    border-radius: var(--radius-full);
+    background: var(--ig-pink);
+    color: #fff;
+    font-size: 0.55rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--bottom-nav-bg);
+}
+
+/* ─── Skeleton Loading ───────────────────────────────────────────── */
+@keyframes skeletonPulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.8; }
+}
+
+#feed-spinner .post-card {
+    pointer-events: none;
+}
+
+#feed-spinner .post-card div[style*="background:var(--hover-bg)"] {
+    animation: skeletonPulse 1.2s ease-in-out infinite;
+}
+
+/* ─── Content Visibility (performance) ───────────────────────────── */
+.post-card {
+    content-visibility: auto;
+    contain-intrinsic-size: 0 400px;
+}
+
 /* ─── Page Load Animation ────────────────────────────────────────── */
 @keyframes pageContentFade {
     from { opacity: 0; transform: translateY(8px); }

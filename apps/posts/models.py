@@ -12,11 +12,17 @@ class Post(models.Model):
         ('hobby', 'Hobby'),
     ]
 
+    VISIBILITY_CHOICES = [
+        ('public', 'Todos'),
+        ('friends', 'Amigos'),
+    ]
+
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
         related_name='posts',
     )
     post_type = models.CharField(max_length=15, choices=POST_TYPES, default='text')
+    visibility = models.CharField(max_length=10, choices=VISIBILITY_CHOICES, default='public')
     title = models.CharField(max_length=255, blank=True)
     content = models.TextField()
     is_pinned = models.BooleanField(default=False)

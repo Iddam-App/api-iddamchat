@@ -202,10 +202,10 @@ function renderPostCard(post, opts = {}) {
     let imagesHtml = '';
     if (post.images && post.images.length > 0) {
         if (post.images.length === 1) {
-            imagesHtml = `<div class="post-card-images"><img src="${post.images[0].image}" alt=""></div>`;
+            imagesHtml = `<div class="post-card-images"><img src="${post.images[0].image}" alt="" loading="lazy"></div>`;
         } else {
             const gridClass = post.images.length >= 3 ? 'grid-3' : 'grid-2';
-            const imgs = post.images.slice(0, 4).map(i => `<img src="${i.image}" alt="">`).join('');
+            const imgs = post.images.slice(0, 4).map(i => `<img src="${i.image}" alt="" loading="lazy">`).join('');
             imagesHtml = `<div class="post-card-images"><div class="image-grid ${gridClass}">${imgs}</div></div>`;
         }
     }

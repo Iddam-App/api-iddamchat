@@ -719,7 +719,7 @@ async function loadMessages(convId, silent) {
 
             let imageHtml = '';
             if (msg.image) {
-                imageHtml = `<img src="${msg.image}" alt="Imagen" onclick="window.open('${msg.image}', '_blank')">`;
+                imageHtml = `<img src="${msg.image}" alt="Imagen" loading="lazy" onclick="window.open('${msg.image}', '_blank')">`;
             }
 
             html += `

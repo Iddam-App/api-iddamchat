@@ -19,23 +19,39 @@ class FeedView(generics.ListAPIView):
 
     def get_queryset(self):
         user = self.request.user
+
+        # Build friend IDs (mutual follows)
+        following_ids = set(
+            Follow.objects.filter(follower=user).values_list('followed_id', flat=True),
+        )
+        follower_ids = set(
+            Follow.objects.filter(followed=user).values_list('follower_id', flat=True),
+        )
+        mutual_ids = following_ids & follower_ids
+
+        # Also include Friendship-based friends
         friend_ids = set(
             Friendship.objects.filter(
                 Q(user1=user) | Q(user2=user),
             ).values_list('user1_id', 'user2_id').distinct()
         )
-        # Flatten and remove self
         flat_friend_ids = set()
         for u1, u2 in friend_ids:
             flat_friend_ids.add(u1 if u2 == user.pk else u2)
 
-        following_ids = set(
-            Follow.objects.filter(follower=user).values_list('followed_id', flat=True),
-        )
-        visible_users = flat_friend_ids | following_ids | {user.pk}
+        all_friend_ids = mutual_ids | flat_friend_ids
+        visible_users = all_friend_ids | following_ids | {user.pk}
 
+        # Visibility filter:
+        # - public posts from anyone in visible_users
+        # - friends-only posts from mutual friends only
+        # - church official posts always
+        # - own posts always
         return Post.objects.filter(
-            Q(author_id__in=visible_users) | Q(is_church_official=True),
+            Q(author=user) |
+            Q(is_church_official=True) |
+            Q(author_id__in=visible_users, visibility='public') |
+            Q(author_id__in=all_friend_ids, visibility='friends'),
         ).select_related('author').prefetch_related(
             'images', 'reactions',
         ).annotate(
@@ -44,7 +60,7 @@ class FeedView(generics.ListAPIView):
             _is_saved=Exists(
                 SavedPost.objects.filter(user=user, post=OuterRef('pk')),
             ),
-        )
+        ).distinct()
 
 
 class PostCreateView(generics.CreateAPIView):

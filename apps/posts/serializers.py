@@ -47,7 +47,7 @@ class PostSerializer(serializers.ModelSerializer):
     class Meta:
         model = Post
         fields = [
-            'id', 'author', 'post_type', 'title', 'content',
+            'id', 'author', 'post_type', 'visibility', 'title', 'content',
             'images', 'is_pinned', 'is_church_official', 'is_hidden',
             'reaction_count', 'comment_count', 'my_reaction',
             'is_saved', 'created_at', 'updated_at',
@@ -80,7 +80,7 @@ class PostCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Post
-        fields = ['post_type', 'title', 'content', 'images']
+        fields = ['post_type', 'visibility', 'title', 'content', 'images']
 
     def create(self, validated_data):
         images = validated_data.pop('images', [])

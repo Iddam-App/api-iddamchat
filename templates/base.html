@@ -17,9 +17,18 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="{% static 'css/iddamchat.css' %}" rel="stylesheet">
     <script>
+    // Immediately apply theme + decide which nav to show (prevents flash)
     (function() {
         var theme = localStorage.getItem('iddam_theme') || 'light';
         if (theme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+        var logged = !!localStorage.getItem('access_token');
+        // Inject a style tag that hides the wrong nav instantly
+        var s = document.createElement('style');
+        s.textContent = logged
+            ? '#nav-guest{display:none!important}#site-footer{display:none!important}'
+            : '#nav-user{display:none!important}#bottom-nav{display:none!important}';
+        document.head.appendChild(s);
+        window.__iddamLogged = logged;
     })();
     </script>
 </head>
@@ -57,7 +66,7 @@
         {% block content %}{% endblock %}
     </main>
 
-    <!-- Footer (hidden when logged in via JS) -->
+    <!-- Footer (hidden when logged in) -->
     <footer class="footer-iddam" id="site-footer">
         <div class="container">
             <img src="{% static 'img/logo_white.png' %}" alt="COGWA"><br>
@@ -65,7 +74,7 @@
         </div>
     </footer>
 
-    <!-- Bottom Navigation (logged-in only, injected by JS) -->
+    <!-- Bottom Navigation (logged-in only) -->
     <nav class="bottom-nav" id="bottom-nav" style="display:none;">
         <a href="/feed/" class="nav-tab" data-page="feed">
             <i class="bi bi-house-door"></i>
@@ -79,6 +88,11 @@
             <i class="bi bi-plus-square"></i>
             <span>Crear</span>
         </button>
+        <a href="/chat/" class="nav-tab" data-page="chat">
+            <i class="bi bi-chat-dots"></i>
+            <span>Chat</span>
+            <span class="nav-badge bottom-unread-badge" style="display:none;">0</span>
+        </a>
         <a href="/groups/" class="nav-tab" data-page="groups">
             <i class="bi bi-people"></i>
             <span>Grupos</span>
@@ -98,6 +112,26 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+                    <!-- Visibility selector -->
+                    <div class="visibility-selector mb-3" id="visibility-selector">
+                        <button type="button" class="vis-btn active" data-vis="public" onclick="selectVisibility('public')">
+                            <i class="bi bi-globe2"></i> Todos
+                        </button>
+                        <button type="button" class="vis-btn" data-vis="friends" onclick="selectVisibility('friends')">
+                            <i class="bi bi-people-fill"></i> Amigos
+                        </button>
+                        <button type="button" class="vis-btn" data-vis="group" onclick="selectVisibility('group')">
+                            <i class="bi bi-collection"></i> Grupo
+                        </button>
+                    </div>
+
+                    <!-- Group selector (hidden by default) -->
+                    <div id="group-selector-wrapper" style="display:none;" class="mb-3">
+                        <select class="form-select form-select-sm" id="post-group-id" style="border-radius:10px;">
+                            <option value="">Selecciona un grupo...</option>
+                        </select>
+                    </div>
+
                     <input type="text" class="form-control mb-3" id="post-title" placeholder="Titulo (opcional)" style="border-radius:10px;">
                     <textarea id="post-content" placeholder="Que quieres compartir?"></textarea>
                     <div class="image-preview-container" id="image-previews"></div>
@@ -156,53 +190,52 @@
     })();
 
     // ─── Nav & Bottom Nav Setup ───
-    (async function initNav() {
-        if (isLoggedIn()) {
-            document.getElementById('nav-guest').style.display = 'none';
-            const navUser = document.getElementById('nav-user');
-            navUser.style.cssText = 'display:flex !important;';
+    (function initNav() {
+        if (!isLoggedIn()) return;
 
-            // Show bottom nav & add body class
-            document.getElementById('bottom-nav').style.display = 'flex';
-            document.body.classList.add('has-bottom-nav');
+        // Show logged-in UI
+        document.getElementById('nav-guest').style.display = 'none';
+        const navUser = document.getElementById('nav-user');
+        navUser.style.cssText = 'display:flex !important;';
+        document.getElementById('bottom-nav').style.display = 'flex';
+        document.body.classList.add('has-bottom-nav');
+        document.getElementById('site-footer').style.display = 'none';
 
-            // Hide footer
-            document.getElementById('site-footer').style.display = 'none';
+        // Highlight active tab
+        const path = window.location.pathname;
+        document.querySelectorAll('.bottom-nav .nav-tab[data-page]').forEach(tab => {
+            const page = tab.dataset.page;
+            if (page === 'feed' && (path === '/feed/' || path === '/')) tab.classList.add('active');
+            else if (page === 'hobbies' && path.startsWith('/hobbies')) tab.classList.add('active');
+            else if (page === 'chat' && path.startsWith('/chat')) tab.classList.add('active');
+            else if (page === 'groups' && path.startsWith('/groups')) tab.classList.add('active');
+            else if (page === 'profile' && path.startsWith('/profile')) tab.classList.add('active');
+        });
 
-            // Highlight active tab
-            const path = window.location.pathname;
-            document.querySelectorAll('.bottom-nav .nav-tab[data-page]').forEach(tab => {
-                const page = tab.dataset.page;
-                if (page === 'feed' && (path === '/feed/' || path === '/')) tab.classList.add('active');
-                else if (page === 'hobbies' && path.startsWith('/hobbies')) tab.classList.add('active');
-                else if (page === 'groups' && path.startsWith('/groups')) tab.classList.add('active');
-                else if (page === 'profile' && path.startsWith('/profile')) tab.classList.add('active');
-            });
-
-            // Highlight chat icon if on chat page
-            if (path.startsWith('/chat')) {
-                document.getElementById('nav-chat-btn').classList.add('active');
-            }
-
-            // Load unread count
-            loadUnreadCount();
-
-            // Fetch user data if needed
-            let userData = localStorage.getItem('user_data');
-            if (!userData) {
-                try {
-                    const res = await authFetch('/api/auth/me/');
-                    if (res.ok) {
-                        const u = await res.json();
-                        localStorage.setItem('user_data', JSON.stringify(u));
-                    }
-                } catch(e) {}
-            }
-
-            // Setup global create post
-            setupGlobalCreatePost();
+        // Highlight top chat icon too
+        if (path.startsWith('/chat')) {
+            document.getElementById('nav-chat-btn').classList.add('active');
         }
+
+        // Load unread count + user data in parallel (non-blocking)
+        loadUnreadCount();
+        ensureUserData();
+
+        // Setup global create post
+        setupGlobalCreatePost();
     })();
+
+    // ─── User Data (lazy, non-blocking) ───
+    async function ensureUserData() {
+        if (localStorage.getItem('user_data')) return;
+        try {
+            const res = await authFetch('/api/auth/me/');
+            if (res.ok) {
+                const u = await res.json();
+                localStorage.setItem('user_data', JSON.stringify(u));
+            }
+        } catch(e) {}
+    }
 
     // ─── Unread Messages Badge ───
     async function loadUnreadCount() {
@@ -210,17 +243,65 @@
             const res = await authFetch('/api/chat/unread/');
             if (!res.ok) return;
             const data = await res.json();
+            const count = data.unread_count || 0;
+
+            // Top navbar badge
             const badge = document.getElementById('nav-unread-badge');
-            if (data.unread_count > 0) {
-                badge.textContent = data.unread_count > 99 ? '99+' : data.unread_count;
+            if (count > 0) {
+                badge.textContent = count > 99 ? '99+' : count;
                 badge.style.display = 'flex';
             } else {
                 badge.style.display = 'none';
             }
+
+            // Bottom nav badge
+            document.querySelectorAll('.bottom-unread-badge').forEach(b => {
+                if (count > 0) {
+                    b.textContent = count > 99 ? '99+' : count;
+                    b.style.display = 'flex';
+                } else {
+                    b.style.display = 'none';
+                }
+            });
         } catch(e) {}
     }
-    // Poll unread every 15 seconds
     if (isLoggedIn()) setInterval(loadUnreadCount, 15000);
+
+    // ─── Visibility Selector ───
+    let selectedVisibility = 'public';
+    let userGroups = null; // cache
+
+    function selectVisibility(vis) {
+        selectedVisibility = vis;
+        document.querySelectorAll('.vis-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector(`.vis-btn[data-vis="${vis}"]`).classList.add('active');
+
+        const groupWrapper = document.getElementById('group-selector-wrapper');
+        if (vis === 'group') {
+            groupWrapper.style.display = 'block';
+            loadUserGroups();
+        } else {
+            groupWrapper.style.display = 'none';
+        }
+    }
+
+    async function loadUserGroups() {
+        if (userGroups) return; // already loaded
+        try {
+            const res = await authFetch('/api/groups/');
+            if (!res.ok) return;
+            const data = await res.json();
+            const groups = data.results || data;
+            userGroups = groups.filter(g => g.is_member);
+            const sel = document.getElementById('post-group-id');
+            sel.innerHTML = '<option value="">Selecciona un grupo...</option>';
+            userGroups.forEach(g => {
+                sel.insertAdjacentHTML('beforeend',
+                    `<option value="${g.id}">${escapeHtml(g.name)}</option>`
+                );
+            });
+        } catch(e) {}
+    }
 
     // ─── Global Create Post ───
     let selectedImages = [];
@@ -266,11 +347,23 @@
             return;
         }
 
+        // If posting to group, use group post endpoint
+        if (selectedVisibility === 'group') {
+            const groupId = document.getElementById('post-group-id').value;
+            if (!groupId) {
+                showToast('Selecciona un grupo');
+                return;
+            }
+            await publishGroupPost(groupId, content, title);
+            return;
+        }
+
         const btn = document.getElementById('btn-publish');
         btn.disabled = true;
 
         const formData = new FormData();
         formData.append('post_type', postType);
+        formData.append('visibility', selectedVisibility);
         if (title) formData.append('title', title);
         formData.append('content', content);
 
@@ -292,30 +385,15 @@
                 res = await authFetch('/api/posts/create/', {
                     method: 'POST',
                     body: formData,
-                    headers: { 'Authorization': 'Bearer ' + getToken() }
                 });
             }
 
             hideUploadProgress('post-upload-progress');
 
             if (res.ok) {
-                bootstrap.Modal.getInstance(document.getElementById('createPostModal')).hide();
-                document.getElementById('post-title').value = '';
-                document.getElementById('post-content').value = '';
-                document.getElementById('image-previews').innerHTML = '';
-                document.getElementById('post-type').value = 'general';
-                selectedImages = [];
-
+                resetPostModal();
                 showToast('Publicacion creada!');
-
-                // Reload feed if on feed/hobbies page
-                if (typeof loadFeed === 'function') {
-                    document.getElementById('posts-feed').innerHTML = '';
-                    currentPage = 1;
-                    loadFeed();
-                } else {
-                    window.location.reload();
-                }
+                reloadCurrentFeed();
             } else {
                 const data = await Promise.resolve(res.json());
                 showToast(data.detail || 'Error al publicar');
@@ -326,6 +404,75 @@
         } finally {
             btn.disabled = false;
             btn.textContent = 'Publicar';
+        }
+    }
+
+    async function publishGroupPost(groupId, content, title) {
+        const btn = document.getElementById('btn-publish');
+        btn.disabled = true;
+        btn.textContent = 'Publicando...';
+
+        const formData = new FormData();
+        formData.append('content', content);
+
+        const hasImages = selectedImages.filter(Boolean).length > 0;
+        if (hasImages) {
+            // Group posts support single image
+            const firstImage = selectedImages.find(Boolean);
+            if (firstImage) formData.append('image', firstImage);
+        }
+
+        try {
+            let res;
+            if (hasImages) {
+                showUploadProgress('post-upload-progress');
+                res = await uploadWithProgress(`/api/groups/${groupId}/posts/`, formData, (pct) => {
+                    updateUploadProgress('post-upload-progress', pct);
+                });
+            } else {
+                res = await authFetch(`/api/groups/${groupId}/posts/`, {
+                    method: 'POST',
+                    body: formData,
+                });
+            }
+
+            hideUploadProgress('post-upload-progress');
+
+            if (res.ok) {
+                resetPostModal();
+                showToast('Publicado en el grupo!');
+                reloadCurrentFeed();
+            } else {
+                const data = await Promise.resolve(res.json());
+                showToast(data.detail || 'Error al publicar');
+            }
+        } catch(e) {
+            hideUploadProgress('post-upload-progress');
+            showToast('Error de conexion');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Publicar';
+        }
+    }
+
+    function resetPostModal() {
+        bootstrap.Modal.getInstance(document.getElementById('createPostModal')).hide();
+        document.getElementById('post-title').value = '';
+        document.getElementById('post-content').value = '';
+        document.getElementById('image-previews').innerHTML = '';
+        document.getElementById('post-type').value = 'general';
+        selectedImages = [];
+        selectVisibility('public');
+    }
+
+    function reloadCurrentFeed() {
+        if (typeof loadFeed === 'function') {
+            const feedEl = document.getElementById('posts-feed');
+            if (feedEl) feedEl.innerHTML = '';
+            currentPage = 1;
+            loadFeed();
+        } else {
+            window.location.reload();
         }
     }
     </script>

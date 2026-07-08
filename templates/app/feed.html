@@ -8,10 +8,35 @@
     <!-- Stories Bar -->
     <div class="stories-bar" id="stories-bar"></div>
 
-    <!-- Loading spinner -->
-    <div class="feed-spinner" id="feed-spinner">
-        <div class="spinner-border" role="status"></div>
-        <p class="mt-2">Cargando publicaciones...</p>
+    <!-- Loading skeleton -->
+    <div id="feed-spinner">
+        <div class="post-card" style="border:1px solid var(--border-color);">
+            <div class="post-card-header">
+                <div class="skeleton-circle" style="width:40px;height:40px;border-radius:50%;background:var(--hover-bg);"></div>
+                <div style="flex:1;">
+                    <div class="skeleton-line" style="width:40%;height:12px;background:var(--hover-bg);border-radius:6px;margin-bottom:6px;"></div>
+                    <div class="skeleton-line" style="width:25%;height:10px;background:var(--hover-bg);border-radius:6px;"></div>
+                </div>
+            </div>
+            <div class="post-card-body">
+                <div class="skeleton-line" style="width:90%;height:12px;background:var(--hover-bg);border-radius:6px;margin-bottom:8px;"></div>
+                <div class="skeleton-line" style="width:70%;height:12px;background:var(--hover-bg);border-radius:6px;margin-bottom:8px;"></div>
+                <div class="skeleton-line" style="width:50%;height:12px;background:var(--hover-bg);border-radius:6px;"></div>
+            </div>
+        </div>
+        <div class="post-card" style="border:1px solid var(--border-color);">
+            <div class="post-card-header">
+                <div style="width:40px;height:40px;border-radius:50%;background:var(--hover-bg);"></div>
+                <div style="flex:1;">
+                    <div style="width:35%;height:12px;background:var(--hover-bg);border-radius:6px;margin-bottom:6px;"></div>
+                    <div style="width:20%;height:10px;background:var(--hover-bg);border-radius:6px;"></div>
+                </div>
+            </div>
+            <div class="post-card-body">
+                <div style="width:85%;height:12px;background:var(--hover-bg);border-radius:6px;margin-bottom:8px;"></div>
+                <div style="width:60%;height:12px;background:var(--hover-bg);border-radius:6px;"></div>
+            </div>
+        </div>
     </div>
 
     <!-- Posts feed -->
