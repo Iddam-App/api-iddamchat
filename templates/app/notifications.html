@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Notificaciones — IddamChat{% endblock %}
+
+{% block content %}
+<div class="feed-container">
+    <div class="feed-header">
+        <h2><i class="bi bi-bell me-2"></i>Notificaciones</h2>
+        <button class="btn btn-outline-secondary btn-sm" id="btn-mark-all" onclick="markAllRead()" style="border-radius:8px; font-size:0.8rem;">
+            <i class="bi bi-check-all me-1"></i>Marcar todo
+        </button>
+    </div>
+
+    <div class="feed-spinner" id="notif-spinner">
+        <div class="spinner-border" role="status"></div>
+    </div>
+
+    <div id="notif-list"></div>
+
+    <div class="empty-state" id="notif-empty" style="display:none;">
+        <i class="bi bi-bell-slash"></i>
+        <h5>Sin notificaciones</h5>
+        <p>Aqui apareceran tus notificaciones</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const NOTIF_ICONS = {
+    follow: { icon: 'bi-person-plus-fill', color: '#7c5c8a' },
+    like: { icon: 'bi-heart-fill', color: '#c2635a' },
+    comment: { icon: 'bi-chat-fill', color: '#8B7355' },
+    dm: { icon: 'bi-envelope-fill', color: '#4a90d9' },
+    story_reaction: { icon: 'bi-fire', color: '#e67e22' },
+    group: { icon: 'bi-people-fill', color: '#27ae60' },
+    mention: { icon: 'bi-at', color: '#8B7355' },
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (!isLoggedIn()) { window.location.href = '/login/'; return; }
+    loadNotifications();
+});
+
+async function loadNotifications() {
+    const spinner = document.getElementById('notif-spinner');
+    const list = document.getElementById('notif-list');
+    const empty = document.getElementById('notif-empty');
+
+    try {
+        const res = await authFetch('/api/notifications/');
+        spinner.style.display = 'none';
+        if (!res.ok) throw new Error('Failed');
+
+        const data = await res.json();
+        const notifications = data.results || data;
+
+        if (notifications.length === 0) {
+            empty.style.display = 'block';
+            return;
+        }
+
+        // Group by time
+        const now = Date.now();
+        const today = [], thisWeek = [], earlier = [];
+
+        notifications.forEach(n => {
+            const diff = (now - new Date(n.created_at).getTime()) / 1000;
+            if (diff < 86400) today.push(n);
+            else if (diff < 604800) thisWeek.push(n);
+            else earlier.push(n);
+        });
+
+        let html = '';
+        if (today.length) {
+            html += '<div class="notif-group-label">Hoy</div>';
+            html += today.map(renderNotifItem).join('');
+        }
+        if (thisWeek.length) {
+            html += '<div class="notif-group-label">Esta semana</div>';
+            html += thisWeek.map(renderNotifItem).join('');
+        }
+        if (earlier.length) {
+            html += '<div class="notif-group-label">Anteriores</div>';
+            html += earlier.map(renderNotifItem).join('');
+        }
+
+        list.innerHTML = html;
+    } catch(e) {
+        spinner.style.display = 'none';
+        showToast('Error al cargar notificaciones');
+        console.error(e);
+    }
+}
+
+function renderNotifItem(n) {
+    const sender = n.sender || {};
+    const name = sender.display_name || sender.first_name || sender.username || '';
+    const initial = (name[0] || '?').toUpperCase();
+    const avatarInner = sender.avatar ? `<img src="${sender.avatar}" alt="">` : initial;
+    const time = formatTimeAgo(n.created_at);
+    const unreadDot = !n.is_read ? '<div class="notif-unread-dot"></div>' : '';
+    const typeInfo = NOTIF_ICONS[n.notification_type] || NOTIF_ICONS.like;
+    const href = getNotifLink(n);
+
+    return `
+    <a href="${href}" class="notif-item ${n.is_read ? '' : 'unread'}" onclick="markRead(${n.id})" data-notif-id="${n.id}">
+        <div class="notif-avatar">
+            <div class="notif-avatar-img">${avatarInner}</div>
+            <div class="notif-type-icon" style="background:${typeInfo.color};">
+                <i class="bi ${typeInfo.icon}"></i>
+            </div>
+        </div>
+        <div class="notif-body">
+            <div class="notif-text">${escapeHtml(n.message || '')}</div>
+            <div class="notif-time">${time}</div>
+        </div>
+        ${unreadDot}
+    </a>`;
+}
+
+function getNotifLink(n) {
+    switch(n.notification_type) {
+        case 'follow':
+            return n.sender ? `/profile/${n.sender.id}/` : '#';
+        case 'like':
+        case 'comment':
+            return n.content_id ? `/post/${n.content_id}/` : '#';
+        case 'dm':
+            return n.sender ? `/chat/${n.sender.id}/` : '/chat/';
+        default:
+            return '#';
+    }
+}
+
+async function markRead(notifId) {
+    try {
+        await authFetch(`/api/notifications/${notifId}/read/`, { method: 'POST' });
+        const item = document.querySelector(`[data-notif-id="${notifId}"]`);
+        if (item) {
+            item.classList.remove('unread');
+            const dot = item.querySelector('.notif-unread-dot');
+            if (dot) dot.remove();
+        }
+    } catch(e) {}
+}
+
+async function markAllRead() {
+    try {
+        const res = await authFetch('/api/notifications/read-all/', { method: 'POST' });
+        if (res.ok) {
+            document.querySelectorAll('.notif-item.unread').forEach(el => {
+                el.classList.remove('unread');
+                const dot = el.querySelector('.notif-unread-dot');
+                if (dot) dot.remove();
+            });
+            showToast('Todas marcadas como leidas');
+            // Update badge
+            const badge = document.getElementById('nav-notif-badge');
+            if (badge) badge.style.display = 'none';
+        }
+    } catch(e) {
+        showToast('Error');
+    }
+}
+</script>
+{% endblock %}

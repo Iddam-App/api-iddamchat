@@ -15,4 +15,5 @@ urlpatterns = [
     path('user/<int:user_id>/', views.UserPostsView.as_view(), name='user_posts'),
     path('hobbies/', views.HobbiesFeedView.as_view(), name='hobbies_feed'),
     path('<int:pk>/hide/', views.ToggleHidePostView.as_view(), name='toggle_hide'),
+    path('hashtag/<str:tag>/', views.HashtagPostsView.as_view(), name='hashtag_posts'),
 ]

@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from apps.core.serializers import UserMinimalSerializer
 
-from .models import Comment, Post, PostImage, Reaction, SavedPost
+from .models import Comment, Hashtag, Post, PostHashtag, PostImage, Reaction, SavedPost
 
 
 class PostImageSerializer(serializers.ModelSerializer):
@@ -36,6 +36,12 @@ class CommentSerializer(serializers.ModelSerializer):
         return []
 
 
+class HashtagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Hashtag
+        fields = ['id', 'name', 'post_count']
+
+
 class PostSerializer(serializers.ModelSerializer):
     author = UserMinimalSerializer(read_only=True)
     images = PostImageSerializer(many=True, read_only=True)
@@ -43,6 +49,7 @@ class PostSerializer(serializers.ModelSerializer):
     comment_count = serializers.ReadOnlyField()
     my_reaction = serializers.SerializerMethodField()
     is_saved = serializers.SerializerMethodField()
+    hashtag_names = serializers.SerializerMethodField()
 
     class Meta:
         model = Post
@@ -50,8 +57,11 @@ class PostSerializer(serializers.ModelSerializer):
             'id', 'author', 'post_type', 'visibility', 'title', 'content',
             'images', 'is_pinned', 'is_church_official', 'is_hidden',
             'reaction_count', 'comment_count', 'my_reaction',
-            'is_saved', 'created_at', 'updated_at',
+            'is_saved', 'hashtag_names', 'created_at', 'updated_at',
         ]
+
+    def get_hashtag_names(self, obj):
+        return [ph.hashtag.name for ph in obj.hashtags.select_related('hashtag').all()]
         read_only_fields = ['id', 'author', 'is_church_official', 'created_at', 'updated_at']
 
     def get_my_reaction(self, obj):

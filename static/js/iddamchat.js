@@ -167,6 +167,10 @@ function escapeHtml(text) {
     return d.innerHTML;
 }
 
+function renderHashtags(escapedHtml) {
+    return escapedHtml.replace(/#(\w+)/g, '<a href="/explore/?hashtag=$1" class="hashtag-link">#$1</a>');
+}
+
 function showToast(message) {
     let container = document.getElementById('toast-container');
     if (!container) {
@@ -254,7 +258,7 @@ function renderPostCard(post, opts = {}) {
         </div>
         <div class="post-card-body">
             ${post.title ? `<div class="post-title">${escapeHtml(post.title)}</div>` : ''}
-            <div class="post-text">${escapeHtml(post.content)}</div>
+            <div class="post-text">${renderHashtags(escapeHtml(post.content))}</div>
         </div>
         ${imagesHtml}
         <div class="post-card-stats">

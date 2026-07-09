@@ -1,0 +1,277 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Explorar — IddamChat{% endblock %}
+
+{% block content %}
+<div class="feed-container">
+    <div class="feed-header">
+        <h2><i class="bi bi-compass me-2"></i>Explorar</h2>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="explore-search-bar">
+        <i class="bi bi-search"></i>
+        <input type="text" id="explore-search" placeholder="Buscar usuarios, grupos, #hashtags..." autocomplete="off">
+        <button class="explore-clear" id="search-clear" style="display:none;" onclick="clearSearch()">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+
+    <!-- Category Chips -->
+    <div class="explore-chips" id="explore-chips">
+        <button class="explore-chip active" data-cat="" onclick="filterCategory(this, '')">Todos</button>
+        <button class="explore-chip" data-cat="testimony" onclick="filterCategory(this, 'testimony')">Testimonios</button>
+        <button class="explore-chip" data-cat="devotional" onclick="filterCategory(this, 'devotional')">Devocionales</button>
+        <button class="explore-chip" data-cat="hobby" onclick="filterCategory(this, 'hobby')">Hobby</button>
+        <button class="explore-chip" data-cat="news" onclick="filterCategory(this, 'news')">Noticias</button>
+    </div>
+
+    <!-- Search Results -->
+    <div id="search-results" style="display:none;">
+        <div id="search-users"></div>
+        <div id="search-groups"></div>
+        <div id="search-hashtags"></div>
+    </div>
+
+    <!-- Discovery Grid -->
+    <div id="discover-section">
+        <div class="feed-spinner" id="discover-spinner">
+            <div class="spinner-border" role="status"></div>
+        </div>
+        <div class="profile-grid" id="discover-grid"></div>
+        <div class="empty-state" id="discover-empty" style="display:none;">
+            <i class="bi bi-compass"></i>
+            <h5>No hay publicaciones</h5>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let discoverPosts = [];
+let currentCategory = '';
+let searchTimeout = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (!isLoggedIn()) { window.location.href = '/login/'; return; }
+
+    // Check for hashtag param
+    const params = new URLSearchParams(window.location.search);
+    const hashtagParam = params.get('hashtag');
+    if (hashtagParam) {
+        document.getElementById('explore-search').value = '#' + hashtagParam;
+        searchHashtag(hashtagParam);
+    } else {
+        loadDiscoverGrid();
+    }
+
+    // Live search
+    document.getElementById('explore-search').addEventListener('input', (e) => {
+        const q = e.target.value.trim();
+        document.getElementById('search-clear').style.display = q ? 'flex' : 'none';
+        clearTimeout(searchTimeout);
+        if (q.length < 2) {
+            document.getElementById('search-results').style.display = 'none';
+            document.getElementById('discover-section').style.display = 'block';
+            return;
+        }
+        searchTimeout = setTimeout(() => performSearch(q), 300);
+    });
+});
+
+async function loadDiscoverGrid() {
+    const spinner = document.getElementById('discover-spinner');
+    const grid = document.getElementById('discover-grid');
+    const empty = document.getElementById('discover-empty');
+
+    try {
+        let url = '/api/posts/feed/';
+        const res = await authFetch(url);
+        spinner.style.display = 'none';
+        if (!res.ok) throw new Error('Failed');
+
+        const data = await res.json();
+        discoverPosts = data.results || data;
+
+        renderDiscoverGrid();
+    } catch(e) {
+        spinner.style.display = 'none';
+        console.error(e);
+    }
+}
+
+function renderDiscoverGrid() {
+    const grid = document.getElementById('discover-grid');
+    const empty = document.getElementById('discover-empty');
+
+    let posts = discoverPosts;
+    if (currentCategory) {
+        posts = posts.filter(p => p.post_type === currentCategory);
+    }
+
+    if (posts.length === 0) {
+        grid.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+    }
+    empty.style.display = 'none';
+
+    grid.innerHTML = posts.map(post => {
+        const thumb = (post.images && post.images.length > 0)
+            ? `<img src="${post.images[0].image}" alt="" loading="lazy">`
+            : `<div class="grid-thumb-text"><i class="bi bi-chat-square-text"></i></div>`;
+        const multiIcon = (post.images && post.images.length > 1)
+            ? '<i class="bi bi-layers grid-multi-icon"></i>' : '';
+        return `
+        <a href="/post/${post.id}/" class="grid-thumb">
+            ${thumb}
+            ${multiIcon}
+            <div class="grid-thumb-overlay">
+                <span><i class="bi bi-heart-fill"></i> ${post.reaction_count || 0}</span>
+                <span><i class="bi bi-chat-fill"></i> ${post.comment_count || 0}</span>
+            </div>
+        </a>`;
+    }).join('');
+}
+
+function filterCategory(btn, cat) {
+    currentCategory = cat;
+    document.querySelectorAll('.explore-chip').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    renderDiscoverGrid();
+}
+
+async function performSearch(query) {
+    document.getElementById('search-results').style.display = 'block';
+    document.getElementById('discover-section').style.display = 'none';
+
+    // Check if searching hashtag
+    if (query.startsWith('#') && query.length > 1) {
+        searchHashtag(query.substring(1));
+        return;
+    }
+
+    // Search users and groups in parallel
+    const [usersHtml, groupsHtml] = await Promise.all([
+        searchUsers(query),
+        searchGroups(query)
+    ]);
+
+    document.getElementById('search-users').innerHTML = usersHtml;
+    document.getElementById('search-groups').innerHTML = groupsHtml;
+    document.getElementById('search-hashtags').innerHTML = '';
+}
+
+async function searchUsers(query) {
+    try {
+        const res = await authFetch(`/api/auth/users/search/?q=${encodeURIComponent(query)}`);
+        if (!res.ok) return '';
+        const data = await res.json();
+        const users = data.results || data;
+        if (users.length === 0) return '';
+
+        return `
+        <div class="search-section-label"><i class="bi bi-people me-1"></i>Usuarios</div>
+        ${users.map(u => {
+            const name = u.display_name || u.first_name || u.username;
+            const initial = (name[0] || '?').toUpperCase();
+            const avatarInner = u.avatar ? `<img src="${u.avatar}" alt="">` : initial;
+            return `
+            <a href="/profile/${u.id}/" class="search-user-item">
+                <div class="search-user-avatar">${avatarInner}</div>
+                <div class="search-user-info">
+                    <div class="search-user-name">${escapeHtml(name)}</div>
+                    <div class="search-user-username">@${escapeHtml(u.username)}</div>
+                </div>
+            </a>`;
+        }).join('')}`;
+    } catch(e) {
+        return '';
+    }
+}
+
+async function searchGroups(query) {
+    try {
+        const res = await authFetch(`/api/groups/?search=${encodeURIComponent(query)}`);
+        if (!res.ok) return '';
+        const data = await res.json();
+        const groups = data.results || data;
+        if (groups.length === 0) return '';
+
+        return `
+        <div class="search-section-label"><i class="bi bi-collection me-1"></i>Grupos</div>
+        ${groups.map(g => {
+            const initial = (g.name[0] || '?').toUpperCase();
+            const avatarInner = g.avatar ? `<img src="${g.avatar}" alt="">` : initial;
+            return `
+            <a href="/groups/" class="search-user-item" onclick="localStorage.setItem('open_group','${g.id}')">
+                <div class="search-user-avatar" style="border-radius:12px;">${avatarInner}</div>
+                <div class="search-user-info">
+                    <div class="search-user-name">${escapeHtml(g.name)}</div>
+                    <div class="search-user-username">${g.member_count} miembros</div>
+                </div>
+                <span class="meta-badge">${g.is_member ? 'Miembro' : 'Unirse'}</span>
+            </a>`;
+        }).join('')}`;
+    } catch(e) {
+        return '';
+    }
+}
+
+async function searchHashtag(tag) {
+    document.getElementById('search-results').style.display = 'block';
+    document.getElementById('discover-section').style.display = 'none';
+    document.getElementById('search-users').innerHTML = '';
+    document.getElementById('search-groups').innerHTML = '';
+
+    const container = document.getElementById('search-hashtags');
+    container.innerHTML = '<div class="feed-spinner"><div class="spinner-border spinner-border-sm"></div></div>';
+
+    try {
+        const res = await authFetch(`/api/posts/hashtag/${encodeURIComponent(tag)}/`);
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+        const posts = data.results || data;
+
+        if (posts.length === 0) {
+            container.innerHTML = '<div class="empty-state"><i class="bi bi-hash"></i><h5>Sin resultados para #' + escapeHtml(tag) + '</h5></div>';
+            return;
+        }
+
+        container.innerHTML = `
+        <div class="search-section-label"><i class="bi bi-hash me-1"></i>#${escapeHtml(tag)} — ${posts.length} publicaciones</div>
+        <div class="profile-grid">
+            ${posts.map(post => {
+                const thumb = (post.images && post.images.length > 0)
+                    ? `<img src="${post.images[0].image}" alt="" loading="lazy">`
+                    : `<div class="grid-thumb-text"><i class="bi bi-chat-square-text"></i></div>`;
+                return `
+                <a href="/post/${post.id}/" class="grid-thumb">
+                    ${thumb}
+                    <div class="grid-thumb-overlay">
+                        <span><i class="bi bi-heart-fill"></i> ${post.reaction_count || 0}</span>
+                        <span><i class="bi bi-chat-fill"></i> ${post.comment_count || 0}</span>
+                    </div>
+                </a>`;
+            }).join('')}
+        </div>`;
+    } catch(e) {
+        container.innerHTML = '';
+        console.error(e);
+    }
+}
+
+function clearSearch() {
+    document.getElementById('explore-search').value = '';
+    document.getElementById('search-clear').style.display = 'none';
+    document.getElementById('search-results').style.display = 'none';
+    document.getElementById('discover-section').style.display = 'block';
+    // Clear URL params
+    if (window.location.search) {
+        history.replaceState(null, '', '/explore/');
+    }
+}
+</script>
+{% endblock %}

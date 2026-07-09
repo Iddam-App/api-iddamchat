@@ -1,4 +1,6 @@
-from django.db.models import Count, Exists, OuterRef, Q, Subquery
+import re
+
+from django.db.models import Count, Exists, F, OuterRef, Q, Subquery
 from rest_framework import generics, status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
@@ -8,10 +10,13 @@ from apps.moderation.filter import check_and_flag
 from apps.notifications.services import create_notification
 from apps.social.models import Follow, Friendship
 
-from .models import Comment, Post, Reaction, SavedPost
+from .models import Comment, Hashtag, Post, PostHashtag, Reaction, SavedPost
 from .serializers import (
-    CommentSerializer, PostCreateSerializer, PostSerializer, ReactionSerializer,
+    CommentSerializer, HashtagSerializer, PostCreateSerializer,
+    PostSerializer, ReactionSerializer,
 )
+
+HASHTAG_RE = re.compile(r'#(\w+)', re.UNICODE)
 
 
 class FeedView(generics.ListAPIView):
@@ -93,7 +98,8 @@ class PostCreateView(generics.CreateAPIView):
                 'severity': mod_result['severity'],
             }, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
-        serializer.save(author=request.user)
+        post = serializer.save(author=request.user)
+        _extract_hashtags(post)
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
@@ -251,3 +257,28 @@ class ToggleHidePostView(APIView):
         post.is_hidden = not post.is_hidden
         post.save(update_fields=['is_hidden'])
         return Response({'is_hidden': post.is_hidden})
+
+
+def _extract_hashtags(post):
+    """Parse #hashtags from post content/title and link them."""
+    text = f'{post.title} {post.content}'
+    tags = set(t.lower() for t in HASHTAG_RE.findall(text))
+    for tag_name in tags:
+        hashtag, _ = Hashtag.objects.get_or_create(name=tag_name)
+        PostHashtag.objects.get_or_create(post=post, hashtag=hashtag)
+    # Update counts
+    for tag_name in tags:
+        Hashtag.objects.filter(name=tag_name).update(
+            post_count=PostHashtag.objects.filter(hashtag__name=tag_name).count(),
+        )
+
+
+class HashtagPostsView(generics.ListAPIView):
+    """List posts for a given hashtag."""
+    serializer_class = PostSerializer
+
+    def get_queryset(self):
+        tag = self.kwargs['tag'].lower()
+        return Post.objects.filter(
+            hashtags__hashtag__name=tag, is_hidden=False,
+        ).select_related('author').prefetch_related('images', 'reactions').distinct()

@@ -7,6 +7,7 @@ from apps.core.views_web import (
     landing_view, login_view, register_view,
     feed_view, hobbies_view, hosting_view, chat_view, groups_view,
     profile_view, edit_profile_view, post_detail_view,
+    notifications_view, explore_view, events_view,
 )
 
 urlpatterns = [
@@ -24,6 +25,9 @@ urlpatterns = [
     path('profile/edit/', edit_profile_view, name='edit_profile'),
     path('profile/<int:user_id>/', profile_view, name='user_profile'),
     path('post/<int:pk>/', post_detail_view, name='post_detail'),
+    path('notifications/', notifications_view, name='notifications'),
+    path('explore/', explore_view, name='explore'),
+    path('events/', events_view, name='events'),
 
     path('admin/', admin.site.urls),
 

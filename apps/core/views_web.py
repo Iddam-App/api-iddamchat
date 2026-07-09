@@ -43,3 +43,15 @@ def groups_view(request):
 
 def post_detail_view(request, pk):
     return render(request, 'app/post_detail.html')
+
+
+def notifications_view(request):
+    return render(request, 'app/notifications.html')
+
+
+def explore_view(request):
+    return render(request, 'app/explore.html')
+
+
+def events_view(request):
+    return render(request, 'app/events.html')
