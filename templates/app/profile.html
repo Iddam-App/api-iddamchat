@@ -4,100 +4,54 @@
 {% block title %}Perfil — IddamChat{% endblock %}
 
 {% block content %}
-<!-- Profile Header (Instagram-style) -->
+<!-- Profile Header -->
 <div class="profile-header" id="profile-header">
     <div class="container">
-        <div class="profile-top-row">
-            <div class="profile-avatar" id="profile-avatar">?</div>
-            <input type="file" id="avatar-file-input" accept="image/*" style="display:none;">
-            <div class="profile-stats">
-                <div class="stat" id="stat-posts-wrap">
-                    <span class="stat-number" id="stat-posts">0</span>
-                    <span class="stat-label">Publicaciones</span>
-                </div>
-                <div class="stat clickable" id="stat-followers-wrap" onclick="openFollowModal('followers')">
-                    <span class="stat-number" id="stat-followers">0</span>
-                    <span class="stat-label">Seguidores</span>
-                </div>
-                <div class="stat clickable" id="stat-following-wrap" onclick="openFollowModal('following')">
-                    <span class="stat-number" id="stat-following">0</span>
-                    <span class="stat-label">Siguiendo</span>
-                </div>
+        <div class="profile-avatar" id="profile-avatar">?</div>
+        <input type="file" id="avatar-file-input" accept="image/*" style="display:none;">
+        <h2 id="profile-name">Cargando...</h2>
+        <div class="profile-username" id="profile-username"></div>
+        <div class="profile-bio" id="profile-bio"></div>
+        <div class="profile-stats">
+            <div class="stat">
+                <span class="stat-number" id="stat-posts">0</span>
+                <span class="stat-label">Publicaciones</span>
             </div>
-        </div>
-        <div class="profile-name-section">
-            <h2 id="profile-name">Cargando...</h2>
-            <div class="profile-username" id="profile-username"></div>
-            <div class="profile-bio" id="profile-bio"></div>
+            <div class="stat">
+                <span class="stat-number" id="stat-followers">0</span>
+                <span class="stat-label">Seguidores</span>
+            </div>
+            <div class="stat">
+                <span class="stat-number" id="stat-following">0</span>
+                <span class="stat-label">Siguiendo</span>
+            </div>
         </div>
         <div class="profile-actions" id="profile-actions"></div>
     </div>
 </div>
 
-<!-- Private Account Message -->
-<div class="private-account-msg" id="private-msg" style="display:none;">
-    <div class="container" style="max-width:640px; padding:3rem 1rem; text-align:center;">
-        <i class="bi bi-lock" style="font-size:3rem; color:var(--text-muted);"></i>
-        <h5 style="font-weight:700; margin-top:0.8rem; color:var(--text-primary);">Cuenta Privada</h5>
-        <p style="color:var(--text-secondary); font-size:0.9rem;">Sigue a este usuario para ver sus publicaciones.</p>
-    </div>
-</div>
-
 <!-- Profile Content -->
 <div class="profile-info-cards" id="profile-content">
-    <!-- Stories Row (own profile) -->
-    <div class="profile-stories" id="profile-stories" style="display:none;">
-        <div class="stories-bar" id="stories-row"></div>
-    </div>
-
     <!-- Info card -->
     <div class="info-card" id="info-card" style="display:none;">
         <h5><i class="bi bi-info-circle me-2"></i>Informacion</h5>
         <div id="info-rows"></div>
     </div>
 
-    <!-- Profile Tabs -->
-    <div class="profile-tabs" id="profile-tabs">
-        <button class="profile-tab active" data-tab="grid" onclick="switchProfileTab('grid')">
-            <i class="bi bi-grid-3x3"></i>
-        </button>
-        <button class="profile-tab" data-tab="list" onclick="switchProfileTab('list')">
-            <i class="bi bi-list-ul"></i>
-        </button>
-        <button class="profile-tab" data-tab="saved" id="saved-tab" onclick="switchProfileTab('saved')" style="display:none;">
-            <i class="bi bi-bookmark"></i>
-        </button>
+    <!-- Posts -->
+    <div class="feed-header mt-3">
+        <h5 style="font-weight:700; color:var(--text-primary); margin:0;"><i class="bi bi-grid me-2"></i>Publicaciones</h5>
     </div>
-
-    <!-- Grid View -->
-    <div class="profile-grid" id="posts-grid"></div>
-
-    <!-- List View -->
-    <div id="posts-list" style="display:none;"></div>
-
-    <!-- Saved View -->
-    <div class="profile-grid" id="saved-grid" style="display:none;"></div>
 
     <div class="feed-spinner" id="posts-spinner">
         <div class="spinner-border" role="status"></div>
     </div>
 
-    <div class="empty-state" id="empty-posts" style="display:none;">
-        <i class="bi bi-camera"></i>
-        <h5>Sin publicaciones aun</h5>
-    </div>
-</div>
+    <div id="user-posts"></div>
 
-<!-- Followers / Following Modal -->
-<div class="modal-overlay" id="follow-modal" style="display:none;" onclick="closeFollowModal(event)">
-    <div class="follow-modal-card" onclick="event.stopPropagation()">
-        <div class="follow-modal-header">
-            <h5 id="follow-modal-title">Seguidores</h5>
-            <button class="btn-close" onclick="closeFollowModal()"></button>
-        </div>
-        <div class="follow-modal-body" id="follow-modal-list">
-            <div class="feed-spinner"><div class="spinner-border spinner-border-sm"></div></div>
-        </div>
+    <div class="empty-state" id="empty-posts" style="display:none;">
+        <i class="bi bi-image"></i>
+        <h5>Sin publicaciones aun</h5>
     </div>
 </div>
 
@@ -120,11 +74,6 @@
 <script>
 let profileUserId = null;
 let isOwnProfile = false;
-let allUserPosts = [];
-let savedPosts = [];
-let currentTab = 'grid';
-let followersData = [];
-let followingData = [];
 
 document.addEventListener('DOMContentLoaded', () => {
     if (!isLoggedIn()) { window.location.href = '/login/'; return; }
@@ -140,18 +89,21 @@ document.addEventListener('DOMContentLoaded', () => {
         isOwnProfile = true;
     }
 
-    if (isOwnProfile) {
-        document.getElementById('saved-tab').style.display = '';
-    }
-
     loadProfile();
+    loadUserPosts();
 
     // Avatar click-to-change for own profile
     document.getElementById('avatar-file-input').addEventListener('change', async function() {
         if (!this.files || !this.files[0]) return;
         const formData = new FormData();
         formData.append('avatar', this.files[0]);
-        const res = await authFetch('/api/auth/me/', { method: 'PUT', body: formData });
+
+        const res = await authFetch('/api/auth/me/', {
+            method: 'PUT',
+            body: formData,
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+
         if (res.ok) {
             const user = await res.json();
             localStorage.setItem('user_data', JSON.stringify(user));
@@ -178,6 +130,7 @@ async function loadProfile() {
             avatarEl.textContent = (user.first_name || user.username || '?')[0].toUpperCase();
         }
 
+        // Make avatar editable for own profile
         if (isOwnProfile) {
             avatarEl.classList.add('editable');
             avatarEl.insertAdjacentHTML('beforeend', '<div class="avatar-overlay"><i class="bi bi-camera"></i></div>');
@@ -236,27 +189,18 @@ async function loadProfile() {
                     <i class="bi bi-chat me-1"></i>Mensaje
                 </a>
             `;
-
-            // Check if private and not following
-            if (user.is_private && !isFollowing) {
-                document.getElementById('private-msg').style.display = 'block';
-                document.getElementById('profile-content').style.display = 'none';
-                return;
-            }
         } else {
             actionsEl.innerHTML = `
-                <a href="/profile/edit/" class="btn btn-outline-light btn-sm px-4" style="border-radius:8px;">
+                <a href="/profile/edit/" class="btn btn-gradient btn-sm px-4">
                     <i class="bi bi-pencil me-1"></i>Editar Perfil
                 </a>
-                <button class="btn btn-outline-light btn-sm px-3" style="border-radius:8px; opacity:0.7;" onclick="openDeleteModal()">
-                    <i class="bi bi-gear me-1"></i>
+                <button class="btn btn-outline-danger btn-sm px-3" onclick="openDeleteModal()">
+                    <i class="bi bi-trash me-1"></i>Eliminar Cuenta
                 </button>
             `;
         }
 
         loadStats();
-        loadUserPosts();
-        if (isOwnProfile) loadStories();
 
     } catch(e) {
         document.getElementById('profile-name').textContent = 'Usuario no encontrado';
@@ -273,16 +217,16 @@ async function loadStats() {
 
         if (followersRes.ok) {
             const data = await followersRes.json();
-            followersData = data.results || data;
+            const items = data.results || data;
             if (isOwnProfile) {
-                document.getElementById('stat-followers').textContent = followersData.length;
+                document.getElementById('stat-followers').textContent = items.length;
             }
         }
         if (followingRes.ok) {
             const data = await followingRes.json();
-            followingData = data.results || data;
+            const items = data.results || data;
             if (isOwnProfile) {
-                document.getElementById('stat-following').textContent = followingData.length;
+                document.getElementById('stat-following').textContent = items.length;
             }
         }
     } catch(e) {}
@@ -296,142 +240,23 @@ async function loadUserPosts() {
 
         if (!res.ok) throw new Error('Failed');
         const data = await res.json();
-        allUserPosts = data.results || data;
+        const posts = data.results || data;
 
-        document.getElementById('stat-posts').textContent = allUserPosts.length;
+        document.getElementById('stat-posts').textContent = posts.length;
 
-        if (allUserPosts.length === 0) {
+        if (posts.length === 0) {
             document.getElementById('empty-posts').style.display = 'block';
             return;
         }
 
-        renderGrid(allUserPosts, 'posts-grid');
-        renderList(allUserPosts, 'posts-list');
+        const container = document.getElementById('user-posts');
+        posts.forEach(post => {
+            container.insertAdjacentHTML('beforeend', renderPostCard(post, { showType: true }));
+        });
     } catch(e) {
         spinner.style.display = 'none';
         console.error(e);
     }
-}
-
-function renderGrid(posts, containerId) {
-    const container = document.getElementById(containerId);
-    container.innerHTML = posts.map(post => {
-        const thumb = (post.images && post.images.length > 0)
-            ? `<img src="${post.images[0].image}" alt="" loading="lazy">`
-            : `<div class="grid-thumb-text"><i class="bi bi-chat-square-text"></i></div>`;
-        const multiIcon = (post.images && post.images.length > 1)
-            ? '<i class="bi bi-layers grid-multi-icon"></i>' : '';
-        return `
-        <a href="/post/${post.id}/" class="grid-thumb">
-            ${thumb}
-            ${multiIcon}
-            <div class="grid-thumb-overlay">
-                <span><i class="bi bi-heart-fill"></i> ${post.reaction_count || 0}</span>
-                <span><i class="bi bi-chat-fill"></i> ${post.comment_count || 0}</span>
-            </div>
-        </a>`;
-    }).join('');
-}
-
-function renderList(posts, containerId) {
-    const container = document.getElementById(containerId);
-    container.innerHTML = '';
-    posts.forEach(post => {
-        container.insertAdjacentHTML('beforeend', renderPostCard(post, { showType: true }));
-    });
-}
-
-async function loadSavedPosts() {
-    const grid = document.getElementById('saved-grid');
-    if (savedPosts.length > 0) return; // already loaded
-    grid.innerHTML = '<div class="feed-spinner"><div class="spinner-border spinner-border-sm"></div></div>';
-    try {
-        const res = await authFetch('/api/posts/saved/');
-        if (!res.ok) throw new Error('Failed');
-        const data = await res.json();
-        savedPosts = data.results || data;
-        if (savedPosts.length === 0) {
-            grid.innerHTML = '<div class="empty-state"><i class="bi bi-bookmark"></i><h5>Sin publicaciones guardadas</h5></div>';
-            return;
-        }
-        renderGrid(savedPosts, 'saved-grid');
-    } catch(e) {
-        grid.innerHTML = '';
-        console.error(e);
-    }
-}
-
-async function loadStories() {
-    try {
-        const res = await authFetch('/api/profiles/stories/mine/');
-        if (!res.ok) return;
-        const data = await res.json();
-        const stories = data.results || data;
-        if (stories.length > 0) {
-            document.getElementById('profile-stories').style.display = 'block';
-            const row = document.getElementById('stories-row');
-            row.innerHTML = stories.map(s => {
-                const thumb = s.image || s.media_url || '';
-                return `
-                <div class="story-item" onclick="viewStory(${s.id})">
-                    <div class="story-avatar-ring has-story">
-                        <div class="story-avatar">
-                            ${thumb ? `<img src="${thumb}" alt="">` : '<i class="bi bi-image"></i>'}
-                        </div>
-                    </div>
-                    <span class="story-name">${formatTimeAgo(s.created_at)}</span>
-                </div>`;
-            }).join('');
-        }
-    } catch(e) {}
-}
-
-function switchProfileTab(tab) {
-    currentTab = tab;
-    document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active'));
-    document.querySelector(`.profile-tab[data-tab="${tab}"]`).classList.add('active');
-
-    document.getElementById('posts-grid').style.display = tab === 'grid' ? 'grid' : 'none';
-    document.getElementById('posts-list').style.display = tab === 'list' ? 'block' : 'none';
-    document.getElementById('saved-grid').style.display = tab === 'saved' ? 'grid' : 'none';
-
-    if (tab === 'saved' && savedPosts.length === 0) loadSavedPosts();
-}
-
-// Follow Modal
-function openFollowModal(type) {
-    if (!isOwnProfile) return;
-    const modal = document.getElementById('follow-modal');
-    modal.style.display = 'flex';
-    document.getElementById('follow-modal-title').textContent = type === 'followers' ? 'Seguidores' : 'Siguiendo';
-
-    const list = document.getElementById('follow-modal-list');
-    const users = type === 'followers' ? followersData : followingData;
-
-    if (users.length === 0) {
-        list.innerHTML = '<div class="empty-state" style="padding:1.5rem;"><i class="bi bi-people"></i><h5>Sin usuarios</h5></div>';
-        return;
-    }
-
-    list.innerHTML = users.map(f => {
-        const u = type === 'followers' ? (f.follower || f) : (f.followed || f);
-        const name = u.display_name || u.first_name || u.username || 'Usuario';
-        const initial = (name[0] || '?').toUpperCase();
-        const avatarInner = u.avatar ? `<img src="${u.avatar}" alt="">` : initial;
-        return `
-        <a href="/profile/${u.id}/" class="follow-user-item">
-            <div class="follow-user-avatar">${avatarInner}</div>
-            <div class="follow-user-info">
-                <div class="follow-user-name">${escapeHtml(name)}</div>
-                <div class="follow-user-username">@${u.username || ''}</div>
-            </div>
-        </a>`;
-    }).join('');
-}
-
-function closeFollowModal(e) {
-    if (e && e.target !== e.currentTarget) return;
-    document.getElementById('follow-modal').style.display = 'none';
 }
 
 async function toggleFollow() {
@@ -466,7 +291,10 @@ async function confirmDelete() {
     const errorEl = document.getElementById('delete-error');
     const btn = document.getElementById('btn-confirm-delete');
 
-    if (!password) { errorEl.textContent = 'Ingresa tu contraseña.'; return; }
+    if (!password) {
+        errorEl.textContent = 'Ingresa tu contraseña.';
+        return;
+    }
 
     btn.disabled = true;
     btn.textContent = 'Eliminando...';
@@ -477,6 +305,7 @@ async function confirmDelete() {
             body: JSON.stringify({ password })
         });
         const data = await res.json();
+
         if (res.ok) {
             localStorage.clear();
             window.location.href = '/';
@@ -489,11 +318,6 @@ async function confirmDelete() {
         btn.disabled = false;
         btn.textContent = 'Eliminar';
     }
-}
-
-function viewStory(id) {
-    // Placeholder — story viewer would go here
-    showToast('Visor de historias proximamente');
 }
 </script>
 {% endblock %}

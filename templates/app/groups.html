@@ -69,11 +69,9 @@
         </div>
 
         <!-- Group Tabs -->
-        <div class="hosting-tabs mt-3" id="gd-tabs">
+        <div class="hosting-tabs mt-3">
             <button class="hosting-tab active" onclick="switchDetailTab('posts')"><i class="bi bi-chat-square-text"></i> Posts</button>
             <button class="hosting-tab" onclick="switchDetailTab('members')"><i class="bi bi-people"></i> Miembros</button>
-            <button class="hosting-tab" onclick="switchDetailTab('proposals')"><i class="bi bi-lightbulb"></i> Propuestas</button>
-            <button class="hosting-tab" onclick="switchDetailTab('admin')" id="gd-admin-tab" style="display:none;"><i class="bi bi-gear"></i> Admin</button>
         </div>
 
         <!-- Group Posts -->
@@ -100,51 +98,6 @@
         <!-- Group Members -->
         <div id="gd-panel-members" style="display:none;">
             <div id="gd-members-list"></div>
-        </div>
-
-        <!-- Group Proposals -->
-        <div id="gd-panel-proposals" style="display:none;">
-            <div class="group-post-input" id="gd-proposal-input" style="display:none;">
-                <input type="text" class="form-control mb-2" id="gd-proposal-title" placeholder="Titulo de la propuesta" style="border-radius:10px;">
-                <textarea class="form-control mb-2" id="gd-proposal-desc" placeholder="Describe tu propuesta..." rows="2"></textarea>
-                <div class="d-flex justify-content-end">
-                    <button class="btn btn-gradient btn-sm" onclick="createProposal()">Crear Propuesta</button>
-                </div>
-            </div>
-            <div id="gd-proposals-list"></div>
-            <div class="empty-state" id="gd-proposals-empty" style="display:none;">
-                <i class="bi bi-lightbulb"></i>
-                <h5>Sin propuestas</h5>
-                <p>Crea una propuesta para el grupo</p>
-            </div>
-        </div>
-
-        <!-- Admin Panel -->
-        <div id="gd-panel-admin" style="display:none;">
-            <!-- Join Requests -->
-            <div class="info-card mb-3">
-                <h5><i class="bi bi-person-check me-2"></i>Solicitudes de ingreso</h5>
-                <div id="gd-requests-list">
-                    <div class="feed-spinner"><div class="spinner-border spinner-border-sm"></div></div>
-                </div>
-                <div class="empty-state" id="gd-requests-empty" style="display:none; padding:1rem;">
-                    <p style="margin:0; font-size:0.85rem;">Sin solicitudes pendientes</p>
-                </div>
-            </div>
-
-            <!-- Group Settings -->
-            <div class="info-card">
-                <h5><i class="bi bi-gear me-2"></i>Configuracion del grupo</h5>
-                <div class="mb-2">
-                    <label class="form-label" style="font-weight:600; font-size:0.82rem; color:var(--text-secondary);">Nombre</label>
-                    <input type="text" class="form-control" id="gd-edit-name" style="border-radius:10px;">
-                </div>
-                <div class="mb-2">
-                    <label class="form-label" style="font-weight:600; font-size:0.82rem; color:var(--text-secondary);">Descripcion</label>
-                    <textarea class="form-control" id="gd-edit-desc" rows="2" style="border-radius:10px;"></textarea>
-                </div>
-                <button class="btn btn-gradient btn-sm mt-2" onclick="saveGroupSettings()">Guardar cambios</button>
-            </div>
         </div>
     </div>
 </div>
@@ -586,31 +539,18 @@ function renderGroupDetail(group) {
 
     // Actions
     const actions = document.getElementById('gd-actions');
-    const isAdmin = group.is_admin || group.my_role === 'admin';
     if (group.is_member) {
         actions.innerHTML = `
             <button class="btn btn-outline-secondary btn-sm px-3" style="border-radius:8px;" onclick="leaveGroup(${group.id})">
                 <i class="bi bi-box-arrow-right me-1"></i>Salir del grupo
             </button>`;
         document.getElementById('gd-post-input').style.display = 'block';
-        document.getElementById('gd-proposal-input').style.display = 'block';
     } else {
         actions.innerHTML = `
             <button class="btn btn-gradient btn-sm px-4" onclick="joinGroup(${group.id})">
                 <i class="bi bi-plus-lg me-1"></i>Unirse
             </button>`;
         document.getElementById('gd-post-input').style.display = 'none';
-        document.getElementById('gd-proposal-input').style.display = 'none';
-    }
-
-    // Show admin tab for admins
-    const adminTab = document.getElementById('gd-admin-tab');
-    adminTab.style.display = isAdmin ? '' : 'none';
-
-    // Pre-fill settings for admin
-    if (isAdmin) {
-        document.getElementById('gd-edit-name').value = group.name || '';
-        document.getElementById('gd-edit-desc').value = group.description || '';
     }
 }
 
@@ -626,16 +566,11 @@ function closeGroupDetail() {
 }
 
 function switchDetailTab(tab) {
-    const tabMap = { posts: 0, members: 1, proposals: 2, admin: 3 };
-    const tabs = document.querySelectorAll('#gd-tabs .hosting-tab');
-    tabs.forEach((t, i) => t.classList.toggle('active', i === tabMap[tab]));
+    const tabs = document.querySelectorAll('#group-detail-view .hosting-tab');
+    tabs.forEach((t, i) => t.classList.toggle('active', i === (tab === 'posts' ? 0 : 1)));
     document.getElementById('gd-panel-posts').style.display = tab === 'posts' ? 'block' : 'none';
     document.getElementById('gd-panel-members').style.display = tab === 'members' ? 'block' : 'none';
-    document.getElementById('gd-panel-proposals').style.display = tab === 'proposals' ? 'block' : 'none';
-    document.getElementById('gd-panel-admin').style.display = tab === 'admin' ? 'block' : 'none';
     if (tab === 'members') loadGroupMembers();
-    if (tab === 'proposals') loadProposals();
-    if (tab === 'admin') loadJoinRequests();
 }
 
 // ─── Group Posts ───
@@ -797,164 +732,6 @@ function openCreateGroupModal() {
     new bootstrap.Modal(document.getElementById('createGroupModal')).show();
 }
 
-// ─── Proposals ───
-async function loadProposals() {
-    const list = document.getElementById('gd-proposals-list');
-    const empty = document.getElementById('gd-proposals-empty');
-    list.innerHTML = '<div class="feed-spinner"><div class="spinner-border spinner-border-sm"></div></div>';
-    empty.style.display = 'none';
-
-    try {
-        const res = await authFetch('/api/groups/proposals/');
-        if (!res.ok) throw new Error('Failed');
-        const data = await res.json();
-        const proposals = (data.results || data).filter(p => p.group === activeGroupId || p.group_id === activeGroupId);
-
-        if (proposals.length === 0) {
-            list.innerHTML = '';
-            empty.style.display = 'block';
-            return;
-        }
-
-        list.innerHTML = proposals.map(p => {
-            const creator = p.created_by || p.creator || {};
-            const name = creator.display_name || creator.first_name || creator.username || 'Usuario';
-            const memberCount = p.members_count || p.member_count || 0;
-            const isJoined = p.is_joined || false;
-
-            return `
-            <div class="gp-card">
-                <div class="gp-card-header">
-                    <div style="flex:1;">
-                        <div style="font-weight:700; color:var(--text-primary); font-size:0.95rem;">${escapeHtml(p.title || p.name || '')}</div>
-                        <div style="font-size:0.78rem; color:var(--text-muted);">por ${escapeHtml(name)} · ${memberCount} interesados</div>
-                    </div>
-                    <button class="btn ${isJoined ? 'btn-outline-secondary' : 'btn-gradient'} btn-sm" onclick="joinProposal(${p.id})" style="border-radius:8px;">
-                        ${isJoined ? 'Unido' : 'Unirse'}
-                    </button>
-                </div>
-                ${p.description ? `<div class="gp-card-content" style="margin-top:0.3rem;">${escapeHtml(p.description)}</div>` : ''}
-            </div>`;
-        }).join('');
-    } catch(e) {
-        list.innerHTML = '';
-        console.error(e);
-    }
-}
-
-async function createProposal() {
-    const title = document.getElementById('gd-proposal-title').value.trim();
-    const desc = document.getElementById('gd-proposal-desc').value.trim();
-    if (!title) { showToast('La propuesta necesita un titulo'); return; }
-
-    try {
-        const res = await authFetch('/api/groups/proposals/', {
-            method: 'POST',
-            body: JSON.stringify({ title, description: desc, group: activeGroupId })
-        });
-        if (res.ok) {
-            document.getElementById('gd-proposal-title').value = '';
-            document.getElementById('gd-proposal-desc').value = '';
-            showToast('Propuesta creada');
-            loadProposals();
-        } else {
-            const data = await res.json();
-            showToast(Object.values(data).flat().join(', ') || 'Error');
-        }
-    } catch(e) {
-        showToast('Error de conexion');
-    }
-}
-
-async function joinProposal(proposalId) {
-    try {
-        const res = await authFetch(`/api/groups/proposals/${proposalId}/join/`, { method: 'POST' });
-        if (res.ok) {
-            showToast('Te uniste a la propuesta');
-            loadProposals();
-        }
-    } catch(e) {
-        showToast('Error');
-    }
-}
-
-// ─── Admin: Join Requests ───
-async function loadJoinRequests() {
-    const list = document.getElementById('gd-requests-list');
-    const empty = document.getElementById('gd-requests-empty');
-
-    try {
-        const res = await authFetch(`/api/groups/${activeGroupId}/requests/`);
-        if (!res.ok) throw new Error('Failed');
-        const data = await res.json();
-        const requests = data.results || data;
-
-        if (requests.length === 0) {
-            list.innerHTML = '';
-            empty.style.display = 'block';
-            return;
-        }
-        empty.style.display = 'none';
-
-        list.innerHTML = requests.map(r => {
-            const u = r.user || {};
-            const name = u.display_name || u.first_name || u.username || 'Usuario';
-            const initial = (name[0] || '?').toUpperCase();
-            const avatarInner = u.avatar ? `<img src="${u.avatar}" alt="">` : initial;
-            return `
-            <div class="gm-item" id="request-${r.id}">
-                <a href="/profile/${u.id}/" class="gm-avatar">${avatarInner}</a>
-                <div class="gm-info">
-                    <a href="/profile/${u.id}/" class="gm-name" style="text-decoration:none;">${escapeHtml(name)}</a>
-                    <div style="font-size:0.8rem; color:var(--text-muted);">@${u.username || ''}</div>
-                </div>
-                <div class="d-flex gap-1">
-                    <button class="btn btn-sm btn-gradient" style="border-radius:8px; padding:0.2rem 0.6rem; font-size:0.78rem;" onclick="respondRequest(${r.id},'accept')">Aceptar</button>
-                    <button class="btn btn-sm btn-outline-secondary" style="border-radius:8px; padding:0.2rem 0.6rem; font-size:0.78rem;" onclick="respondRequest(${r.id},'reject')">Rechazar</button>
-                </div>
-            </div>`;
-        }).join('');
-    } catch(e) {
-        list.innerHTML = '';
-        console.error(e);
-    }
-}
-
-async function respondRequest(requestId, action) {
-    try {
-        const res = await authFetch(`/api/groups/requests/${requestId}/${action}/`, { method: 'POST' });
-        if (res.ok) {
-            document.getElementById('request-' + requestId)?.remove();
-            showToast(action === 'accept' ? 'Solicitud aceptada' : 'Solicitud rechazada');
-        }
-    } catch(e) {
-        showToast('Error');
-    }
-}
-
-async function saveGroupSettings() {
-    const name = document.getElementById('gd-edit-name').value.trim();
-    const desc = document.getElementById('gd-edit-desc').value.trim();
-    if (!name) { showToast('El grupo necesita un nombre'); return; }
-
-    try {
-        const res = await authFetch(`/api/groups/${activeGroupId}/`, {
-            method: 'PATCH',
-            body: JSON.stringify({ name, description: desc })
-        });
-        if (res.ok) {
-            showToast('Grupo actualizado');
-            document.getElementById('gd-name').textContent = name;
-            document.getElementById('gd-description').textContent = desc;
-        } else {
-            showToast('Error al guardar');
-        }
-    } catch(e) {
-        showToast('Error de conexion');
-    }
-}
-
-// ─── Create Group ───
 async function createGroup() {
     const name = document.getElementById('cg-name').value.trim();
     if (!name) { showToast('El grupo necesita un nombre'); return; }
