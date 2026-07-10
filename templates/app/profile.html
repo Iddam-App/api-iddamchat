@@ -4,54 +4,241 @@
 {% block title %}Perfil — IddamChat{% endblock %}
 
 {% block content %}
-<!-- Profile Header -->
-<div class="profile-header" id="profile-header">
-    <div class="container">
-        <div class="profile-avatar" id="profile-avatar">?</div>
-        <input type="file" id="avatar-file-input" accept="image/*" style="display:none;">
-        <h2 id="profile-name">Cargando...</h2>
-        <div class="profile-username" id="profile-username"></div>
-        <div class="profile-bio" id="profile-bio"></div>
-        <div class="profile-stats">
-            <div class="stat">
-                <span class="stat-number" id="stat-posts">0</span>
-                <span class="stat-label">Publicaciones</span>
+<!-- Instagram-style Profile Header -->
+<div class="ig-profile-header">
+    <div class="ig-profile-top">
+        <!-- Avatar with story ring -->
+        <div class="ig-avatar-wrapper" id="ig-avatar-wrapper">
+            <div class="ig-avatar-ring" id="ig-avatar-ring">
+                <div class="ig-avatar" id="profile-avatar">?</div>
             </div>
-            <div class="stat">
-                <span class="stat-number" id="stat-followers">0</span>
-                <span class="stat-label">Seguidores</span>
+            <input type="file" id="avatar-file-input" accept="image/*" style="display:none;">
+        </div>
+
+        <!-- Stats -->
+        <div class="ig-stats-row">
+            <div class="ig-stat">
+                <span class="ig-stat-number" id="stat-posts">0</span>
+                <span class="ig-stat-label">publicaciones</span>
             </div>
-            <div class="stat">
-                <span class="stat-number" id="stat-following">0</span>
-                <span class="stat-label">Siguiendo</span>
+            <div class="ig-stat" id="stat-followers-wrap" style="cursor:pointer;">
+                <span class="ig-stat-number" id="stat-followers">0</span>
+                <span class="ig-stat-label">seguidores</span>
+            </div>
+            <div class="ig-stat" id="stat-following-wrap" style="cursor:pointer;">
+                <span class="ig-stat-number" id="stat-following">0</span>
+                <span class="ig-stat-label">seguidos</span>
             </div>
         </div>
-        <div class="profile-actions" id="profile-actions"></div>
     </div>
+
+    <!-- Name, username, bio -->
+    <div class="ig-profile-info">
+        <div class="ig-profile-name" id="profile-name">Cargando...</div>
+        <div class="ig-profile-username" id="profile-username"></div>
+        <div class="ig-profile-bio" id="profile-bio"></div>
+        <!-- Info details -->
+        <div class="ig-profile-details" id="profile-details"></div>
+    </div>
+
+    <!-- Action buttons -->
+    <div class="ig-profile-actions" id="profile-actions"></div>
 </div>
 
-<!-- Profile Content -->
-<div class="profile-info-cards" id="profile-content">
-    <!-- Info card -->
-    <div class="info-card" id="info-card" style="display:none;">
-        <h5><i class="bi bi-info-circle me-2"></i>Informacion</h5>
-        <div id="info-rows"></div>
-    </div>
+<!-- Story Highlights Row -->
+<div class="ig-highlights-section" id="highlights-section" style="display:none;">
+    <div class="ig-highlights-scroll" id="highlights-scroll"></div>
+</div>
 
-    <!-- Posts -->
-    <div class="feed-header mt-3">
-        <h5 style="font-weight:700; color:var(--text-primary); margin:0;"><i class="bi bi-grid me-2"></i>Publicaciones</h5>
-    </div>
+<!-- Content Tabs -->
+<div class="ig-content-tabs" id="content-tabs">
+    <button class="ig-tab active" data-tab="grid" onclick="switchProfileTab('grid')">
+        <i class="bi bi-grid-3x3"></i>
+    </button>
+    <button class="ig-tab" data-tab="list" onclick="switchProfileTab('list')">
+        <i class="bi bi-list"></i>
+    </button>
+    <button class="ig-tab" data-tab="saved" id="tab-saved" style="display:none;" onclick="switchProfileTab('saved')">
+        <i class="bi bi-bookmark"></i>
+    </button>
+</div>
 
+<!-- Posts Grid View -->
+<div id="panel-grid">
     <div class="feed-spinner" id="posts-spinner">
         <div class="spinner-border" role="status"></div>
     </div>
-
-    <div id="user-posts"></div>
-
+    <div class="profile-grid" id="posts-grid"></div>
     <div class="empty-state" id="empty-posts" style="display:none;">
-        <i class="bi bi-image"></i>
+        <i class="bi bi-camera"></i>
         <h5>Sin publicaciones aun</h5>
+        <p>Cuando compartas fotos apareceran aqui</p>
+    </div>
+</div>
+
+<!-- Posts List View -->
+<div id="panel-list" style="display:none;">
+    <div class="ig-posts-list" id="posts-list"></div>
+</div>
+
+<!-- Saved Posts View (own profile only) -->
+<div id="panel-saved" style="display:none;">
+    <div class="feed-spinner" id="saved-spinner" style="display:none;">
+        <div class="spinner-border" role="status"></div>
+    </div>
+    <div class="profile-grid" id="saved-grid"></div>
+    <div class="empty-state" id="empty-saved" style="display:none;">
+        <i class="bi bi-bookmark"></i>
+        <h5>Sin publicaciones guardadas</h5>
+        <p>Guarda publicaciones para verlas aqui</p>
+    </div>
+</div>
+
+<!-- Story Viewer Overlay (reused) -->
+<div class="story-viewer" id="story-viewer" style="display:none;">
+    <div class="story-viewer-backdrop" onclick="closeStoryViewer()"></div>
+    <div class="story-viewer-container">
+        <div class="story-progress-bar" id="story-progress-bar"></div>
+        <div class="story-viewer-header">
+            <div class="story-viewer-user">
+                <div class="story-viewer-avatar" id="sv-avatar"></div>
+                <div>
+                    <div class="story-viewer-name" id="sv-name"></div>
+                    <div class="story-viewer-time" id="sv-time"></div>
+                </div>
+            </div>
+            <div class="story-viewer-controls">
+                <button class="sv-btn" id="sv-pause" onclick="toggleStoryPause()"><i class="bi bi-pause-fill"></i></button>
+                <button class="sv-btn" onclick="closeStoryViewer()"><i class="bi bi-x-lg"></i></button>
+            </div>
+        </div>
+        <div class="story-viewer-content" id="sv-content"></div>
+        <div class="story-viewer-bottom" id="sv-bottom">
+            <div class="story-viewer-views" id="sv-views" style="display:none;">
+                <i class="bi bi-eye me-1"></i><span id="sv-view-count">0</span> vistas
+            </div>
+            <div class="story-viewer-react" id="sv-react" style="display:none;">
+                <input type="text" class="sv-reply-input" id="sv-reply-input" placeholder="Responder a la historia...">
+                <button class="sv-heart-btn" id="sv-heart-btn" onclick="reactToStory()"><i class="bi bi-heart"></i></button>
+            </div>
+        </div>
+        <div class="story-nav story-nav-prev" onclick="prevStory()"></div>
+        <div class="story-nav story-nav-next" onclick="nextStory()"></div>
+    </div>
+</div>
+
+<!-- Story Creation Modal -->
+<div class="modal fade" id="storyCreateModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-plus-circle me-2"></i>Nueva Historia</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="story-type-selector mb-3">
+                    <button class="story-type-btn active" data-type="image" onclick="switchStoryType('image')">
+                        <i class="bi bi-image me-1"></i>Foto
+                    </button>
+                    <button class="story-type-btn" data-type="text" onclick="switchStoryType('text')">
+                        <i class="bi bi-fonts me-1"></i>Texto
+                    </button>
+                </div>
+                <div id="story-image-section">
+                    <div class="story-image-upload" id="story-image-drop" onclick="document.getElementById('story-image-input').click()">
+                        <input type="file" id="story-image-input" accept="image/*" style="display:none;">
+                        <div id="story-image-preview" style="display:none;"></div>
+                        <div id="story-image-placeholder">
+                            <i class="bi bi-camera" style="font-size:2.5rem; color:var(--text-muted);"></i>
+                            <p style="color:var(--text-muted); margin:0.5rem 0 0; font-size:0.9rem;">Toca para seleccionar una foto</p>
+                        </div>
+                    </div>
+                </div>
+                <div id="story-text-section" style="display:none;">
+                    <div class="story-text-preview" id="story-text-preview">
+                        <textarea id="story-text-input" placeholder="Escribe tu historia..." maxlength="500"></textarea>
+                    </div>
+                    <div class="story-color-picker mt-2">
+                        <span style="font-size:0.8rem; color:var(--text-muted); margin-right:0.5rem;">Color:</span>
+                        <button class="color-dot active" data-color="#2EA3F2" style="background:#2EA3F2;" onclick="pickStoryColor(this)"></button>
+                        <button class="color-dot" data-color="#E1306C" style="background:#E1306C;" onclick="pickStoryColor(this)"></button>
+                        <button class="color-dot" data-color="#833AB4" style="background:#833AB4;" onclick="pickStoryColor(this)"></button>
+                        <button class="color-dot" data-color="#F77737" style="background:#F77737;" onclick="pickStoryColor(this)"></button>
+                        <button class="color-dot" data-color="#28a745" style="background:#28a745;" onclick="pickStoryColor(this)"></button>
+                        <button class="color-dot" data-color="#1a1a2e" style="background:#1a1a2e;" onclick="pickStoryColor(this)"></button>
+                        <button class="color-dot" data-color="#8B7355" style="background:#8B7355;" onclick="pickStoryColor(this)"></button>
+                    </div>
+                </div>
+            </div>
+            <div class="upload-progress" id="story-upload-progress">
+                <div class="upload-progress-track"><div class="upload-progress-fill"></div></div>
+                <div class="upload-progress-text">0%</div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-gradient w-100" id="btn-publish-story">
+                    <i class="bi bi-send me-1"></i>Publicar Historia
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Highlight Modal -->
+<div class="modal fade" id="createHighlightModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-plus-circle me-2"></i>Nuevo Destacado</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Nombre</label>
+                    <input type="text" class="form-control" id="hl-name" placeholder="Ej: Viajes, Amigos..." maxlength="50" style="border-radius:10px;">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Portada (opcional)</label>
+                    <input type="file" class="form-control" id="hl-cover" accept="image/*" style="border-radius:10px;">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Seleccionar historias</label>
+                    <div class="hl-stories-picker" id="hl-stories-picker">
+                        <div class="feed-spinner" id="hl-stories-spinner">
+                            <div class="spinner-border spinner-border-sm" role="status"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-gradient w-100" id="btn-create-highlight" onclick="createHighlight()">
+                    <i class="bi bi-plus-lg me-1"></i>Crear Destacado
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Highlight Viewer Modal -->
+<div class="story-viewer" id="highlight-viewer" style="display:none;">
+    <div class="story-viewer-backdrop" onclick="closeHighlightViewer()"></div>
+    <div class="story-viewer-container">
+        <div class="story-progress-bar" id="hl-progress-bar"></div>
+        <div class="story-viewer-header">
+            <div class="story-viewer-user">
+                <div class="story-viewer-avatar" id="hlv-avatar"></div>
+                <div>
+                    <div class="story-viewer-name" id="hlv-name"></div>
+                    <div class="story-viewer-time" id="hlv-time"></div>
+                </div>
+            </div>
+            <div class="story-viewer-controls">
+                <button class="sv-btn" id="hlv-pause" onclick="toggleHlPause()"><i class="bi bi-pause-fill"></i></button>
+                <button class="sv-btn" onclick="closeHighlightViewer()"><i class="bi bi-x-lg"></i></button>
+            </div>
+        </div>
+        <div class="story-viewer-content" id="hlv-content"></div>
+        <div class="story-nav story-nav-prev" onclick="prevHlStory()"></div>
+        <div class="story-nav story-nav-next" onclick="nextHlStory()"></div>
     </div>
 </div>
 
@@ -59,8 +246,8 @@
 <div class="modal-overlay" id="delete-modal" style="display:none;">
     <div class="modal-delete-card">
         <h4>Eliminar Cuenta</h4>
-        <p>Esta accion es irreversible. Confirma tu contraseña para continuar.</p>
-        <input type="password" class="form-control mb-3" id="delete-password" placeholder="Tu contraseña">
+        <p>Esta accion es irreversible. Confirma tu contrasena para continuar.</p>
+        <input type="password" class="form-control mb-3" id="delete-password" placeholder="Tu contrasena">
         <div id="delete-error" class="text-danger mb-2" style="font-size:0.9rem;"></div>
         <div class="d-flex gap-2">
             <button class="btn btn-secondary flex-fill" onclick="closeDeleteModal()">Cancelar</button>
@@ -71,9 +258,182 @@
 {% endblock %}
 
 {% block scripts %}
+<style>
+/* ─── Story Modal (same as feed) ────────────────────────── */
+.story-type-selector { display:flex; gap:0.5rem; }
+.story-type-btn {
+    flex:1; border:2px solid var(--border-color); background:var(--card-bg);
+    color:var(--text-secondary); font-weight:600; font-size:0.9rem;
+    padding:0.6rem; border-radius:12px; cursor:pointer; transition:all 0.2s; font-family:inherit;
+}
+.story-type-btn.active { border-color:var(--gold); color:var(--gold-dark); background:var(--gold-subtle); }
+.story-image-upload {
+    width:100%; aspect-ratio:9/16; max-height:400px; border-radius:16px;
+    border:2px dashed var(--border-color); display:flex; align-items:center;
+    justify-content:center; cursor:pointer; overflow:hidden; position:relative;
+    background:var(--hover-bg); transition:border-color 0.2s;
+}
+.story-image-upload:hover { border-color:var(--gold); }
+#story-image-preview { position:absolute; inset:0; }
+#story-image-preview img { width:100%; height:100%; object-fit:cover; }
+.story-text-preview {
+    width:100%; aspect-ratio:9/16; max-height:400px; border-radius:16px;
+    display:flex; align-items:center; justify-content:center; overflow:hidden;
+    background:#2EA3F2; transition:background 0.3s;
+}
+.story-text-preview textarea {
+    width:100%; height:100%; border:none; background:transparent; color:#fff;
+    font-size:1.3rem; font-weight:600; text-align:center; resize:none;
+    padding:2rem 1.5rem; outline:none;
+}
+.story-text-preview textarea::placeholder { color:rgba(255,255,255,0.6); }
+.story-color-picker { display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap; }
+.color-dot {
+    width:28px; height:28px; border-radius:50%; border:3px solid transparent;
+    cursor:pointer; transition:transform 0.15s, border-color 0.15s; padding:0;
+}
+.color-dot:hover { transform:scale(1.15); }
+.color-dot.active { border-color:var(--text-primary); transform:scale(1.15); }
+
+/* ─── Story Viewer (same as feed) ───────────────────────── */
+.story-viewer { position:fixed; inset:0; z-index:10000; display:flex; align-items:center; justify-content:center; }
+.story-viewer-backdrop { position:absolute; inset:0; background:rgba(0,0,0,0.95); }
+.story-viewer-container { position:relative; width:100%; max-width:420px; height:100%; max-height:100vh; max-height:100dvh; background:#000; overflow:hidden; }
+@media (min-width:768px) { .story-viewer-container { max-height:90vh; border-radius:16px; } }
+.story-progress-bar { position:absolute; top:0; left:0; right:0; display:flex; gap:3px; padding:8px 10px 0; z-index:3; }
+.story-progress-segment { flex:1; height:3px; background:rgba(255,255,255,0.3); border-radius:2px; overflow:hidden; }
+.story-progress-segment .progress-fill { height:100%; background:#fff; border-radius:2px; width:0%; transition:width 0.1s linear; }
+.story-progress-segment.viewed .progress-fill { width:100%; }
+.story-viewer-header { position:absolute; top:14px; left:0; right:0; display:flex; align-items:center; justify-content:space-between; padding:0 12px; z-index:3; }
+.story-viewer-user { display:flex; align-items:center; gap:0.6rem; }
+.story-viewer-avatar { width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg, var(--gold-light), var(--gold-dark)); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:0.9rem; overflow:hidden; border:2px solid #fff; }
+.story-viewer-avatar img { width:100%; height:100%; object-fit:cover; }
+.story-viewer-name { color:#fff; font-weight:700; font-size:0.9rem; text-shadow:0 1px 4px rgba(0,0,0,0.5); }
+.story-viewer-time { color:rgba(255,255,255,0.7); font-size:0.75rem; text-shadow:0 1px 4px rgba(0,0,0,0.5); }
+.story-viewer-controls { display:flex; gap:0.3rem; }
+.sv-btn { border:none; background:rgba(0,0,0,0.3); color:#fff; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:1rem; transition:background 0.2s; }
+.sv-btn:hover { background:rgba(0,0,0,0.5); }
+.story-viewer-content { width:100%; height:100%; display:flex; align-items:center; justify-content:center; }
+.story-viewer-content img { width:100%; height:100%; object-fit:contain; }
+.story-viewer-content .story-text-display { width:100%; height:100%; display:flex; align-items:center; justify-content:center; padding:3rem 1.5rem; color:#fff; font-size:1.4rem; font-weight:600; text-align:center; line-height:1.5; word-break:break-word; }
+.story-viewer-bottom { position:absolute; bottom:0; left:0; right:0; padding:12px; z-index:3; display:flex; justify-content:center; }
+.story-viewer-views { color:rgba(255,255,255,0.8); font-size:0.85rem; background:rgba(0,0,0,0.4); padding:0.4rem 1rem; border-radius:20px; }
+.story-viewer-react { display:flex; gap:0.5rem; width:100%; max-width:400px; }
+.sv-reply-input { flex:1; border:1.5px solid rgba(255,255,255,0.3); background:rgba(0,0,0,0.3); color:#fff; border-radius:22px; padding:0.5rem 1rem; font-size:0.9rem; outline:none; transition:border-color 0.2s; }
+.sv-reply-input::placeholder { color:rgba(255,255,255,0.5); }
+.sv-reply-input:focus { border-color:rgba(255,255,255,0.6); }
+.sv-heart-btn { border:none; background:none; color:#fff; font-size:1.5rem; cursor:pointer; padding:0 0.3rem; transition:transform 0.2s, color 0.2s; }
+.sv-heart-btn:hover { transform:scale(1.2); }
+.sv-heart-btn.liked { color:var(--ig-pink); }
+.story-nav { position:absolute; top:60px; bottom:40px; width:40%; z-index:2; cursor:pointer; }
+.story-nav-prev { left:0; }
+.story-nav-next { right:0; }
+
+/* ─── Highlight Stories Picker ──────────────────────────── */
+.hl-stories-picker {
+    max-height: 300px;
+    overflow-y: auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+.hl-story-option {
+    width: calc(33.33% - 3px);
+    aspect-ratio: 9/16;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    position: relative;
+    border: 3px solid transparent;
+    transition: border-color 0.2s;
+}
+.hl-story-option.selected {
+    border-color: var(--gold);
+}
+.hl-story-option img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.hl-story-option .hl-text-thumb {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    color: #fff;
+    font-weight: 600;
+    padding: 0.3rem;
+    text-align: center;
+    word-break: break-word;
+}
+.hl-story-option .hl-check {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--gold);
+    color: #fff;
+    font-size: 0.6rem;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+.hl-story-option.selected .hl-check {
+    display: flex;
+}
+
+/* ─── Form label ────────────────────────────────────────── */
+#createHighlightModal .form-label {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+#createHighlightModal .form-control {
+    border: 1.5px solid var(--input-border);
+    background: var(--input-bg);
+    color: var(--text-primary);
+}
+#createHighlightModal .form-control:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(139,115,85,0.15);
+}
+</style>
+
 <script>
 let profileUserId = null;
 let isOwnProfile = false;
+let profileUserData = null;
+let userPosts = [];
+let userStories = [];
+let userHighlights = [];
+let savedPosts = [];
+let currentTab = 'grid';
+
+// Story viewer state
+let storyGroups = [];
+let currentGroupIdx = 0;
+let currentStoryIdx = 0;
+let storyTimer = null;
+let storyPaused = false;
+const STORY_DURATION = 6000;
+const STORY_TICK = 50;
+let storyElapsed = 0;
+let storyImageFile = null;
+let storyBgColor = '#2EA3F2';
+
+// Highlight viewer state
+let hlStories = [];
+let hlCurrentIdx = 0;
+let hlTimer = null;
+let hlPaused = false;
+let hlElapsed = 0;
+
+// Selected stories for highlight creation
+let selectedHlStories = [];
 
 document.addEventListener('DOMContentLoaded', () => {
     if (!isLoggedIn()) { window.location.href = '/login/'; return; }
@@ -91,36 +451,84 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loadProfile();
     loadUserPosts();
+    loadUserStories();
+    loadHighlights();
 
-    // Avatar click-to-change for own profile
+    if (isOwnProfile) {
+        document.getElementById('tab-saved').style.display = '';
+    }
+
+    // Avatar change
     document.getElementById('avatar-file-input').addEventListener('change', async function() {
         if (!this.files || !this.files[0]) return;
         const formData = new FormData();
         formData.append('avatar', this.files[0]);
-
         const res = await authFetch('/api/auth/me/', {
             method: 'PUT',
             body: formData,
             headers: { 'Authorization': 'Bearer ' + getToken() }
         });
-
         if (res.ok) {
             const user = await res.json();
             localStorage.setItem('user_data', JSON.stringify(user));
             const avatarEl = document.getElementById('profile-avatar');
-            avatarEl.innerHTML = `<img src="${user.avatar}" alt=""><div class="avatar-overlay"><i class="bi bi-camera"></i></div>`;
+            avatarEl.innerHTML = `<img src="${user.avatar}" alt="">`;
             showToast('Foto actualizada');
         } else {
             showToast('Error al subir foto');
         }
     });
+
+    // Story image input
+    const storyInput = document.getElementById('story-image-input');
+    if (storyInput) {
+        storyInput.addEventListener('change', function() {
+            if (!this.files || !this.files[0]) return;
+            storyImageFile = this.files[0];
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const preview = document.getElementById('story-image-preview');
+                preview.innerHTML = `<img src="${e.target.result}" alt="">`;
+                preview.style.display = 'block';
+                document.getElementById('story-image-placeholder').style.display = 'none';
+            };
+            reader.readAsDataURL(storyImageFile);
+        });
+    }
+
+    // Publish story button
+    const btnStory = document.getElementById('btn-publish-story');
+    if (btnStory) btnStory.addEventListener('click', publishStory);
+
+    // Story viewer keyboard
+    document.addEventListener('keydown', (e) => {
+        const sv = document.getElementById('story-viewer');
+        const hv = document.getElementById('highlight-viewer');
+        if (sv && sv.style.display !== 'none') {
+            if (document.activeElement === document.getElementById('sv-reply-input')) {
+                if (e.key === 'Enter') { e.preventDefault(); replyToStory(); }
+                return;
+            }
+            if (e.key === 'ArrowRight') nextStory();
+            else if (e.key === 'ArrowLeft') prevStory();
+            else if (e.key === 'Escape') closeStoryViewer();
+            else if (e.key === ' ') { e.preventDefault(); toggleStoryPause(); }
+        } else if (hv && hv.style.display !== 'none') {
+            if (e.key === 'ArrowRight') nextHlStory();
+            else if (e.key === 'ArrowLeft') prevHlStory();
+            else if (e.key === 'Escape') closeHighlightViewer();
+            else if (e.key === ' ') { e.preventDefault(); toggleHlPause(); }
+        }
+    });
 });
 
+// ─── Load Profile ───
 async function loadProfile() {
     try {
         const res = await authFetch(`/api/auth/users/${profileUserId}/`);
         if (!res.ok) throw new Error('Not found');
         const user = await res.json();
+        profileUserData = user;
 
         // Avatar
         const avatarEl = document.getElementById('profile-avatar');
@@ -132,42 +540,27 @@ async function loadProfile() {
 
         // Make avatar editable for own profile
         if (isOwnProfile) {
-            avatarEl.classList.add('editable');
-            avatarEl.insertAdjacentHTML('beforeend', '<div class="avatar-overlay"><i class="bi bi-camera"></i></div>');
-            avatarEl.addEventListener('click', () => document.getElementById('avatar-file-input').click());
+            const wrapper = document.getElementById('ig-avatar-wrapper');
+            wrapper.classList.add('editable');
+            wrapper.addEventListener('click', () => document.getElementById('avatar-file-input').click());
         }
 
         // Name & username
-        document.getElementById('profile-name').textContent = user.display_name || `${user.first_name} ${user.last_name}`;
+        document.getElementById('profile-name').textContent = user.display_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username;
         document.getElementById('profile-username').textContent = '@' + user.username;
 
         if (user.bio) {
             document.getElementById('profile-bio').textContent = user.bio;
         }
 
-        // Info card
-        const infoRows = document.getElementById('info-rows');
-        const infoCard = document.getElementById('info-card');
-        let hasInfo = false;
-
-        const infoItems = [
-            { icon: 'bi-geo-alt', value: [user.city, user.country].filter(Boolean).join(', ') },
-            { icon: 'bi-building', value: user.congregation },
-            { icon: 'bi-instagram', value: user.instagram },
-            { icon: 'bi-telephone', value: user.phone },
-            { icon: 'bi-cake', value: user.age ? user.age + ' anos' : '' },
-        ];
-
-        infoItems.forEach(item => {
-            if (item.value) {
-                hasInfo = true;
-                infoRows.insertAdjacentHTML('beforeend', `
-                    <div class="info-row"><i class="bi ${item.icon}"></i>${escapeHtml(item.value)}</div>
-                `);
-            }
-        });
-
-        if (hasInfo) infoCard.style.display = 'block';
+        // Details
+        const detailsEl = document.getElementById('profile-details');
+        const details = [];
+        const location = [user.city, user.country].filter(Boolean).join(', ');
+        if (location) details.push(`<span><i class="bi bi-geo-alt-fill"></i> ${escapeHtml(location)}</span>`);
+        if (user.congregation) details.push(`<span><i class="bi bi-building"></i> ${escapeHtml(user.congregation)}</span>`);
+        if (user.instagram) details.push(`<span><i class="bi bi-instagram"></i> ${escapeHtml(user.instagram)}</span>`);
+        if (details.length) detailsEl.innerHTML = details.join('');
 
         // Actions
         const actionsEl = document.getElementById('profile-actions');
@@ -181,27 +574,28 @@ async function loadProfile() {
             }
 
             actionsEl.innerHTML = `
-                <button class="btn ${isFollowing ? 'btn-outline-light' : 'btn-gradient'} btn-sm px-4" id="btn-follow" onclick="toggleFollow()">
-                    <i class="bi ${isFollowing ? 'bi-person-check' : 'bi-person-plus'} me-1"></i>
+                <button class="ig-action-btn ${isFollowing ? 'following' : 'primary'}" id="btn-follow" onclick="toggleFollow()">
                     ${isFollowing ? 'Siguiendo' : 'Seguir'}
                 </button>
-                <a href="/chat/${profileUserId}/" class="btn btn-outline-light btn-sm px-3">
-                    <i class="bi bi-chat me-1"></i>Mensaje
+                <a href="/chat/${profileUserId}/" class="ig-action-btn secondary">
+                    Mensaje
                 </a>
             `;
         } else {
             actionsEl.innerHTML = `
-                <a href="/profile/edit/" class="btn btn-gradient btn-sm px-4">
-                    <i class="bi bi-pencil me-1"></i>Editar Perfil
+                <a href="/profile/edit/" class="ig-action-btn secondary" style="flex:2;">
+                    Editar perfil
                 </a>
-                <button class="btn btn-outline-danger btn-sm px-3" onclick="openDeleteModal()">
-                    <i class="bi bi-trash me-1"></i>Eliminar Cuenta
+                <button class="ig-action-btn secondary" onclick="openStoryCreate()">
+                    <i class="bi bi-plus-circle"></i>
+                </button>
+                <button class="ig-action-btn secondary" style="color:var(--ig-pink);" onclick="openDeleteModal()">
+                    <i class="bi bi-trash"></i>
                 </button>
             `;
         }
 
         loadStats();
-
     } catch(e) {
         document.getElementById('profile-name').textContent = 'Usuario no encontrado';
         console.error(e);
@@ -209,6 +603,8 @@ async function loadProfile() {
 }
 
 async function loadStats() {
+    // Followers/following API only returns data for the authenticated user
+    if (!isOwnProfile) return;
     try {
         const [followersRes, followingRes] = await Promise.all([
             authFetch('/api/social/followers/'),
@@ -218,40 +614,124 @@ async function loadStats() {
         if (followersRes.ok) {
             const data = await followersRes.json();
             const items = data.results || data;
-            if (isOwnProfile) {
-                document.getElementById('stat-followers').textContent = items.length;
-            }
+            document.getElementById('stat-followers').textContent = items.length;
         }
         if (followingRes.ok) {
             const data = await followingRes.json();
             const items = data.results || data;
-            if (isOwnProfile) {
-                document.getElementById('stat-following').textContent = items.length;
-            }
+            document.getElementById('stat-following').textContent = items.length;
         }
     } catch(e) {}
 }
 
+// ─── Load User Posts ───
 async function loadUserPosts() {
     const spinner = document.getElementById('posts-spinner');
     try {
         const res = await authFetch(`/api/posts/user/${profileUserId}/`);
         spinner.style.display = 'none';
-
         if (!res.ok) throw new Error('Failed');
         const data = await res.json();
-        const posts = data.results || data;
+        userPosts = data.results || data;
+        document.getElementById('stat-posts').textContent = userPosts.length;
 
-        document.getElementById('stat-posts').textContent = posts.length;
-
-        if (posts.length === 0) {
+        if (userPosts.length === 0) {
             document.getElementById('empty-posts').style.display = 'block';
             return;
         }
 
-        const container = document.getElementById('user-posts');
-        posts.forEach(post => {
-            container.insertAdjacentHTML('beforeend', renderPostCard(post, { showType: true }));
+        renderPostsGrid();
+        renderPostsList();
+    } catch(e) {
+        spinner.style.display = 'none';
+        console.error(e);
+    }
+}
+
+function renderPostsGrid() {
+    const grid = document.getElementById('posts-grid');
+    grid.innerHTML = '';
+    userPosts.forEach(post => {
+        const hasMulti = post.images && post.images.length > 1;
+        let thumbContent;
+        if (post.images && post.images.length > 0) {
+            thumbContent = `<img src="${post.images[0].image}" alt="" loading="lazy">`;
+        } else {
+            thumbContent = `<div class="grid-thumb-text"><i class="bi bi-chat-square-text"></i></div>`;
+        }
+        grid.insertAdjacentHTML('beforeend', `
+            <a href="/post/${post.id}/" class="grid-thumb">
+                ${thumbContent}
+                ${hasMulti ? '<i class="bi bi-layers-fill grid-multi-icon"></i>' : ''}
+                <div class="grid-thumb-overlay">
+                    <span><i class="bi bi-heart-fill"></i> ${post.reaction_count || 0}</span>
+                    <span><i class="bi bi-chat-fill"></i> ${post.comment_count || 0}</span>
+                </div>
+            </a>
+        `);
+    });
+}
+
+function renderPostsList() {
+    const list = document.getElementById('posts-list');
+    list.innerHTML = '';
+    userPosts.forEach(post => {
+        list.insertAdjacentHTML('beforeend', renderPostCard(post, { showType: true }));
+    });
+}
+
+// ─── Tab Switching ───
+function switchProfileTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.ig-tab').forEach(t => t.classList.remove('active'));
+    document.querySelector(`.ig-tab[data-tab="${tab}"]`).classList.add('active');
+
+    document.getElementById('panel-grid').style.display = tab === 'grid' ? 'block' : 'none';
+    document.getElementById('panel-list').style.display = tab === 'list' ? 'block' : 'none';
+    document.getElementById('panel-saved').style.display = tab === 'saved' ? 'block' : 'none';
+
+    if (tab === 'saved' && savedPosts.length === 0) {
+        loadSavedPosts();
+    }
+}
+
+// ─── Saved Posts ───
+async function loadSavedPosts() {
+    const spinner = document.getElementById('saved-spinner');
+    spinner.style.display = 'block';
+    try {
+        const res = await authFetch('/api/posts/saved/');
+        spinner.style.display = 'none';
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+        savedPosts = data.results || data;
+
+        if (savedPosts.length === 0) {
+            document.getElementById('empty-saved').style.display = 'block';
+            return;
+        }
+
+        const grid = document.getElementById('saved-grid');
+        grid.innerHTML = '';
+        savedPosts.forEach(item => {
+            const post = item.post || item;
+            const hasMulti = post.images && post.images.length > 1;
+            let thumbContent;
+            if (post.images && post.images.length > 0) {
+                thumbContent = `<img src="${post.images[0].image}" alt="" loading="lazy">`;
+            } else {
+                thumbContent = `<div class="grid-thumb-text"><i class="bi bi-chat-square-text"></i></div>`;
+            }
+            grid.insertAdjacentHTML('beforeend', `
+                <a href="/post/${post.id}/" class="grid-thumb">
+                    ${thumbContent}
+                    ${hasMulti ? '<i class="bi bi-layers-fill grid-multi-icon"></i>' : ''}
+                    <div class="grid-thumb-overlay">
+                        <span><i class="bi bi-heart-fill"></i> ${post.reaction_count || 0}</span>
+                        <span><i class="bi bi-chat-fill"></i> ${post.comment_count || 0}</span>
+                    </div>
+                </a>
+            `);
         });
     } catch(e) {
         spinner.style.display = 'none';
@@ -259,65 +739,544 @@ async function loadUserPosts() {
     }
 }
 
+// ─── Stories ───
+async function loadUserStories() {
+    try {
+        const me = JSON.parse(localStorage.getItem('user_data') || '{}');
+        // Load active stories for profile user
+        let url;
+        if (isOwnProfile) {
+            url = '/api/profiles/stories/mine/';
+        } else {
+            // Use the feed and filter by user
+            url = '/api/profiles/stories/feed/';
+        }
+        const res = await authFetch(url);
+        if (!res.ok) return;
+        const data = await res.json();
+        const allStories = data.results || data;
+
+        if (isOwnProfile) {
+            userStories = allStories;
+        } else {
+            userStories = allStories.filter(s => s.user && s.user.id === profileUserId);
+        }
+
+        // Update avatar ring
+        const ring = document.getElementById('ig-avatar-ring');
+        if (userStories.length > 0) {
+            ring.classList.add('has-stories');
+            if (!isOwnProfile) {
+                ring.style.cursor = 'pointer';
+                ring.onclick = () => openProfileStoryViewer();
+            } else {
+                ring.onclick = () => openProfileStoryViewer();
+            }
+        }
+    } catch(e) {
+        console.error(e);
+    }
+}
+
+function openProfileStoryViewer() {
+    if (userStories.length === 0) return;
+    const user = profileUserData || {};
+    storyGroups = [{ user: user, stories: userStories }];
+    currentGroupIdx = 0;
+    currentStoryIdx = 0;
+    storyPaused = false;
+
+    // Find first unseen
+    const unseenIdx = userStories.findIndex(s => !s.is_viewed);
+    if (unseenIdx > 0) currentStoryIdx = unseenIdx;
+
+    document.getElementById('story-viewer').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    showCurrentStory();
+}
+
+function showCurrentStory() {
+    const group = storyGroups[currentGroupIdx];
+    if (!group) { closeStoryViewer(); return; }
+    const story = group.stories[currentStoryIdx];
+    if (!story) { closeStoryViewer(); return; }
+
+    const me = JSON.parse(localStorage.getItem('user_data') || '{}');
+    const u = group.user;
+
+    // Header
+    const avatarEl = document.getElementById('sv-avatar');
+    if (u.avatar) avatarEl.innerHTML = `<img src="${u.avatar}" alt="">`;
+    else avatarEl.textContent = (u.first_name || u.username || '?')[0].toUpperCase();
+    document.getElementById('sv-name').textContent = u.display_name || u.first_name || u.username;
+    document.getElementById('sv-time').textContent = formatTimeAgo(story.created_at);
+
+    // Content
+    const contentEl = document.getElementById('sv-content');
+    if (story.image) {
+        contentEl.innerHTML = `<img src="${story.image}" alt="">`;
+    } else {
+        contentEl.innerHTML = `<div class="story-text-display" style="background:${story.background_color || '#2EA3F2'};">${escapeHtml(story.text)}</div>`;
+    }
+
+    // Bottom
+    const viewsEl = document.getElementById('sv-views');
+    const reactEl = document.getElementById('sv-react');
+    if (u.id === me.id) {
+        viewsEl.style.display = 'block';
+        reactEl.style.display = 'none';
+        document.getElementById('sv-view-count').textContent = story.view_count || 0;
+    } else {
+        viewsEl.style.display = 'none';
+        reactEl.style.display = 'flex';
+        document.getElementById('sv-reply-input').value = '';
+        document.getElementById('sv-heart-btn').classList.remove('liked');
+        document.getElementById('sv-heart-btn').innerHTML = '<i class="bi bi-heart"></i>';
+    }
+
+    renderProgressBar(group.stories.length, currentStoryIdx);
+
+    if (u.id !== me.id && !story.is_viewed) {
+        authFetch(`/api/profiles/stories/${story.id}/view/`, { method: 'POST' }).catch(() => {});
+        story.is_viewed = true;
+    }
+
+    startStoryTimer();
+}
+
+function renderProgressBar(total, current) {
+    const bar = document.getElementById('story-progress-bar');
+    bar.innerHTML = '';
+    for (let i = 0; i < total; i++) {
+        const cls = i < current ? 'viewed' : (i === current ? 'active' : '');
+        bar.insertAdjacentHTML('beforeend', `<div class="story-progress-segment ${cls}"><div class="progress-fill"></div></div>`);
+    }
+}
+
+function startStoryTimer() {
+    stopStoryTimer();
+    storyElapsed = 0;
+    storyPaused = false;
+    document.getElementById('sv-pause').innerHTML = '<i class="bi bi-pause-fill"></i>';
+    storyTimer = setInterval(() => {
+        if (storyPaused) return;
+        storyElapsed += STORY_TICK;
+        const segments = document.querySelectorAll('#story-viewer .story-progress-segment');
+        const activeSeg = segments[currentStoryIdx];
+        if (activeSeg) {
+            activeSeg.querySelector('.progress-fill').style.width = (storyElapsed / STORY_DURATION * 100) + '%';
+        }
+        if (storyElapsed >= STORY_DURATION) nextStory();
+    }, STORY_TICK);
+}
+
+function stopStoryTimer() { if (storyTimer) { clearInterval(storyTimer); storyTimer = null; } }
+function toggleStoryPause() {
+    storyPaused = !storyPaused;
+    document.getElementById('sv-pause').innerHTML = storyPaused ? '<i class="bi bi-play-fill"></i>' : '<i class="bi bi-pause-fill"></i>';
+}
+
+function nextStory() {
+    stopStoryTimer();
+    const group = storyGroups[currentGroupIdx];
+    if (currentStoryIdx < group.stories.length - 1) { currentStoryIdx++; showCurrentStory(); }
+    else if (currentGroupIdx < storyGroups.length - 1) { currentGroupIdx++; currentStoryIdx = 0; showCurrentStory(); }
+    else closeStoryViewer();
+}
+
+function prevStory() {
+    stopStoryTimer();
+    if (currentStoryIdx > 0) { currentStoryIdx--; showCurrentStory(); }
+    else if (currentGroupIdx > 0) { currentGroupIdx--; currentStoryIdx = storyGroups[currentGroupIdx].stories.length - 1; showCurrentStory(); }
+    else showCurrentStory();
+}
+
+function closeStoryViewer() {
+    document.getElementById('story-viewer').style.display = 'none';
+    document.body.style.overflow = '';
+    stopStoryTimer();
+    loadUserStories();
+}
+
+async function reactToStory() {
+    const group = storyGroups[currentGroupIdx];
+    if (!group) return;
+    const story = group.stories[currentStoryIdx];
+    if (!story) return;
+    const u = group.user;
+    const btn = document.getElementById('sv-heart-btn');
+    btn.classList.add('liked');
+    btn.innerHTML = '<i class="bi bi-heart-fill"></i>';
+    try {
+        const startRes = await authFetch('/api/chat/conversations/start/', { method: 'POST', body: JSON.stringify({ user_id: u.id }) });
+        if (startRes.ok) {
+            const conv = await startRes.json();
+            const msg = story.image ? 'Le ha encantado tu historia' : 'Le ha encantado tu historia: "' + (story.text || '').substring(0, 50) + '"';
+            await authFetch(`/api/chat/conversations/${conv.id}/send/`, { method: 'POST', body: JSON.stringify({ content: msg + ' ❤️' }) });
+            showToast('Reaccion enviada');
+        }
+    } catch(e) { console.error(e); }
+}
+
+async function replyToStory() {
+    const input = document.getElementById('sv-reply-input');
+    const text = input.value.trim();
+    if (!text) return;
+    const group = storyGroups[currentGroupIdx];
+    if (!group) return;
+    try {
+        const startRes = await authFetch('/api/chat/conversations/start/', { method: 'POST', body: JSON.stringify({ user_id: group.user.id }) });
+        if (startRes.ok) {
+            const conv = await startRes.json();
+            await authFetch(`/api/chat/conversations/${conv.id}/send/`, { method: 'POST', body: JSON.stringify({ content: text }) });
+            input.value = '';
+            showToast('Respuesta enviada');
+        }
+    } catch(e) { showToast('Error al enviar'); }
+}
+
+// ─── Story Creation ───
+function openStoryCreate() {
+    new bootstrap.Modal(document.getElementById('storyCreateModal')).show();
+}
+
+function switchStoryType(type) {
+    document.querySelectorAll('.story-type-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector(`.story-type-btn[data-type="${type}"]`).classList.add('active');
+    document.getElementById('story-image-section').style.display = type === 'image' ? 'block' : 'none';
+    document.getElementById('story-text-section').style.display = type === 'text' ? 'block' : 'none';
+}
+
+function pickStoryColor(btn) {
+    storyBgColor = btn.dataset.color;
+    document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('story-text-preview').style.background = storyBgColor;
+}
+
+async function publishStory() {
+    const btn = document.getElementById('btn-publish-story');
+    const isText = document.querySelector('.story-type-btn.active').dataset.type === 'text';
+    if (isText) {
+        const text = document.getElementById('story-text-input').value.trim();
+        if (!text) { showToast('Escribe algo para tu historia'); return; }
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Publicando...';
+        try {
+            const res = await authFetch('/api/profiles/stories/create/', {
+                method: 'POST', body: JSON.stringify({ text, background_color: storyBgColor })
+            });
+            if (res.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('storyCreateModal')).hide();
+                document.getElementById('story-text-input').value = '';
+                showToast('Historia publicada');
+                loadUserStories();
+            } else { showToast('Error al publicar historia'); }
+        } catch(e) { showToast('Error de conexion'); }
+        finally { btn.disabled = false; btn.innerHTML = '<i class="bi bi-send me-1"></i>Publicar Historia'; }
+    } else {
+        if (!storyImageFile) { showToast('Selecciona una foto'); return; }
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Subiendo...';
+        showUploadProgress('story-upload-progress');
+        const formData = new FormData();
+        formData.append('image', storyImageFile);
+        try {
+            const res = await uploadWithProgress('/api/profiles/stories/create/', formData, (pct) => { updateUploadProgress('story-upload-progress', pct); });
+            hideUploadProgress('story-upload-progress');
+            if (res.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('storyCreateModal')).hide();
+                storyImageFile = null;
+                document.getElementById('story-image-preview').innerHTML = '';
+                document.getElementById('story-image-preview').style.display = 'none';
+                document.getElementById('story-image-placeholder').style.display = 'flex';
+                document.getElementById('story-image-input').value = '';
+                showToast('Historia publicada');
+                loadUserStories();
+            } else { showToast('Error al publicar historia'); }
+        } catch(e) { hideUploadProgress('story-upload-progress'); showToast('Error de conexion'); }
+        finally { btn.disabled = false; btn.innerHTML = '<i class="bi bi-send me-1"></i>Publicar Historia'; }
+    }
+}
+
+// ─── Highlights ───
+async function loadHighlights() {
+    try {
+        const res = await authFetch(`/api/profiles/highlights/user/${profileUserId}/`);
+        if (!res.ok) return;
+        const data = await res.json();
+        userHighlights = data.results || data;
+        renderHighlights();
+    } catch(e) { console.error(e); }
+}
+
+function renderHighlights() {
+    const section = document.getElementById('highlights-section');
+    const scroll = document.getElementById('highlights-scroll');
+    scroll.innerHTML = '';
+
+    // Add "new highlight" button for own profile
+    if (isOwnProfile) {
+        scroll.insertAdjacentHTML('beforeend', `
+            <div class="ig-highlight-item" onclick="openCreateHighlight()">
+                <div class="ig-highlight-circle add">
+                    <i class="bi bi-plus" style="font-size:1.5rem; color:var(--text-muted);"></i>
+                </div>
+                <span class="ig-highlight-name">Nuevo</span>
+            </div>
+        `);
+    }
+
+    if (userHighlights.length === 0 && !isOwnProfile) return;
+
+    section.style.display = 'block';
+    if (userHighlights.length > 0 || isOwnProfile) section.style.display = 'block';
+
+    userHighlights.forEach((hl, idx) => {
+        const coverUrl = hl.cover_url || hl.cover_image || '';
+        let coverContent;
+        if (coverUrl) {
+            coverContent = `<img src="${coverUrl}" alt="">`;
+        } else {
+            coverContent = `<i class="bi bi-star-fill" style="font-size:1.2rem; color:var(--gold);"></i>`;
+        }
+        scroll.insertAdjacentHTML('beforeend', `
+            <div class="ig-highlight-item" onclick="openHighlightViewer(${idx})">
+                <div class="ig-highlight-circle">
+                    ${coverContent}
+                </div>
+                <span class="ig-highlight-name">${escapeHtml(hl.name)}</span>
+            </div>
+        `);
+    });
+}
+
+function openCreateHighlight() {
+    selectedHlStories = [];
+    document.getElementById('hl-name').value = '';
+    document.getElementById('hl-cover').value = '';
+    new bootstrap.Modal(document.getElementById('createHighlightModal')).show();
+    loadStoriesForPicker();
+}
+
+async function loadStoriesForPicker() {
+    const picker = document.getElementById('hl-stories-picker');
+    const spinner = document.getElementById('hl-stories-spinner');
+    spinner.style.display = 'block';
+    try {
+        const res = await authFetch(`/api/profiles/stories/user/${profileUserId}/`);
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+        const stories = data.results || data;
+        spinner.style.display = 'none';
+
+        if (stories.length === 0) {
+            picker.innerHTML = '<p style="color:var(--text-muted); font-size:0.85rem; padding:1rem; text-align:center;">No hay historias disponibles. Publica historias primero.</p>';
+            return;
+        }
+
+        picker.innerHTML = '';
+        stories.forEach(story => {
+            let thumbContent;
+            if (story.image) {
+                thumbContent = `<img src="${story.image}" alt="">`;
+            } else {
+                thumbContent = `<div class="hl-text-thumb" style="background:${story.background_color || '#2EA3F2'};">${escapeHtml((story.text || '').substring(0, 30))}</div>`;
+            }
+            picker.insertAdjacentHTML('beforeend', `
+                <div class="hl-story-option" data-story-id="${story.id}" onclick="toggleHlStory(this, ${story.id})">
+                    ${thumbContent}
+                    <div class="hl-check"><i class="bi bi-check"></i></div>
+                </div>
+            `);
+        });
+    } catch(e) {
+        spinner.style.display = 'none';
+        picker.innerHTML = '<p style="color:var(--text-muted); font-size:0.85rem;">Error al cargar historias</p>';
+    }
+}
+
+function toggleHlStory(el, storyId) {
+    el.classList.toggle('selected');
+    const idx = selectedHlStories.indexOf(storyId);
+    if (idx > -1) {
+        selectedHlStories.splice(idx, 1);
+    } else {
+        selectedHlStories.push(storyId);
+    }
+}
+
+async function createHighlight() {
+    const name = document.getElementById('hl-name').value.trim();
+    if (!name) { showToast('El destacado necesita un nombre'); return; }
+
+    const btn = document.getElementById('btn-create-highlight');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Creando...';
+
+    try {
+        // Create highlight
+        const coverFile = document.getElementById('hl-cover').files[0];
+        let body, fetchOpts;
+        if (coverFile) {
+            body = new FormData();
+            body.append('name', name);
+            body.append('cover_image', coverFile);
+            fetchOpts = { method: 'POST', body, headers: { 'Authorization': 'Bearer ' + getToken() } };
+        } else {
+            body = JSON.stringify({ name });
+            fetchOpts = { method: 'POST', body };
+        }
+
+        const res = await authFetch('/api/profiles/highlights/', fetchOpts);
+        if (!res.ok) { showToast('Error al crear destacado'); return; }
+        const highlight = await res.json();
+
+        // Add selected stories
+        for (const storyId of selectedHlStories) {
+            await authFetch(`/api/profiles/highlights/${highlight.id}/add/`, {
+                method: 'POST',
+                body: JSON.stringify({ story_id: storyId })
+            });
+        }
+
+        bootstrap.Modal.getInstance(document.getElementById('createHighlightModal')).hide();
+        showToast('Destacado creado');
+        loadHighlights();
+    } catch(e) {
+        showToast('Error de conexion');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-plus-lg me-1"></i>Crear Destacado';
+    }
+}
+
+// ─── Highlight Viewer ───
+function openHighlightViewer(idx) {
+    const hl = userHighlights[idx];
+    if (!hl || !hl.items || hl.items.length === 0) {
+        showToast('Este destacado esta vacio');
+        return;
+    }
+
+    hlStories = hl.items.map(item => item.story);
+    hlCurrentIdx = 0;
+    hlPaused = false;
+
+    document.getElementById('highlight-viewer').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    showCurrentHlStory(hl.name);
+}
+
+function showCurrentHlStory(hlName) {
+    const story = hlStories[hlCurrentIdx];
+    if (!story) { closeHighlightViewer(); return; }
+
+    const user = profileUserData || {};
+    const avatarEl = document.getElementById('hlv-avatar');
+    if (user.avatar) avatarEl.innerHTML = `<img src="${user.avatar}" alt="">`;
+    else avatarEl.textContent = (user.first_name || user.username || '?')[0].toUpperCase();
+    document.getElementById('hlv-name').textContent = hlName || '';
+    document.getElementById('hlv-time').textContent = formatTimeAgo(story.created_at);
+
+    const contentEl = document.getElementById('hlv-content');
+    if (story.image) {
+        contentEl.innerHTML = `<img src="${story.image}" alt="">`;
+    } else {
+        contentEl.innerHTML = `<div class="story-text-display" style="background:${story.background_color || '#2EA3F2'};">${escapeHtml(story.text)}</div>`;
+    }
+
+    // Progress
+    const bar = document.getElementById('hl-progress-bar');
+    bar.innerHTML = '';
+    for (let i = 0; i < hlStories.length; i++) {
+        const cls = i < hlCurrentIdx ? 'viewed' : (i === hlCurrentIdx ? 'active' : '');
+        bar.insertAdjacentHTML('beforeend', `<div class="story-progress-segment ${cls}"><div class="progress-fill"></div></div>`);
+    }
+
+    startHlTimer();
+}
+
+function startHlTimer() {
+    stopHlTimer();
+    hlElapsed = 0;
+    hlPaused = false;
+    document.getElementById('hlv-pause').innerHTML = '<i class="bi bi-pause-fill"></i>';
+    hlTimer = setInterval(() => {
+        if (hlPaused) return;
+        hlElapsed += STORY_TICK;
+        const segments = document.querySelectorAll('#highlight-viewer .story-progress-segment');
+        const activeSeg = segments[hlCurrentIdx];
+        if (activeSeg) activeSeg.querySelector('.progress-fill').style.width = (hlElapsed / STORY_DURATION * 100) + '%';
+        if (hlElapsed >= STORY_DURATION) nextHlStory();
+    }, STORY_TICK);
+}
+
+function stopHlTimer() { if (hlTimer) { clearInterval(hlTimer); hlTimer = null; } }
+function toggleHlPause() {
+    hlPaused = !hlPaused;
+    document.getElementById('hlv-pause').innerHTML = hlPaused ? '<i class="bi bi-play-fill"></i>' : '<i class="bi bi-pause-fill"></i>';
+}
+
+function nextHlStory() {
+    stopHlTimer();
+    if (hlCurrentIdx < hlStories.length - 1) { hlCurrentIdx++; showCurrentHlStory(); }
+    else closeHighlightViewer();
+}
+
+function prevHlStory() {
+    stopHlTimer();
+    if (hlCurrentIdx > 0) { hlCurrentIdx--; showCurrentHlStory(); }
+    else showCurrentHlStory();
+}
+
+function closeHighlightViewer() {
+    document.getElementById('highlight-viewer').style.display = 'none';
+    document.body.style.overflow = '';
+    stopHlTimer();
+}
+
+// ─── Follow Toggle ───
 async function toggleFollow() {
     const btn = document.getElementById('btn-follow');
     const res = await authFetch(`/api/social/follow/${profileUserId}/`, { method: 'POST' });
     if (res.ok) {
         const data = await res.json();
         if (data.following) {
-            btn.className = 'btn btn-outline-light btn-sm px-4';
-            btn.innerHTML = '<i class="bi bi-person-check me-1"></i>Siguiendo';
+            btn.className = 'ig-action-btn following';
+            btn.textContent = 'Siguiendo';
             showToast('Ahora sigues a este usuario');
         } else {
-            btn.className = 'btn btn-gradient btn-sm px-4';
-            btn.innerHTML = '<i class="bi bi-person-plus me-1"></i>Seguir';
+            btn.className = 'ig-action-btn primary';
+            btn.textContent = 'Seguir';
             showToast('Dejaste de seguir');
         }
     }
 }
 
+// ─── Delete Account ───
 function openDeleteModal() {
     document.getElementById('delete-modal').style.display = 'flex';
     document.getElementById('delete-password').value = '';
     document.getElementById('delete-error').textContent = '';
 }
-
 function closeDeleteModal() {
     document.getElementById('delete-modal').style.display = 'none';
 }
-
 async function confirmDelete() {
     const password = document.getElementById('delete-password').value;
     const errorEl = document.getElementById('delete-error');
     const btn = document.getElementById('btn-confirm-delete');
-
-    if (!password) {
-        errorEl.textContent = 'Ingresa tu contraseña.';
-        return;
-    }
-
+    if (!password) { errorEl.textContent = 'Ingresa tu contrasena.'; return; }
     btn.disabled = true;
     btn.textContent = 'Eliminando...';
-
     try {
-        const res = await authFetch('/api/auth/me/delete/', {
-            method: 'POST',
-            body: JSON.stringify({ password })
-        });
+        const res = await authFetch('/api/auth/me/delete/', { method: 'POST', body: JSON.stringify({ password }) });
         const data = await res.json();
-
-        if (res.ok) {
-            localStorage.clear();
-            window.location.href = '/';
-        } else {
-            errorEl.textContent = data.detail || 'Error al eliminar cuenta.';
-        }
-    } catch(e) {
-        errorEl.textContent = 'Error de conexion.';
-    } finally {
-        btn.disabled = false;
-        btn.textContent = 'Eliminar';
-    }
+        if (res.ok) { localStorage.clear(); window.location.href = '/'; }
+        else { errorEl.textContent = data.detail || 'Error al eliminar cuenta.'; }
+    } catch(e) { errorEl.textContent = 'Error de conexion.'; }
+    finally { btn.disabled = false; btn.textContent = 'Eliminar'; }
 }
 </script>
 {% endblock %}

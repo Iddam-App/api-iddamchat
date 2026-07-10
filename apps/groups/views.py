@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.moderation.filter import check_and_flag
+from apps.notifications.models import Notification
 
 from .models import (
     Group, GroupJoinRequest, GroupMembership, GroupPost,
@@ -126,7 +127,27 @@ class GroupPostListCreateView(generics.ListCreateAPIView):
             }, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
         group = generics.get_object_or_404(Group, pk=self.kwargs['pk'])
-        serializer.save(author=request.user, group=group)
+        post = serializer.save(author=request.user, group=group)
+
+        # Notify all active members except the author
+        member_ids = (
+            GroupMembership.objects.filter(group=group, is_active=True)
+            .exclude(user=request.user)
+            .values_list('user_id', flat=True)
+        )
+        if member_ids:
+            Notification.objects.bulk_create([
+                Notification(
+                    recipient_id=uid,
+                    sender=request.user,
+                    notification_type='group_post',
+                    content_type='group_post',
+                    content_id=post.id,
+                    message=f'Publicó en {group.name}',
+                )
+                for uid in member_ids
+            ])
+
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 

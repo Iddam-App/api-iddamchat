@@ -49,3 +49,36 @@ class StoryView(models.Model):
 
     class Meta:
         unique_together = ('story', 'viewer')
+
+
+class StoryHighlight(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='highlights',
+    )
+    name = models.CharField(max_length=100)
+    cover_image = models.ImageField(
+        upload_to='highlights/covers/%Y/%m/', blank=True,
+    )
+    order = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['order', '-created_at']
+
+    def __str__(self):
+        return f"Destacado: {self.name} ({self.user})"
+
+
+class StoryHighlightItem(models.Model):
+    highlight = models.ForeignKey(
+        StoryHighlight, on_delete=models.CASCADE, related_name='items',
+    )
+    story = models.ForeignKey(
+        Story, on_delete=models.CASCADE, related_name='highlight_items',
+    )
+    order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order']
+        unique_together = ('highlight', 'story')

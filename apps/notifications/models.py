@@ -13,6 +13,7 @@ class Notification(models.Model):
         ('friend_request', 'Solicitud de amistad'),
         ('friend_request_accepted', 'Solicitud de amistad aceptada'),
         ('story_reaction', 'Reacción a historia'),
+        ('group_post', 'Nueva publicación en grupo'),
     ]
 
     recipient = models.ForeignKey(

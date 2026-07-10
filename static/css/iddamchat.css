@@ -2438,3 +2438,335 @@ main {
     animation: pageContentFade 0.3s var(--ease-out);
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   INSTAGRAM-STYLE PROFILE PAGE
+   ═══════════════════════════════════════════════════════════════════ */
+
+.ig-profile-header {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 1.2rem 1rem 0;
+}
+
+/* ─── Top Row: Avatar + Stats ────────────────────────────── */
+.ig-profile-top {
+    display: flex;
+    align-items: center;
+    gap: 1.8rem;
+    margin-bottom: 1rem;
+}
+
+.ig-avatar-wrapper {
+    flex-shrink: 0;
+    position: relative;
+}
+
+.ig-avatar-wrapper.editable {
+    cursor: pointer;
+}
+
+.ig-avatar-ring {
+    width: 86px;
+    height: 86px;
+    border-radius: 50%;
+    padding: 3px;
+    background: var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.25s var(--ease-out);
+}
+
+.ig-avatar-ring.has-stories {
+    background: var(--ig-gradient);
+    cursor: pointer;
+}
+
+.ig-avatar-ring:hover {
+    transform: scale(1.03);
+}
+
+.ig-avatar {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold-light), var(--gold-dark));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 800;
+    font-size: 2rem;
+    border: 3px solid var(--body-bg);
+    overflow: hidden;
+}
+
+.ig-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* ─── Stats Row ──────────────────────────────────────────── */
+.ig-stats-row {
+    display: flex;
+    flex: 1;
+    justify-content: space-around;
+    text-align: center;
+}
+
+.ig-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.ig-stat-number {
+    font-weight: 800;
+    font-size: 1.15rem;
+    color: var(--text-primary);
+    line-height: 1.2;
+}
+
+.ig-stat-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+/* ─── Profile Info ───────────────────────────────────────── */
+.ig-profile-info {
+    padding: 0 0 0.6rem;
+}
+
+.ig-profile-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    line-height: 1.3;
+}
+
+.ig-profile-username {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-bottom: 0.2rem;
+}
+
+.ig-profile-bio {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    line-height: 1.45;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.ig-profile-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-top: 0.3rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.ig-profile-details span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.ig-profile-details i {
+    font-size: 0.75rem;
+}
+
+/* ─── Action Buttons ─────────────────────────────────────── */
+.ig-profile-actions {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.4rem 0 0.8rem;
+}
+
+.ig-action-btn {
+    flex: 1;
+    padding: 0.45rem 0;
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+    font-size: 0.82rem;
+    text-align: center;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s var(--ease-out);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    font-family: inherit;
+}
+
+.ig-action-btn.primary {
+    background: var(--gold);
+    color: #fff;
+}
+
+.ig-action-btn.primary:hover {
+    background: var(--gold-dark);
+}
+
+.ig-action-btn.secondary {
+    background: var(--hover-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.ig-action-btn.secondary:hover {
+    background: var(--border-color);
+}
+
+.ig-action-btn.following {
+    background: var(--hover-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+/* ─── Highlights Section ─────────────────────────────────── */
+.ig-highlights-section {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 0 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.ig-highlights-scroll {
+    display: flex;
+    gap: 1rem;
+    padding: 0.5rem 0 0.8rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.ig-highlights-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.ig-highlight-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    flex-shrink: 0;
+    cursor: pointer;
+    width: 68px;
+}
+
+.ig-highlight-circle {
+    width: 62px;
+    height: 62px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border-color);
+    background: var(--card-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    transition: transform 0.2s var(--ease-out), border-color 0.2s;
+}
+
+.ig-highlight-circle:hover {
+    transform: scale(1.05);
+    border-color: var(--text-muted);
+}
+
+.ig-highlight-circle.add {
+    border-style: dashed;
+}
+
+.ig-highlight-circle img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.ig-highlight-name {
+    font-size: 0.68rem;
+    color: var(--text-secondary);
+    text-align: center;
+    max-width: 68px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+/* ─── Content Tabs ───────────────────────────────────────── */
+.ig-content-tabs {
+    max-width: 640px;
+    margin: 0 auto;
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.ig-tab {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.7rem 0;
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: color 0.2s;
+    position: relative;
+    font-family: inherit;
+}
+
+.ig-tab:hover {
+    color: var(--text-primary);
+}
+
+.ig-tab.active {
+    color: var(--text-primary);
+}
+
+.ig-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 1.5px;
+    background: var(--text-primary);
+}
+
+/* ─── Post Grid in Profile ───────────────────────────────── */
+#panel-grid,
+#panel-list,
+#panel-saved {
+    max-width: 640px;
+    margin: 0 auto;
+}
+
+.ig-posts-list {
+    padding: 0 1rem;
+}
+
+/* ─── Responsive Profile ─────────────────────────────────── */
+@media (max-width: 480px) {
+    .ig-profile-top {
+        gap: 1.2rem;
+    }
+
+    .ig-avatar-ring {
+        width: 76px;
+        height: 76px;
+    }
+
+    .ig-stat-number {
+        font-size: 1.05rem;
+    }
+}
+

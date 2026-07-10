@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from apps.core.serializers import UserMinimalSerializer
 
-from .models import ProfilePhoto, Story, StoryView
+from .models import ProfilePhoto, Story, StoryHighlight, StoryHighlightItem, StoryView
 
 
 class ProfilePhotoSerializer(serializers.ModelSerializer):
@@ -41,3 +41,43 @@ class StoryCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Story
         fields = ['image', 'text', 'background_color', 'expires_at']
+
+
+class StoryHighlightItemSerializer(serializers.ModelSerializer):
+    story = StorySerializer(read_only=True)
+
+    class Meta:
+        model = StoryHighlightItem
+        fields = ['id', 'story', 'order']
+        read_only_fields = ['id']
+
+
+class StoryHighlightSerializer(serializers.ModelSerializer):
+    items = StoryHighlightItemSerializer(many=True, read_only=True)
+    cover_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = StoryHighlight
+        fields = ['id', 'name', 'cover_image', 'cover_url', 'order',
+                  'created_at', 'items']
+        read_only_fields = ['id', 'created_at']
+
+    def get_cover_url(self, obj):
+        if obj.cover_image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.cover_image.url)
+            return obj.cover_image.url
+        first_item = obj.items.select_related('story').first()
+        if first_item and first_item.story.image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(first_item.story.image.url)
+            return first_item.story.image.url
+        return None
+
+
+class StoryHighlightCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StoryHighlight
+        fields = ['name', 'cover_image', 'order']
