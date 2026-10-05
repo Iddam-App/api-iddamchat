@@ -6,9 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#1a1a2e" media="(prefers-color-scheme: dark)">
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="IddamChat">
     <meta name="description" content="IddamChat — Comunidad para miembros de la Iglesia de Dios, Una Asociacion Mundial">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/x-icon" href="/icons/favicon.ico">
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
     <title>{% block title %}IddamChat{% endblock %}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -163,6 +169,19 @@
         </div>
     </div>
 
+    <!-- PWA Install Banner -->
+    <div class="pwa-install-banner" id="pwa-install-banner" style="display:none;">
+        <div class="pwa-install-content">
+            <img src="/icons/icon-192x192.png" alt="IddamChat" class="pwa-install-icon">
+            <div class="pwa-install-text">
+                <strong>Instalar IddamChat</strong>
+                <span>Accede mas rapido desde tu escritorio o celular</span>
+            </div>
+            <button class="btn btn-gold btn-sm" id="pwa-install-btn">Instalar</button>
+            <button class="pwa-install-close" id="pwa-install-close">&times;</button>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{% static 'js/iddamchat.js' %}"></script>
     <script>
@@ -274,7 +293,7 @@
             });
         } catch(e) {}
     }
-    if (isLoggedIn()) setInterval(loadUnreadCount, 15000);
+    if (isLoggedIn()) setInterval(loadUnreadCount, 8000);
 
     // ─── Notification Badge ───
     async function loadNotifCount() {
@@ -294,7 +313,53 @@
             }
         } catch(e) {}
     }
-    if (isLoggedIn()) setInterval(loadNotifCount, 20000);
+    if (isLoggedIn()) setInterval(loadNotifCount, 10000);
+
+    // ─── Service Worker & PWA Install ───
+    (function() {
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('SW registered:', reg.scope))
+                    .catch(err => console.log('SW registration failed:', err));
+            });
+        }
+
+        let deferredPrompt = null;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const dismissed = localStorage.getItem('pwa_install_dismissed');
+            if (!dismissed) {
+                document.getElementById('pwa-install-banner').style.display = 'block';
+            }
+        });
+
+        const installBtn = document.getElementById('pwa-install-btn');
+        if (installBtn) {
+            installBtn.addEventListener('click', async () => {
+                if (!deferredPrompt) return;
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                deferredPrompt = null;
+                document.getElementById('pwa-install-banner').style.display = 'none';
+                if (outcome === 'accepted') showToast('App instalada correctamente');
+            });
+        }
+
+        const closeBtn = document.getElementById('pwa-install-close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                document.getElementById('pwa-install-banner').style.display = 'none';
+                localStorage.setItem('pwa_install_dismissed', '1');
+            });
+        }
+
+        window.addEventListener('appinstalled', () => {
+            deferredPrompt = null;
+            document.getElementById('pwa-install-banner').style.display = 'none';
+        });
+    })();
 
     // ─── Visibility Selector ───
     let selectedVisibility = 'public';

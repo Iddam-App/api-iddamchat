@@ -72,53 +72,48 @@ function logout() {
 // ─── Upload with Progress (uses XHR for upload.onprogress) ───
 function uploadWithProgress(url, formData, onProgress, method) {
     method = method || 'POST';
-    return new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open(method, API + url);
-        xhr.setRequestHeader('Authorization', 'Bearer ' + getToken());
 
-        xhr.upload.onprogress = (e) => {
-            if (e.lengthComputable && onProgress) {
-                onProgress(Math.round((e.loaded / e.total) * 100));
-            }
-        };
+    function makeXhr(token) {
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open(method, API + url);
+            xhr.setRequestHeader('Authorization', 'Bearer ' + token);
 
-        xhr.onload = () => {
-            if (xhr.status === 401) {
-                // Token expired — refresh and retry once
-                fetch(API + '/api/auth/token/refresh/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ refresh: localStorage.getItem('refresh_token') })
-                }).then(r => {
-                    if (!r.ok) throw new Error('Refresh failed');
-                    return r.json();
-                }).then(data => {
-                    localStorage.setItem('access_token', data.access);
-                    if (data.refresh) localStorage.setItem('refresh_token', data.refresh);
-                    const xhr2 = new XMLHttpRequest();
-                    xhr2.open(method, API + url);
-                    xhr2.setRequestHeader('Authorization', 'Bearer ' + data.access);
-                    xhr2.upload.onprogress = xhr.upload.onprogress;
-                    xhr2.onload = () => resolve({
-                        status: xhr2.status,
-                        ok: xhr2.status >= 200 && xhr2.status < 300,
-                        json: () => JSON.parse(xhr2.responseText),
-                    });
-                    xhr2.onerror = () => reject(new Error('Network error'));
-                    xhr2.send(formData);
-                }).catch(() => { logout(); reject(new Error('Auth failed')); });
-            } else {
-                resolve({
-                    status: xhr.status,
-                    ok: xhr.status >= 200 && xhr.status < 300,
-                    json: () => JSON.parse(xhr.responseText),
-                });
-            }
-        };
+            xhr.upload.onprogress = (e) => {
+                if (e.lengthComputable && onProgress) {
+                    onProgress(Math.round((e.loaded / e.total) * 100));
+                }
+            };
 
-        xhr.onerror = () => reject(new Error('Network error'));
-        xhr.send(formData);
+            xhr.onload = () => resolve({
+                status: xhr.status,
+                ok: xhr.status >= 200 && xhr.status < 300,
+                json: () => JSON.parse(xhr.responseText),
+            });
+
+            xhr.onerror = () => reject(new Error('Network error'));
+            xhr.send(formData);
+        });
+    }
+
+    return makeXhr(getToken()).then(res => {
+        if (res.status === 401) {
+            const refreshToken = localStorage.getItem('refresh_token');
+            if (!refreshToken) { logout(); return Promise.reject(new Error('Auth failed')); }
+            return fetch(API + '/api/auth/token/refresh/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refresh: refreshToken })
+            }).then(r => {
+                if (!r.ok) { logout(); return Promise.reject(new Error('Refresh failed')); }
+                return r.json();
+            }).then(data => {
+                localStorage.setItem('access_token', data.access);
+                if (data.refresh) localStorage.setItem('refresh_token', data.refresh);
+                return makeXhr(data.access);
+            });
+        }
+        return res;
     });
 }
 

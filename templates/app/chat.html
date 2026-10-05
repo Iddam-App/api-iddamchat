@@ -548,11 +548,13 @@ document.addEventListener('DOMContentLoaded', () => {
         searchTimer = setTimeout(() => searchUsers(this.value.trim()), 300);
     });
 
-    // Poll for new messages
+    // Poll for new messages (3s when in active chat, 8s for conversation list)
     chatPollTimer = setInterval(() => {
         if (activeConvId) loadMessages(activeConvId, true);
+    }, 3000);
+    setInterval(() => {
         loadConversations(true);
-    }, 5000);
+    }, 6000);
 });
 
 // ─── Conversations ───
