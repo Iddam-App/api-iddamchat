@@ -648,7 +648,7 @@ async function loadStories() {
         const data = await res.json();
         allStories = data.results || data;
 
-        const me = JSON.parse(localStorage.getItem('user_data') || '{}');
+        const me = getCachedUser();
 
         // Group stories by user
         const grouped = {};
@@ -976,9 +976,14 @@ async function loadFeed() {
             return;
         }
 
+        // Batch DOM insert using DocumentFragment for fewer reflows
+        const fragment = document.createDocumentFragment();
+        const temp = document.createElement('div');
         posts.forEach(post => {
-            feed.insertAdjacentHTML('beforeend', renderPostCard(post, { showType: true }));
+            temp.innerHTML = renderPostCard(post, { showType: true });
+            while (temp.firstChild) fragment.appendChild(temp.firstChild);
         });
+        requestAnimationFrame(() => feed.appendChild(fragment));
 
         if (data.next) {
             currentPage++;

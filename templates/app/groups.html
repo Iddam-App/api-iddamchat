@@ -542,7 +542,7 @@ let groupImageFile = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     if (!isLoggedIn()) { window.location.href = '/login/'; return; }
-    me = JSON.parse(localStorage.getItem('user_data') || '{}');
+    me = getCachedUser();
     loadGroups();
 
     // Image attachment for group posts

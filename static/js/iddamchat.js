@@ -1,9 +1,20 @@
 /* ═══════════════════════════════════════════════════════════════════
-   IddamChat — Shared JavaScript
+   IddamChat — Shared JavaScript (Performance-optimized)
    ═══════════════════════════════════════════════════════════════════ */
 
 const API = '';
 const REACTIONS = {like:'👍', love:'❤️', pray:'🙏', amen:'🙌', fire:'🔥'};
+
+// ─── Cached user data (avoid repeated JSON.parse of localStorage) ───
+let _cachedUserData = null;
+function getCachedUser() {
+    if (!_cachedUserData) {
+        try { _cachedUserData = JSON.parse(localStorage.getItem('user_data') || '{}'); }
+        catch(e) { _cachedUserData = {}; }
+    }
+    return _cachedUserData;
+}
+function invalidateUserCache() { _cachedUserData = null; }
 
 // ─── Auth Helpers ─────────────────────────────────────────
 function getToken() { return localStorage.getItem('access_token'); }
@@ -155,11 +166,12 @@ function formatTimeAgo(dateStr) {
     return new Date(dateStr).toLocaleDateString('es');
 }
 
+// Reuse a single element for escapeHtml (avoid creating DOM nodes per call)
+const _escapeEl = document.createElement('span');
 function escapeHtml(text) {
     if (!text) return '';
-    const d = document.createElement('div');
-    d.textContent = text;
-    return d.innerHTML;
+    _escapeEl.textContent = text;
+    return _escapeEl.innerHTML;
 }
 
 function renderHashtags(escapedHtml) {
@@ -169,18 +181,22 @@ function renderHashtags(escapedHtml) {
     return result;
 }
 
-// Navigate to a mentioned user's profile
+// Navigate to a mentioned user's profile (uses mention cache)
 async function navigateToUser(username) {
+    // Check mention cache first
+    const cacheKey = username.toLowerCase();
+    if (_mentionCache[cacheKey]) {
+        const match = _mentionCache[cacheKey].find(u => u.username.toLowerCase() === cacheKey);
+        if (match) { window.location.href = `/profile/${match.id}/`; return; }
+    }
     try {
         const res = await authFetch(`/api/auth/users/search/?q=${encodeURIComponent(username)}`);
         if (res.ok) {
             const data = await res.json();
             const users = data.results || data;
-            const match = users.find(u => u.username.toLowerCase() === username.toLowerCase());
-            if (match) {
-                window.location.href = `/profile/${match.id}/`;
-                return;
-            }
+            _mentionCache[cacheKey] = users;
+            const match = users.find(u => u.username.toLowerCase() === cacheKey);
+            if (match) { window.location.href = `/profile/${match.id}/`; return; }
         }
     } catch(e) {}
     showToast('Usuario no encontrado');
@@ -222,6 +238,7 @@ if (document.readyState === 'loading') {
 
 // ─── Mention Autocomplete for Post/Group Post Creation ────
 let mentionSearchTimer = null;
+const _mentionCache = {}; // cache search results to avoid redundant API calls
 
 function initMentionAutocomplete(textareaId, dropdownId) {
     const textarea = document.getElementById(textareaId);
@@ -247,7 +264,7 @@ function initMentionAutocomplete(textareaId, dropdownId) {
         if (match) {
             const query = match[1];
             clearTimeout(mentionSearchTimer);
-            mentionSearchTimer = setTimeout(() => searchMentions(query, dropdown, textarea), 250);
+            mentionSearchTimer = setTimeout(() => searchMentions(query, dropdown, textarea), 180);
         } else {
             dropdown.classList.remove('show');
         }
@@ -280,12 +297,22 @@ function initMentionAutocomplete(textareaId, dropdownId) {
 
 async function searchMentions(query, dropdown, textarea) {
     if (query.length < 1) { dropdown.classList.remove('show'); return; }
-    try {
-        const res = await authFetch(`/api/auth/users/search/?q=${encodeURIComponent(query)}`);
-        if (!res.ok) return;
-        const data = await res.json();
-        const users = (data.results || data).slice(0, 5);
-        if (users.length === 0) { dropdown.classList.remove('show'); return; }
+
+    // Check cache first
+    const cacheKey = query.toLowerCase();
+    let users;
+    if (_mentionCache[cacheKey]) {
+        users = _mentionCache[cacheKey];
+    } else {
+        try {
+            const res = await authFetch(`/api/auth/users/search/?q=${encodeURIComponent(query)}`);
+            if (!res.ok) return;
+            const data = await res.json();
+            users = (data.results || data).slice(0, 5);
+            _mentionCache[cacheKey] = users;
+        } catch(e) { return; }
+    }
+        if (!users || users.length === 0) { dropdown.classList.remove('show'); return; }
 
         dropdown.innerHTML = users.map(u => {
             const initial = ((u.first_name || u.username || '?')[0]).toUpperCase();
@@ -303,7 +330,6 @@ async function searchMentions(query, dropdown, textarea) {
         dropdown.classList.add('show');
         const first = dropdown.querySelector('.mention-option');
         if (first) first.classList.add('highlighted');
-    } catch(e) {}
 }
 
 function selectMention(username, textarea, dropdown) {
@@ -349,7 +375,7 @@ function renderPostCard(post, opts = {}) {
         : initial;
     const displayName = author.display_name || author.first_name || author.username;
     const timeAgo = formatTimeAgo(post.created_at);
-    const me = JSON.parse(localStorage.getItem('user_data') || '{}');
+    const me = getCachedUser();
     const isMe = me.id === author.id;
 
     let imagesHtml = '';
@@ -458,54 +484,91 @@ async function react(postId, type) {
     const btn = card.querySelector('.action-btn[data-reaction]');
     if (!btn) return;
     const current = btn.dataset.reaction;
+    const icon = btn.querySelector('i');
+    const span = btn.querySelector('span');
 
-    try {
-        if (current === type) {
-            const res = await authFetch(`/api/posts/${postId}/react/`, { method: 'DELETE' });
-            if (res.ok || res.status === 204) {
-                btn.dataset.reaction = '';
-                btn.classList.remove('liked');
-                btn.querySelector('i').className = 'bi bi-hand-thumbs-up';
-                btn.querySelector('span').textContent = 'Me gusta';
-            }
-        } else {
-            const res = await authFetch(`/api/posts/${postId}/react/`, {
-                method: 'POST',
-                body: JSON.stringify({ reaction_type: type })
-            });
-            if (res.ok) {
+    // Optimistic UI — update instantly, revert on failure
+    if (current === type) {
+        // Unreact optimistically
+        btn.dataset.reaction = '';
+        btn.classList.remove('liked');
+        icon.className = 'bi bi-hand-thumbs-up';
+        span.textContent = 'Me gusta';
+
+        authFetch(`/api/posts/${postId}/react/`, { method: 'DELETE' }).then(res => {
+            if (!res.ok && res.status !== 204) {
+                // Revert
                 btn.dataset.reaction = type;
                 btn.classList.add('liked');
-                btn.querySelector('i').className = 'bi bi-hand-thumbs-up-fill';
-                btn.querySelector('span').textContent = REACTIONS[type];
-                // Pop animation
-                btn.classList.add('just-liked');
-                setTimeout(() => btn.classList.remove('just-liked'), 500);
+                icon.className = 'bi bi-hand-thumbs-up-fill';
+                span.textContent = REACTIONS[type];
             }
-        }
-    } catch(e) {
-        showToast('Error de conexion');
+        }).catch(() => {
+            btn.dataset.reaction = type;
+            btn.classList.add('liked');
+            icon.className = 'bi bi-hand-thumbs-up-fill';
+            span.textContent = REACTIONS[type];
+        });
+    } else {
+        // React optimistically
+        btn.dataset.reaction = type;
+        btn.classList.add('liked');
+        icon.className = 'bi bi-hand-thumbs-up-fill';
+        span.textContent = REACTIONS[type];
+        btn.classList.add('just-liked');
+        setTimeout(() => btn.classList.remove('just-liked'), 500);
+
+        authFetch(`/api/posts/${postId}/react/`, {
+            method: 'POST',
+            body: JSON.stringify({ reaction_type: type })
+        }).then(res => {
+            if (!res.ok) {
+                // Revert
+                btn.dataset.reaction = current || '';
+                btn.classList.toggle('liked', !!current);
+                icon.className = current ? 'bi bi-hand-thumbs-up-fill' : 'bi bi-hand-thumbs-up';
+                span.textContent = current ? (REACTIONS[current] || 'Me gusta') : 'Me gusta';
+            }
+        }).catch(() => {
+            btn.dataset.reaction = current || '';
+            btn.classList.toggle('liked', !!current);
+            icon.className = current ? 'bi bi-hand-thumbs-up-fill' : 'bi bi-hand-thumbs-up';
+            span.textContent = current ? (REACTIONS[current] || 'Me gusta') : 'Me gusta';
+        });
     }
 }
 
-// ─── Save Post ────────────────────────────────────────────
-async function savePost(postId) {
-    try {
-        const res = await authFetch(`/api/posts/${postId}/save/`, { method: 'POST' });
+// ─── Save Post (optimistic UI) ────────────────────────────
+function savePost(postId) {
+    const card = document.getElementById('post-' + postId);
+    if (!card) return;
+    const saveBtn = card.querySelector('.action-btn[data-action="save"]');
+    if (!saveBtn) return;
+    const icon = saveBtn.querySelector('i');
+    const span = saveBtn.querySelector('span');
+    const wasSaved = icon.classList.contains('bi-bookmark-fill');
+
+    // Optimistic toggle
+    icon.className = wasSaved ? 'bi bi-bookmark' : 'bi bi-bookmark-fill';
+    span.textContent = wasSaved ? 'Guardar' : 'Guardado';
+
+    authFetch(`/api/posts/${postId}/save/`, { method: 'POST' }).then(res => {
         if (res.ok) {
-            const data = await res.json();
-            const card = document.getElementById('post-' + postId);
-            if (!card) return;
-            const saveBtn = card.querySelector('.action-btn[data-action="save"]');
-            if (saveBtn) {
-                saveBtn.querySelector('i').className = data.saved ? 'bi bi-bookmark-fill' : 'bi bi-bookmark';
-                saveBtn.querySelector('span').textContent = data.saved ? 'Guardado' : 'Guardar';
-            }
-            showToast(data.saved ? 'Publicacion guardada' : 'Removida de guardados');
+            res.json().then(data => {
+                icon.className = data.saved ? 'bi bi-bookmark-fill' : 'bi bi-bookmark';
+                span.textContent = data.saved ? 'Guardado' : 'Guardar';
+                showToast(data.saved ? 'Guardado' : 'Removida de guardados');
+            });
+        } else {
+            // Revert
+            icon.className = wasSaved ? 'bi bi-bookmark-fill' : 'bi bi-bookmark';
+            span.textContent = wasSaved ? 'Guardado' : 'Guardar';
         }
-    } catch(e) {
+    }).catch(() => {
+        icon.className = wasSaved ? 'bi bi-bookmark-fill' : 'bi bi-bookmark';
+        span.textContent = wasSaved ? 'Guardado' : 'Guardar';
         showToast('Error de conexion');
-    }
+    });
 }
 
 // ─── Post Menu ────────────────────────────────────────────
@@ -521,7 +584,7 @@ document.addEventListener('click', (e) => {
     if (!e.target.closest('.post-dropdown')) {
         document.querySelectorAll('.post-dropdown-menu.show').forEach(m => m.classList.remove('show'));
     }
-});
+}, { passive: true });
 
 async function toggleHidePost(postId) {
     try {

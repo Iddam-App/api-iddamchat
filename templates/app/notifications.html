@@ -48,8 +48,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!isLoggedIn()) { window.location.href = '/login/'; return; }
     loadNotifications();
 
-    // Poll for new notifications every 15s
-    setInterval(loadNotifications, 15000);
+    // Smart polling: only when tab is visible
+    let notifPollInterval = setInterval(loadNotifications, 20000);
+    document.addEventListener('visibilitychange', () => {
+        clearInterval(notifPollInterval);
+        if (!document.hidden) {
+            loadNotifications();
+            notifPollInterval = setInterval(loadNotifications, 20000);
+        }
+    });
 });
 
 async function loadNotifications() {
