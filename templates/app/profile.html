@@ -435,7 +435,7 @@ let hlElapsed = 0;
 // Selected stories for highlight creation
 let selectedHlStories = [];
 
-document.addEventListener('DOMContentLoaded', () => {
+onPageReady(() => {
     if (!isLoggedIn()) { window.location.href = '/login/'; return; }
 
     const pathParts = window.location.pathname.split('/').filter(Boolean);
@@ -501,7 +501,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnStory) btnStory.addEventListener('click', publishStory);
 
     // Story viewer keyboard
-    document.addEventListener('keydown', (e) => {
+    const _profileKeyHandler = (e) => {
         const sv = document.getElementById('story-viewer');
         const hv = document.getElementById('highlight-viewer');
         if (sv && sv.style.display !== 'none') {
@@ -519,6 +519,13 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (e.key === 'Escape') closeHighlightViewer();
             else if (e.key === ' ') { e.preventDefault(); toggleHlPause(); }
         }
+    };
+    document.addEventListener('keydown', _profileKeyHandler);
+
+    onPageUnload(() => {
+        clearInterval(storyTimer);
+        clearInterval(hlTimer);
+        document.removeEventListener('keydown', _profileKeyHandler);
     });
 });
 

@@ -540,7 +540,7 @@ let activeGroupData = null;
 let me = {};
 let groupImageFile = null;
 
-document.addEventListener('DOMContentLoaded', () => {
+onPageReady(() => {
     if (!isLoggedIn()) { window.location.href = '/login/'; return; }
     me = getCachedUser();
     loadGroups();

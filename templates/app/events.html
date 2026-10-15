@@ -353,7 +353,7 @@ const MONTHS_ES = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','
 let currentEventTab = 'upcoming';
 let activeEventId = null;
 
-document.addEventListener('DOMContentLoaded', () => {
+onPageReady(() => {
     if (!isLoggedIn()) { window.location.href = '/login/'; return; }
     loadEvents();
 });

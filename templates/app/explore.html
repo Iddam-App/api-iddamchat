@@ -54,7 +54,7 @@ let discoverPosts = [];
 let currentCategory = '';
 let searchTimeout = null;
 
-document.addEventListener('DOMContentLoaded', () => {
+onPageReady(() => {
     if (!isLoggedIn()) { window.location.href = '/login/'; return; }
 
     // Check for hashtag param

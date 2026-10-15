@@ -44,18 +44,24 @@ const NOTIF_ICONS = {
     mention: { icon: 'bi-at', color: '#8B7355' },
 };
 
-document.addEventListener('DOMContentLoaded', () => {
+onPageReady(() => {
     if (!isLoggedIn()) { window.location.href = '/login/'; return; }
     loadNotifications();
 
     // Smart polling: only when tab is visible
     let notifPollInterval = setInterval(loadNotifications, 20000);
-    document.addEventListener('visibilitychange', () => {
+    const _notifVisHandler = () => {
         clearInterval(notifPollInterval);
         if (!document.hidden) {
             loadNotifications();
             notifPollInterval = setInterval(loadNotifications, 20000);
         }
+    };
+    document.addEventListener('visibilitychange', _notifVisHandler);
+
+    onPageUnload(() => {
+        clearInterval(notifPollInterval);
+        document.removeEventListener('visibilitychange', _notifVisHandler);
     });
 });
 

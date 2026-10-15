@@ -446,7 +446,7 @@ const STATUS_LABELS = {
 let currentTab = 'browse';
 let me = {};
 
-document.addEventListener('DOMContentLoaded', () => {
+onPageReady(() => {
     if (!isLoggedIn()) { window.location.href = '/login/'; return; }
 
     me = JSON.parse(localStorage.getItem('user_data') || '{}');

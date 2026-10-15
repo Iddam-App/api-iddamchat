@@ -141,7 +141,7 @@
 let currentPage = 1;
 let searchTimer;
 
-document.addEventListener('DOMContentLoaded', () => {
+onPageReady(() => {
     if (!isLoggedIn()) { window.location.href = '/login/'; return; }
 
     // Set avatar in create box

@@ -43,7 +43,7 @@
 <script>
 let postId = null;
 
-document.addEventListener('DOMContentLoaded', () => {
+onPageReady(() => {
     if (!isLoggedIn()) { window.location.href = '/login/'; return; }
 
     const pathParts = window.location.pathname.split('/').filter(Boolean);

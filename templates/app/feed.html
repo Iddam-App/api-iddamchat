@@ -502,7 +502,7 @@ let storyElapsed = 0;
 let storyImageFile = null;
 let storyBgColor = '#2EA3F2';
 
-document.addEventListener('DOMContentLoaded', () => {
+onPageReady(() => {
     if (!isLoggedIn()) { window.location.href = '/login/'; return; }
 
     loadStories();
@@ -543,9 +543,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Keyboard nav for story viewer
-    document.addEventListener('keydown', (e) => {
+    const _feedKeyHandler = (e) => {
         if (document.getElementById('story-viewer').style.display === 'none') return;
-        // Don't hijack keys when typing in reply input
         if (document.activeElement === document.getElementById('sv-reply-input')) {
             if (e.key === 'Enter') { e.preventDefault(); replyToStory(); }
             return;
@@ -554,6 +553,14 @@ document.addEventListener('DOMContentLoaded', () => {
         else if (e.key === 'ArrowLeft') prevStory();
         else if (e.key === 'Escape') closeStoryViewer();
         else if (e.key === ' ') { e.preventDefault(); toggleStoryPause(); }
+    };
+    document.addEventListener('keydown', _feedKeyHandler);
+
+    // Cleanup on SPA navigation
+    onPageUnload(() => {
+        observer.disconnect();
+        clearInterval(storyTimer);
+        document.removeEventListener('keydown', _feedKeyHandler);
     });
 });
 

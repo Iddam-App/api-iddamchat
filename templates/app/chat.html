@@ -505,7 +505,7 @@ let chatImageFile = null;
 let chatPollTimer = null;
 let me = {};
 
-document.addEventListener('DOMContentLoaded', () => {
+onPageReady(() => {
     if (!isLoggedIn()) { window.location.href = '/login/'; return; }
     me = JSON.parse(localStorage.getItem('user_data') || '{}');
 
@@ -552,9 +552,14 @@ document.addEventListener('DOMContentLoaded', () => {
     chatPollTimer = setInterval(() => {
         if (activeConvId) loadMessages(activeConvId, true);
     }, 3000);
-    setInterval(() => {
+    const convListTimer = setInterval(() => {
         loadConversations(true);
     }, 6000);
+
+    onPageUnload(() => {
+        clearInterval(chatPollTimer);
+        clearInterval(convListTimer);
+    });
 });
 
 // ─── Conversations ───

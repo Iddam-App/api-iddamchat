@@ -187,7 +187,7 @@ async function navigateToUser(username) {
     const cacheKey = username.toLowerCase();
     if (_mentionCache[cacheKey]) {
         const match = _mentionCache[cacheKey].find(u => u.username.toLowerCase() === cacheKey);
-        if (match) { window.location.href = `/profile/${match.id}/`; return; }
+        if (match) { _spaEnabled ? spaNavigate(`/profile/${match.id}/`) : (window.location.href = `/profile/${match.id}/`); return; }
     }
     try {
         const res = await authFetch(`/api/auth/users/search/?q=${encodeURIComponent(username)}`);
@@ -196,11 +196,221 @@ async function navigateToUser(username) {
             const users = data.results || data;
             _mentionCache[cacheKey] = users;
             const match = users.find(u => u.username.toLowerCase() === cacheKey);
-            if (match) { window.location.href = `/profile/${match.id}/`; return; }
+            if (match) { _spaEnabled ? spaNavigate(`/profile/${match.id}/`) : (window.location.href = `/profile/${match.id}/`); return; }
         }
     } catch(e) {}
     showToast('Usuario no encontrado');
 }
+
+// ─── SPA Navigation (Turbolinks-style) ───────────────────────
+let _pageUnloadCallbacks = [];
+const _pageCache = new Map();
+const SPA_MAX_CACHE = 8;
+let _spaEnabled = false;
+
+/** Replace DOMContentLoaded — runs fn immediately (scripts load after DOM) */
+function onPageReady(fn) { fn(); }
+
+/** Register cleanup for current page (intervals, listeners, observers) */
+function onPageUnload(fn) { _pageUnloadCallbacks.push(fn); }
+
+function _runPageUnload() {
+    _pageUnloadCallbacks.forEach(fn => { try { fn(); } catch(e) { console.warn('unload err', e); } });
+    _pageUnloadCallbacks = [];
+    // Remove page-scoped styles
+    document.querySelectorAll('style[data-spa-page]').forEach(s => s.remove());
+}
+
+function initSpaRouter() {
+    if (_spaEnabled || !isLoggedIn()) return;
+    _spaEnabled = true;
+
+    // Intercept link clicks (delegated)
+    document.addEventListener('click', (e) => {
+        if (!_spaEnabled) return;
+        const link = e.target.closest('a[href]');
+        if (!link) return;
+
+        const href = link.getAttribute('href');
+        if (!href || href === '#' || href.startsWith('#') || href.startsWith('javascript:')) return;
+        if (link.target === '_blank' || link.hasAttribute('download')) return;
+        if (e.ctrlKey || e.metaKey || e.shiftKey) return;
+        // Skip modal triggers
+        if (link.hasAttribute('data-bs-toggle')) return;
+
+        let url;
+        try { url = new URL(href, window.location.origin); } catch(_) { return; }
+        if (url.origin !== window.location.origin) return;
+
+        // Skip auth/api/admin paths
+        const p = url.pathname;
+        if (p.startsWith('/api/') || p.startsWith('/login') || p.startsWith('/register') || p.startsWith('/admin')) return;
+
+        e.preventDefault();
+        spaNavigate(url.pathname + url.search + url.hash);
+    });
+
+    // Back/forward buttons
+    window.addEventListener('popstate', () => {
+        _spaLoadPage(window.location.pathname + window.location.search, false);
+    });
+
+    // Mark initial state
+    history.replaceState({ spa: true }, '', window.location.href);
+
+    // Prefetch nav links on hover/touch
+    document.querySelectorAll('.bottom-nav .nav-tab[href], .nav-icon-btn[href]').forEach(link => {
+        const prefetch = () => _spaPrefetch(link.getAttribute('href'));
+        link.addEventListener('mouseenter', prefetch, { passive: true, once: true });
+        link.addEventListener('touchstart', prefetch, { passive: true, once: true });
+    });
+}
+
+function spaNavigate(path) {
+    const current = window.location.pathname + window.location.search;
+    if (path === current) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+    history.pushState({ spa: true }, '', path);
+    _spaLoadPage(path, true);
+}
+
+async function _spaLoadPage(path, animate) {
+    _runPageUnload();
+    _spaShowBar();
+
+    try {
+        let html = _pageCache.get(path);
+        if (!html) {
+            const res = await fetch(path, { credentials: 'same-origin' });
+            if (!res.ok || !res.headers.get('content-type')?.includes('text/html')) {
+                window.location.href = path; return;
+            }
+            html = await res.text();
+        }
+
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const newMain = doc.querySelector('main');
+        const newPageScripts = doc.getElementById('page-scripts');
+        const newTitle = doc.querySelector('title');
+
+        if (!newMain) { window.location.href = path; return; }
+
+        // Update title
+        if (newTitle) document.title = newTitle.textContent;
+
+        const main = document.querySelector('main');
+
+        if (animate) {
+            main.classList.add('spa-exit');
+            await new Promise(r => setTimeout(r, 120));
+        }
+
+        // Swap content
+        main.innerHTML = newMain.innerHTML;
+        main.classList.remove('spa-exit');
+        if (animate) main.classList.add('spa-enter');
+
+        // Update nav highlights
+        _spaUpdateNav(path);
+
+        // Execute page scripts + styles
+        if (newPageScripts) _spaExecScripts(newPageScripts);
+
+        // Scroll up
+        window.scrollTo(0, 0);
+
+        if (animate) {
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => main.classList.remove('spa-enter'));
+            });
+        }
+
+        // Cache (limit size)
+        _pageCache.set(path, html);
+        if (_pageCache.size > SPA_MAX_CACHE) {
+            _pageCache.delete(_pageCache.keys().next().value);
+        }
+    } catch(e) {
+        console.error('SPA nav error:', e);
+        window.location.href = path;
+    } finally {
+        _spaHideBar();
+    }
+}
+
+function _spaExecScripts(container) {
+    // Styles first
+    container.querySelectorAll('style').forEach(s => {
+        const el = document.createElement('style');
+        el.setAttribute('data-spa-page', '1');
+        el.textContent = s.textContent;
+        document.head.appendChild(el);
+    });
+    // Then scripts
+    container.querySelectorAll('script').forEach(old => {
+        const el = document.createElement('script');
+        if (old.src) { el.src = old.src; }
+        else { el.textContent = old.textContent; }
+        document.body.appendChild(el);
+        if (!old.src) el.remove();
+    });
+}
+
+function _spaUpdateNav(path) {
+    document.querySelectorAll('.bottom-nav .nav-tab').forEach(tab => {
+        tab.classList.remove('active');
+        const page = tab.dataset.page;
+        if (!page) return;
+        if (page === 'feed' && (path === '/feed/' || path === '/')) tab.classList.add('active');
+        else if (page === 'hobbies' && path.startsWith('/hobbies')) tab.classList.add('active');
+        else if (page === 'groups' && path.startsWith('/groups')) tab.classList.add('active');
+        else if (page === 'profile' && path.startsWith('/profile')) tab.classList.add('active');
+    });
+    const chatBtn = document.getElementById('nav-chat-btn');
+    const notifBtn = document.getElementById('nav-notif-btn');
+    if (chatBtn) chatBtn.classList.toggle('active', path.startsWith('/chat'));
+    if (notifBtn) notifBtn.classList.toggle('active', path.startsWith('/notifications'));
+}
+
+function _spaShowBar() {
+    let bar = document.getElementById('spa-loading-bar');
+    if (!bar) {
+        bar = document.createElement('div');
+        bar.id = 'spa-loading-bar';
+        bar.className = 'spa-loading-bar';
+        document.body.appendChild(bar);
+    }
+    bar.style.display = 'block';
+    bar.style.opacity = '1';
+    bar.style.width = '0%';
+    bar.style.transition = 'none';
+    requestAnimationFrame(() => {
+        bar.style.transition = 'width 6s cubic-bezier(0.1, 0.7, 0.2, 1)';
+        bar.style.width = '80%';
+    });
+}
+
+function _spaHideBar() {
+    const bar = document.getElementById('spa-loading-bar');
+    if (!bar) return;
+    bar.style.transition = 'width 0.15s ease';
+    bar.style.width = '100%';
+    setTimeout(() => {
+        bar.style.transition = 'opacity 0.25s ease';
+        bar.style.opacity = '0';
+        setTimeout(() => { bar.style.display = 'none'; }, 250);
+    }, 150);
+}
+
+function _spaPrefetch(path) {
+    if (!path || _pageCache.has(path)) return;
+    fetch(path, { credentials: 'same-origin' })
+        .then(r => r.ok ? r.text() : null)
+        .then(html => { if (html) _pageCache.set(path, html); })
+        .catch(() => {});
+}
+
+/** Invalidate SPA cache (call after creating posts, etc.) */
+function spaClearCache() { _pageCache.clear(); }
 
 // ─── Double-tap to Like on Post Images ────────────────────
 function initDoubleTapLike() {
@@ -229,12 +439,8 @@ function initDoubleTapLike() {
     });
 }
 
-// Initialize double-tap on DOMContentLoaded
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initDoubleTapLike);
-} else {
-    initDoubleTapLike();
-}
+// Initialize double-tap
+initDoubleTapLike();
 
 // ─── Mention Autocomplete for Post/Group Post Creation ────
 let mentionSearchTimer = null;

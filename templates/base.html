@@ -598,6 +598,7 @@
     }
 
     function reloadCurrentFeed() {
+        spaClearCache();
         if (typeof loadFeed === 'function') {
             const feedEl = document.getElementById('posts-feed');
             if (feedEl) feedEl.innerHTML = '';
@@ -609,11 +610,14 @@
             const infiniteSpinner = document.getElementById('infinite-spinner');
             if (infiniteSpinner) infiniteSpinner.style.display = '';
             loadFeed();
+        } else if (_spaEnabled) {
+            spaNavigate(window.location.pathname);
         } else {
             window.location.reload();
         }
     }
     </script>
-    {% block scripts %}{% endblock %}
+    <script>initSpaRouter();</script>
+    <div id="page-scripts">{% block scripts %}{% endblock %}</div>
 </body>
 </html>
