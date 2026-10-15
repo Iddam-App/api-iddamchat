@@ -6,9 +6,9 @@
 {% block content %}
 <div class="feed-container">
     <div class="feed-header">
-        <h2><i class="bi bi-bell me-2"></i>Notificaciones</h2>
-        <button class="btn btn-outline-secondary btn-sm" id="btn-mark-all" onclick="markAllRead()" style="border-radius:8px; font-size:0.8rem;">
-            <i class="bi bi-check-all me-1"></i>Marcar todo
+        <h2><i class="bi bi-bell-fill me-2"></i>Actividad</h2>
+        <button class="btn btn-outline-secondary btn-sm" id="btn-mark-all" onclick="markAllRead()" style="border-radius:var(--radius-full); font-size:0.78rem; font-weight:600;">
+            <i class="bi bi-check-all me-1"></i>Leer todo
         </button>
     </div>
 
@@ -21,7 +21,7 @@
     <div class="empty-state" id="notif-empty" style="display:none;">
         <i class="bi bi-bell-slash"></i>
         <h5>Sin notificaciones</h5>
-        <p>Aqui apareceran tus notificaciones</p>
+        <p>Aqui veras la actividad de tus amigos y grupos</p>
     </div>
 </div>
 {% endblock %}
@@ -34,12 +34,12 @@ const NOTIF_ICONS = {
     follow_request_accepted: { icon: 'bi-person-check-fill', color: '#27ae60' },
     like: { icon: 'bi-heart-fill', color: '#c2635a' },
     comment: { icon: 'bi-chat-fill', color: '#8B7355' },
-    dm_message: { icon: 'bi-envelope-fill', color: '#4a90d9' },
-    dm: { icon: 'bi-envelope-fill', color: '#4a90d9' },
-    friend_request: { icon: 'bi-people-fill', color: '#7c5c8a' },
+    dm_message: { icon: 'bi-send-fill', color: '#4a90d9' },
+    dm: { icon: 'bi-send-fill', color: '#4a90d9' },
+    friend_request: { icon: 'bi-person-hearts', color: '#7c5c8a' },
     friend_request_accepted: { icon: 'bi-people-fill', color: '#27ae60' },
-    story_reaction: { icon: 'bi-fire', color: '#e67e22' },
-    group_post: { icon: 'bi-people-fill', color: '#27ae60' },
+    story_reaction: { icon: 'bi-heart-fill', color: '#e67e22' },
+    group_post: { icon: 'bi-megaphone-fill', color: '#8B7355' },
     group: { icon: 'bi-people-fill', color: '#27ae60' },
     mention: { icon: 'bi-at', color: '#8B7355' },
 };
@@ -47,6 +47,9 @@ const NOTIF_ICONS = {
 document.addEventListener('DOMContentLoaded', () => {
     if (!isLoggedIn()) { window.location.href = '/login/'; return; }
     loadNotifications();
+
+    // Poll for new notifications every 15s
+    setInterval(loadNotifications, 15000);
 });
 
 async function loadNotifications() {
@@ -64,8 +67,10 @@ async function loadNotifications() {
 
         if (notifications.length === 0) {
             empty.style.display = 'block';
+            list.innerHTML = '';
             return;
         }
+        empty.style.display = 'none';
 
         // Group by time
         const now = Date.now();
@@ -95,7 +100,6 @@ async function loadNotifications() {
         list.innerHTML = html;
     } catch(e) {
         spinner.style.display = 'none';
-        showToast('Error al cargar notificaciones');
         console.error(e);
     }
 }
@@ -110,6 +114,22 @@ function renderNotifItem(n) {
     const typeInfo = NOTIF_ICONS[n.notification_type] || NOTIF_ICONS.like;
     const href = getNotifLink(n);
 
+    // Build action buttons for specific notification types
+    let actionHtml = '';
+    if (n.notification_type === 'follow_request' && !n.is_read) {
+        actionHtml = `
+        <div class="notif-actions" onclick="event.preventDefault(); event.stopPropagation();">
+            <button class="notif-accept-btn" onclick="handleFollowRequest(${n.id}, ${sender.id}, 'accept')">Aceptar</button>
+            <button class="notif-reject-btn" onclick="handleFollowRequest(${n.id}, ${sender.id}, 'reject')">Rechazar</button>
+        </div>`;
+    } else if (n.notification_type === 'friend_request' && !n.is_read) {
+        actionHtml = `
+        <div class="notif-actions" onclick="event.preventDefault(); event.stopPropagation();">
+            <button class="notif-accept-btn" onclick="handleFriendRequest(${n.id}, ${n.content_id}, 'accept')">Aceptar</button>
+            <button class="notif-reject-btn" onclick="handleFriendRequest(${n.id}, ${n.content_id}, 'reject')">Rechazar</button>
+        </div>`;
+    }
+
     return `
     <a href="${href}" class="notif-item ${n.is_read ? '' : 'unread'}" onclick="markRead(${n.id})" data-notif-id="${n.id}">
         <div class="notif-avatar">
@@ -119,8 +139,9 @@ function renderNotifItem(n) {
             </div>
         </div>
         <div class="notif-body">
-            <div class="notif-text">${escapeHtml(n.message || '')}</div>
+            <div class="notif-text"><strong>${escapeHtml(name)}</strong> ${escapeHtml(n.message || '')}</div>
             <div class="notif-time">${time}</div>
+            ${actionHtml}
         </div>
         ${unreadDot}
     </a>`;
@@ -141,6 +162,7 @@ function getNotifLink(n) {
         case 'dm_message':
             return n.sender ? `/chat/${n.sender.id}/` : '/chat/';
         case 'group_post':
+        case 'group':
             return '/groups/';
         default:
             return '#';
@@ -169,7 +191,7 @@ async function markAllRead() {
                 if (dot) dot.remove();
             });
             showToast('Todas marcadas como leidas');
-            // Update badge
+            // Update navbar badge
             const badge = document.getElementById('nav-notif-badge');
             if (badge) badge.style.display = 'none';
         }
@@ -177,5 +199,103 @@ async function markAllRead() {
         showToast('Error');
     }
 }
+
+async function handleFollowRequest(notifId, senderId, action) {
+    try {
+        // Find pending follow request from this user
+        const res = await authFetch('/api/social/follow-requests/pending/');
+        if (!res.ok) return;
+        const data = await res.json();
+        const requests = data.results || data;
+        const req = requests.find(r => r.from_user?.id === senderId);
+        if (!req) { showToast('Solicitud no encontrada'); return; }
+
+        const actionRes = await authFetch(`/api/social/follow-requests/${req.id}/${action}/`, { method: 'POST' });
+        if (actionRes.ok) {
+            showToast(action === 'accept' ? 'Solicitud aceptada' : 'Solicitud rechazada');
+            markRead(notifId);
+            // Remove action buttons
+            const item = document.querySelector(`[data-notif-id="${notifId}"] .notif-actions`);
+            if (item) item.remove();
+        }
+    } catch(e) {
+        showToast('Error');
+    }
+}
+
+async function handleFriendRequest(notifId, requestId, action) {
+    if (!requestId) return;
+    try {
+        const res = await authFetch(`/api/social/friends/request/${requestId}/${action}/`, { method: 'POST' });
+        if (res.ok) {
+            showToast(action === 'accept' ? 'Amistad aceptada' : 'Solicitud rechazada');
+            markRead(notifId);
+            const item = document.querySelector(`[data-notif-id="${notifId}"] .notif-actions`);
+            if (item) item.remove();
+        }
+    } catch(e) {
+        showToast('Error');
+    }
+}
 </script>
+
+<style>
+/* Notification action buttons */
+.notif-actions {
+    display: flex;
+    gap: 0.4rem;
+    margin-top: 0.4rem;
+}
+
+.notif-accept-btn {
+    background: var(--gold);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 0.3rem 0.8rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.notif-accept-btn:hover {
+    background: var(--gold-dark);
+}
+
+.notif-reject-btn {
+    background: var(--hover-bg);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 0.3rem 0.8rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.notif-reject-btn:hover {
+    background: var(--border-color);
+}
+
+/* Better notification text styling */
+.notif-text strong {
+    color: var(--text-primary);
+    font-weight: 700;
+}
+
+/* Animation for notification items */
+.notif-item {
+    animation: cardSlideUp 0.3s var(--ease-out) both;
+}
+
+.notif-item:nth-child(1) { animation-delay: 0s; }
+.notif-item:nth-child(2) { animation-delay: 0.04s; }
+.notif-item:nth-child(3) { animation-delay: 0.08s; }
+.notif-item:nth-child(4) { animation-delay: 0.12s; }
+.notif-item:nth-child(5) { animation-delay: 0.16s; }
+</style>
 {% endblock %}

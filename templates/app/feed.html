@@ -52,9 +52,16 @@
         </a>
     </div>
 
-    <!-- Load more -->
-    <div class="text-center py-3" id="load-more-container" style="display:none;">
-        <button class="btn btn-outline-gold btn-sm" id="btn-load-more">Cargar mas</button>
+    <!-- Infinite scroll spinner -->
+    <div class="infinite-scroll-spinner" id="infinite-spinner">
+        <div class="spinner-dot"></div>
+        <div class="spinner-dot"></div>
+        <div class="spinner-dot"></div>
+    </div>
+
+    <!-- End of feed -->
+    <div class="text-center py-3" id="feed-end" style="display:none;">
+        <p style="color:var(--text-muted); font-size:0.85rem; margin:0;">Ya viste todo por ahora</p>
     </div>
 </div>
 
@@ -481,6 +488,8 @@
 
 <script>
 let currentPage = 1;
+let feedLoading = false;
+let feedHasMore = true;
 let allStories = [];       // flat array of all stories
 let storyGroups = [];      // grouped by user: [{user, stories: [...]}]
 let currentGroupIdx = 0;
@@ -498,7 +507,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loadStories();
     loadFeed();
-    document.getElementById('btn-load-more').addEventListener('click', loadFeed);
+
+    // Infinite scroll with IntersectionObserver
+    const infiniteSpinner = document.getElementById('infinite-spinner');
+    const observer = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && feedHasMore && !feedLoading) {
+            loadFeed();
+        }
+    }, { rootMargin: '200px' });
+    observer.observe(infiniteSpinner);
 
     // Story image input
     document.getElementById('story-image-input').addEventListener('change', function() {
@@ -929,22 +946,33 @@ async function replyToStory() {
     }
 }
 
-// ─── Load Feed ───
+// ─── Load Feed (Infinite Scroll) ───
 async function loadFeed() {
-    const spinner = document.getElementById('feed-spinner');
-    if (currentPage === 1) spinner.style.display = 'block';
+    if (feedLoading || !feedHasMore) return;
+    feedLoading = true;
+
+    const skeleton = document.getElementById('feed-spinner');
+    const infiniteSpinner = document.getElementById('infinite-spinner');
+
+    if (currentPage === 1) {
+        skeleton.style.display = 'block';
+    } else {
+        infiniteSpinner.classList.add('visible');
+    }
 
     try {
         const res = await authFetch(`/api/posts/feed/?page=${currentPage}`);
         if (!res.ok) throw new Error('Failed');
         const data = await res.json();
 
-        spinner.style.display = 'none';
+        skeleton.style.display = 'none';
+        infiniteSpinner.classList.remove('visible');
         const feed = document.getElementById('posts-feed');
         const posts = data.results || data;
 
         if (posts.length === 0 && currentPage === 1) {
             document.getElementById('empty-state').style.display = 'block';
+            feedHasMore = false;
             return;
         }
 
@@ -954,13 +982,19 @@ async function loadFeed() {
 
         if (data.next) {
             currentPage++;
-            document.getElementById('load-more-container').style.display = 'block';
         } else {
-            document.getElementById('load-more-container').style.display = 'none';
+            feedHasMore = false;
+            infiniteSpinner.style.display = 'none';
+            if (currentPage > 1) {
+                document.getElementById('feed-end').style.display = 'block';
+            }
         }
     } catch(e) {
-        spinner.style.display = 'none';
+        skeleton.style.display = 'none';
+        infiniteSpinner.classList.remove('visible');
         console.error(e);
+    } finally {
+        feedLoading = false;
     }
 }
 </script>

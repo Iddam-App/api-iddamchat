@@ -163,7 +163,161 @@ function escapeHtml(text) {
 }
 
 function renderHashtags(escapedHtml) {
-    return escapedHtml.replace(/#(\w+)/g, '<a href="/explore/?hashtag=$1" class="hashtag-link">#$1</a>');
+    // Render both #hashtags and @mentions as clickable links
+    let result = escapedHtml.replace(/#(\w+)/g, '<a href="/explore/?hashtag=$1" class="hashtag-link">#$1</a>');
+    result = result.replace(/@(\w+)/g, '<a href="#" class="mention-link" onclick="navigateToUser(\'$1\'); return false;">@$1</a>');
+    return result;
+}
+
+// Navigate to a mentioned user's profile
+async function navigateToUser(username) {
+    try {
+        const res = await authFetch(`/api/auth/users/search/?q=${encodeURIComponent(username)}`);
+        if (res.ok) {
+            const data = await res.json();
+            const users = data.results || data;
+            const match = users.find(u => u.username.toLowerCase() === username.toLowerCase());
+            if (match) {
+                window.location.href = `/profile/${match.id}/`;
+                return;
+            }
+        }
+    } catch(e) {}
+    showToast('Usuario no encontrado');
+}
+
+// ─── Double-tap to Like on Post Images ────────────────────
+function initDoubleTapLike() {
+    document.addEventListener('dblclick', function(e) {
+        const imgContainer = e.target.closest('.post-card-images');
+        if (!imgContainer) return;
+        const card = imgContainer.closest('.post-card');
+        if (!card) return;
+        const postId = card.id.replace('post-', '');
+        if (!postId) return;
+
+        // Show heart animation
+        const heart = document.createElement('div');
+        heart.className = 'double-tap-heart';
+        heart.innerHTML = '<i class="bi bi-heart-fill"></i>';
+        imgContainer.appendChild(heart);
+        setTimeout(() => heart.remove(), 900);
+
+        // Like the post
+        const likeBtn = card.querySelector('.action-btn[data-reaction]');
+        if (likeBtn && !likeBtn.dataset.reaction) {
+            react(parseInt(postId), 'like');
+            likeBtn.classList.add('just-liked');
+            setTimeout(() => likeBtn.classList.remove('just-liked'), 500);
+        }
+    });
+}
+
+// Initialize double-tap on DOMContentLoaded
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDoubleTapLike);
+} else {
+    initDoubleTapLike();
+}
+
+// ─── Mention Autocomplete for Post/Group Post Creation ────
+let mentionSearchTimer = null;
+
+function initMentionAutocomplete(textareaId, dropdownId) {
+    const textarea = document.getElementById(textareaId);
+    if (!textarea) return;
+
+    // Create dropdown if not exists
+    let dropdown = document.getElementById(dropdownId);
+    if (!dropdown) {
+        dropdown = document.createElement('div');
+        dropdown.id = dropdownId;
+        dropdown.className = 'mention-autocomplete';
+        textarea.parentElement.style.position = 'relative';
+        textarea.parentElement.appendChild(dropdown);
+    }
+
+    textarea.addEventListener('input', function() {
+        const val = this.value;
+        const cursorPos = this.selectionStart;
+        const textBeforeCursor = val.substring(0, cursorPos);
+
+        // Find @ pattern before cursor
+        const match = textBeforeCursor.match(/@(\w{1,20})$/);
+        if (match) {
+            const query = match[1];
+            clearTimeout(mentionSearchTimer);
+            mentionSearchTimer = setTimeout(() => searchMentions(query, dropdown, textarea), 250);
+        } else {
+            dropdown.classList.remove('show');
+        }
+    });
+
+    textarea.addEventListener('keydown', function(e) {
+        if (!dropdown.classList.contains('show')) return;
+        const options = dropdown.querySelectorAll('.mention-option');
+        const highlighted = dropdown.querySelector('.mention-option.highlighted');
+        let idx = Array.from(options).indexOf(highlighted);
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (highlighted) highlighted.classList.remove('highlighted');
+            idx = (idx + 1) % options.length;
+            options[idx].classList.add('highlighted');
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (highlighted) highlighted.classList.remove('highlighted');
+            idx = idx <= 0 ? options.length - 1 : idx - 1;
+            options[idx].classList.add('highlighted');
+        } else if (e.key === 'Enter' && highlighted) {
+            e.preventDefault();
+            selectMention(highlighted.dataset.username, textarea, dropdown);
+        } else if (e.key === 'Escape') {
+            dropdown.classList.remove('show');
+        }
+    });
+}
+
+async function searchMentions(query, dropdown, textarea) {
+    if (query.length < 1) { dropdown.classList.remove('show'); return; }
+    try {
+        const res = await authFetch(`/api/auth/users/search/?q=${encodeURIComponent(query)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const users = (data.results || data).slice(0, 5);
+        if (users.length === 0) { dropdown.classList.remove('show'); return; }
+
+        dropdown.innerHTML = users.map(u => {
+            const initial = ((u.first_name || u.username || '?')[0]).toUpperCase();
+            const avatarInner = u.avatar ? `<img src="${u.avatar}" alt="">` : initial;
+            const name = u.display_name || [u.first_name, u.last_name].filter(Boolean).join(' ') || u.username;
+            return `<div class="mention-option" data-username="${u.username}" onclick="selectMention('${u.username}', document.getElementById('${textarea.id}'), this.parentElement)">
+                <div class="mention-avatar">${avatarInner}</div>
+                <div>
+                    <div class="mention-name">${escapeHtml(name)}</div>
+                    <div class="mention-username">@${u.username}</div>
+                </div>
+            </div>`;
+        }).join('');
+
+        dropdown.classList.add('show');
+        const first = dropdown.querySelector('.mention-option');
+        if (first) first.classList.add('highlighted');
+    } catch(e) {}
+}
+
+function selectMention(username, textarea, dropdown) {
+    const val = textarea.value;
+    const cursorPos = textarea.selectionStart;
+    const textBefore = val.substring(0, cursorPos);
+    const textAfter = val.substring(cursorPos);
+
+    // Replace @partial with @username
+    const newBefore = textBefore.replace(/@\w*$/, '@' + username + ' ');
+    textarea.value = newBefore + textAfter;
+    textarea.selectionStart = textarea.selectionEnd = newBefore.length;
+    textarea.focus();
+    dropdown.classList.remove('show');
 }
 
 function showToast(message) {
@@ -324,6 +478,9 @@ async function react(postId, type) {
                 btn.classList.add('liked');
                 btn.querySelector('i').className = 'bi bi-hand-thumbs-up-fill';
                 btn.querySelector('span').textContent = REACTIONS[type];
+                // Pop animation
+                btn.classList.add('just-liked');
+                setTimeout(() => btn.classList.remove('just-liked'), 500);
             }
         }
     } catch(e) {

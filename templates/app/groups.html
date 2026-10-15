@@ -4,9 +4,9 @@
 {% block title %}Grupos — IddamChat{% endblock %}
 
 {% block content %}
-<div class="feed-container">
+<div class="feed-container" id="groups-main-view">
     <div class="feed-header">
-        <h2><i class="bi bi-people me-2"></i>Grupos</h2>
+        <h2><i class="bi bi-people-fill me-2"></i>Grupos</h2>
         <button class="btn btn-gradient btn-sm" onclick="openCreateGroupModal()">
             <i class="bi bi-plus-lg me-1"></i>Crear
         </button>
@@ -14,26 +14,25 @@
 
     <!-- Tabs -->
     <div class="hosting-tabs" style="margin-bottom:1rem;">
-        <button class="hosting-tab active" data-tab="browse" onclick="switchGroupTab('browse')"><i class="bi bi-search"></i> Explorar</button>
-        <button class="hosting-tab" data-tab="my-groups" onclick="switchGroupTab('my-groups')"><i class="bi bi-bookmark"></i> Mis Grupos</button>
+        <button class="hosting-tab active" data-tab="browse" onclick="switchGroupTab('browse')"><i class="bi bi-compass"></i> Explorar</button>
+        <button class="hosting-tab" data-tab="my-groups" onclick="switchGroupTab('my-groups')"><i class="bi bi-star"></i> Mis Grupos</button>
     </div>
 
     <!-- Filters (browse tab) -->
     <div class="group-filters" id="group-filters">
-        <div class="d-flex gap-2 flex-wrap mb-3">
-            <button class="group-type-chip active" data-type="" onclick="filterGroupType(this, '')">Todos</button>
-            <button class="group-type-chip" data-type="country" onclick="filterGroupType(this, 'country')">Pais</button>
-            <button class="group-type-chip" data-type="youth" onclick="filterGroupType(this, 'youth')">Jovenes</button>
-            <button class="group-type-chip" data-type="musical" onclick="filterGroupType(this, 'musical')">Musical</button>
-            <button class="group-type-chip" data-type="study" onclick="filterGroupType(this, 'study')">Estudio</button>
-            <button class="group-type-chip" data-type="general" onclick="filterGroupType(this, 'general')">General</button>
+        <div class="explore-chips mb-3">
+            <button class="explore-chip active" data-type="" onclick="filterGroupType(this, '')">Todos</button>
+            <button class="explore-chip" data-type="country" onclick="filterGroupType(this, 'country')"><i class="bi bi-globe2 me-1"></i>Pais</button>
+            <button class="explore-chip" data-type="youth" onclick="filterGroupType(this, 'youth')"><i class="bi bi-lightning me-1"></i>Jovenes</button>
+            <button class="explore-chip" data-type="musical" onclick="filterGroupType(this, 'musical')"><i class="bi bi-music-note me-1"></i>Musical</button>
+            <button class="explore-chip" data-type="study" onclick="filterGroupType(this, 'study')"><i class="bi bi-book me-1"></i>Estudio</button>
+            <button class="explore-chip" data-type="general" onclick="filterGroupType(this, 'general')"><i class="bi bi-chat-dots me-1"></i>General</button>
         </div>
     </div>
 
     <!-- Groups List -->
     <div class="feed-spinner" id="groups-spinner">
         <div class="spinner-border" role="status"></div>
-        <p class="mt-2">Cargando grupos...</p>
     </div>
 
     <div id="groups-list"></div>
@@ -41,64 +40,85 @@
     <div class="empty-state" id="groups-empty" style="display:none;">
         <i class="bi bi-people"></i>
         <h5>No se encontraron grupos</h5>
-        <p>Crea uno para empezar</p>
+        <p>Crea uno para empezar a compartir</p>
+        <button class="btn btn-gradient btn-sm mt-2" onclick="openCreateGroupModal()">
+            <i class="bi bi-plus-lg me-1"></i>Crear grupo
+        </button>
+    </div>
+</div>
+
+<!-- Group Detail View (separate view) -->
+<div class="feed-container" id="group-detail-view" style="display:none;">
+    <button class="back-link" onclick="closeGroupDetail()" style="border:none; background:none; cursor:pointer;">
+        <i class="bi bi-arrow-left"></i> Grupos
+    </button>
+
+    <!-- Group Header -->
+    <div class="group-detail-header" id="gd-header">
+        <div class="group-detail-cover" id="gd-cover"></div>
+        <div class="group-detail-info">
+            <div class="d-flex align-items-start justify-content-between flex-wrap gap-2">
+                <div>
+                    <h4 id="gd-name" style="margin:0; font-weight:800; font-size:1.2rem; letter-spacing:-0.02em;"></h4>
+                    <div class="d-flex align-items-center gap-2 mt-1 flex-wrap">
+                        <span class="meta-badge" id="gd-type-badge"></span>
+                        <span class="meta-badge" id="gd-private-badge" style="display:none;"><i class="bi bi-lock-fill me-1"></i>Privado</span>
+                    </div>
+                </div>
+                <div id="gd-actions"></div>
+            </div>
+            <p id="gd-description" style="color:var(--text-secondary); font-size:0.9rem; margin:0.6rem 0 0; line-height:1.5;"></p>
+            <div class="d-flex align-items-center gap-3 flex-wrap mt-2" style="font-size:0.85rem; color:var(--text-muted);">
+                <span><i class="bi bi-people-fill me-1"></i><span id="gd-member-count">0</span> miembros</span>
+                <span id="gd-country-info"></span>
+            </div>
+        </div>
     </div>
 
-    <!-- Group Detail View (replaces list) -->
-    <div id="group-detail-view" style="display:none;">
-        <a href="#" class="back-link" onclick="closeGroupDetail(); return false;">
-            <i class="bi bi-arrow-left"></i> Volver a grupos
-        </a>
+    <!-- Group Tabs -->
+    <div class="ig-content-tabs mt-3" style="max-width:none;">
+        <button class="ig-tab active" onclick="switchDetailTab('posts')"><i class="bi bi-chat-square-text-fill"></i></button>
+        <button class="ig-tab" onclick="switchDetailTab('members')"><i class="bi bi-people-fill"></i></button>
+    </div>
 
-        <!-- Group Header -->
-        <div class="group-detail-header" id="gd-header">
-            <div class="group-detail-cover" id="gd-cover"></div>
-            <div class="group-detail-info">
-                <div class="d-flex align-items-center gap-2 flex-wrap">
-                    <h4 id="gd-name" style="margin:0; font-weight:700;"></h4>
-                    <span class="meta-badge" id="gd-type-badge"></span>
-                    <span class="meta-badge" id="gd-private-badge" style="display:none;"><i class="bi bi-lock me-1"></i>Privado</span>
+    <!-- Group Posts -->
+    <div id="gd-panel-posts" class="mt-3">
+        <!-- Post input (for members only) -->
+        <div class="group-post-input" id="gd-post-input" style="display:none;">
+            <div class="gp-input-row">
+                <div class="gp-input-avatar" id="gd-my-avatar"></div>
+                <div class="gp-input-field" style="position:relative; flex:1;">
+                    <textarea class="form-control" id="gd-post-content" placeholder="Comparte algo con el grupo... usa @usuario para etiquetar" rows="2"></textarea>
+                    <div id="gd-mention-dropdown" class="mention-autocomplete"></div>
                 </div>
-                <p id="gd-description" style="color:var(--text-secondary); font-size:0.9rem; margin:0.5rem 0;"></p>
-                <div class="d-flex align-items-center gap-3 flex-wrap" style="font-size:0.85rem; color:var(--text-muted);">
-                    <span><i class="bi bi-people me-1"></i><span id="gd-member-count">0</span> miembros</span>
-                    <span id="gd-country-info"></span>
-                </div>
-                <div class="mt-2" id="gd-actions"></div>
+            </div>
+            <!-- Image preview -->
+            <div id="gd-image-preview" class="gp-image-preview" style="display:none;">
+                <img id="gd-preview-img" src="" alt="">
+                <button onclick="clearGroupImage()" class="gp-preview-remove"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div class="gp-input-actions">
+                <label class="gp-attach-btn" title="Adjuntar foto">
+                    <i class="bi bi-image"></i>
+                    <input type="file" id="gd-post-image" accept="image/*" style="display:none;">
+                </label>
+                <button class="btn btn-gradient btn-sm" onclick="publishGroupPost()" id="gd-publish-btn">
+                    <i class="bi bi-send-fill me-1"></i>Publicar
+                </button>
             </div>
         </div>
 
-        <!-- Group Tabs -->
-        <div class="hosting-tabs mt-3">
-            <button class="hosting-tab active" onclick="switchDetailTab('posts')"><i class="bi bi-chat-square-text"></i> Posts</button>
-            <button class="hosting-tab" onclick="switchDetailTab('members')"><i class="bi bi-people"></i> Miembros</button>
+        <div id="gd-posts-list"></div>
+        <div class="empty-state" id="gd-posts-empty" style="display:none;">
+            <i class="bi bi-chat-square-text"></i>
+            <h5>Sin publicaciones</h5>
+            <p>Se el primero en publicar en este grupo</p>
         </div>
+    </div>
 
-        <!-- Group Posts -->
-        <div id="gd-panel-posts">
-            <div class="group-post-input" id="gd-post-input" style="display:none;">
-                <textarea class="form-control mb-2" id="gd-post-content" placeholder="Escribe algo para el grupo..." rows="2"></textarea>
-                <div class="d-flex justify-content-between align-items-center">
-                    <label class="btn btn-outline-secondary btn-sm" style="border-radius:8px; cursor:pointer;">
-                        <i class="bi bi-image me-1"></i>Foto
-                        <input type="file" id="gd-post-image" accept="image/*" style="display:none;">
-                    </label>
-                    <button class="btn btn-gradient btn-sm" onclick="publishGroupPost()">Publicar</button>
-                </div>
-            </div>
-
-            <div id="gd-posts-list"></div>
-            <div class="empty-state" id="gd-posts-empty" style="display:none;">
-                <i class="bi bi-chat-square-text"></i>
-                <h5>Sin publicaciones</h5>
-                <p>Se el primero en publicar en este grupo</p>
-            </div>
-        </div>
-
-        <!-- Group Members -->
-        <div id="gd-panel-members" style="display:none;">
-            <div id="gd-members-list"></div>
-        </div>
+    <!-- Group Members -->
+    <div id="gd-panel-members" style="display:none;" class="mt-3">
+        <div id="gd-members-list"></div>
     </div>
 </div>
 
@@ -107,7 +127,7 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-people me-2"></i>Crear Grupo</h5>
+                <h5 class="modal-title"><i class="bi bi-people-fill me-2"></i>Crear Grupo</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -150,23 +170,37 @@
 
 {% block scripts %}
 <style>
-/* ─── Group Cards ────────────────────────────────────────── */
+/* ─── Group Cards (improved) ────────────────────────────── */
 .group-card {
     background: var(--card-bg);
-    border-radius: 20px;
-    box-shadow: 0 1px 8px rgba(0,0,0,0.05);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
     overflow: hidden;
     margin-bottom: 0.8rem;
     cursor: pointer;
-    transition: box-shadow 0.2s;
+    transition: transform 0.25s var(--ease-out), box-shadow 0.25s var(--ease-out);
+    animation: cardSlideUp 0.4s var(--ease-out) both;
 }
 .group-card:hover {
-    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
 }
+.group-card:nth-child(1) { animation-delay: 0s; }
+.group-card:nth-child(2) { animation-delay: 0.06s; }
+.group-card:nth-child(3) { animation-delay: 0.08s; }
+.group-card:nth-child(4) { animation-delay: 0.1s; }
+
 .group-card-cover {
-    height: 80px;
-    background: linear-gradient(135deg, var(--dark-bg) 0%, var(--dark-bg-light) 100%);
+    height: 90px;
+    background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
     position: relative;
+    overflow: hidden;
+}
+.group-card-cover::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.4), transparent);
 }
 .group-card-cover img {
     width: 100%;
@@ -174,21 +208,22 @@
     object-fit: cover;
 }
 .group-card-avatar {
-    width: 52px;
-    height: 52px;
-    border-radius: 16px;
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
     background: linear-gradient(135deg, var(--gold-light), var(--gold-dark));
     display: flex;
     align-items: center;
     justify-content: center;
     color: #fff;
     font-weight: 700;
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     position: absolute;
-    bottom: -20px;
+    bottom: -18px;
     left: 16px;
     border: 3px solid var(--card-bg);
     overflow: hidden;
+    z-index: 1;
 }
 .group-card-avatar img {
     width: 100%;
@@ -196,59 +231,61 @@
     object-fit: cover;
 }
 .group-card-body {
-    padding: 1.6rem 1rem 1rem;
+    padding: 1.5rem 1rem 0.9rem;
 }
 .group-card-body h5 {
     font-weight: 700;
-    font-size: 1rem;
+    font-size: 0.98rem;
     color: var(--text-primary);
-    margin-bottom: 0.2rem;
+    margin-bottom: 0.15rem;
+    letter-spacing: -0.01em;
 }
 .group-card-body .group-card-desc {
-    font-size: 0.85rem;
-    color: var(--text-secondary);
+    font-size: 0.84rem;
+    color: var(--text-muted);
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    margin-bottom: 0.4rem;
+    margin-bottom: 0.5rem;
+    line-height: 1.45;
 }
 .group-card-body .group-card-meta {
     display: flex;
     align-items: center;
-    gap: 0.8rem;
-    font-size: 0.8rem;
+    gap: 0.6rem;
+    font-size: 0.78rem;
     color: var(--text-muted);
+    flex-wrap: wrap;
+}
+.group-card-body .group-member-badge {
+    color: var(--gold);
+    font-weight: 700;
+    font-size: 0.78rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
 }
 
-.group-type-chip {
-    border: 1.5px solid var(--border-color);
-    background: var(--card-bg);
-    color: var(--text-secondary);
-    font-weight: 600;
-    font-size: 0.82rem;
-    padding: 0.35rem 0.8rem;
-    border-radius: 20px;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-.group-type-chip:hover { border-color: var(--gold); color: var(--gold); }
-.group-type-chip.active {
-    background: var(--gold);
-    border-color: var(--gold);
-    color: #fff;
-}
-
-/* ─── Group Detail ───────────────────────────────────────── */
+/* ─── Group Detail (improved) ───────────────────────────── */
 .group-detail-header {
     background: var(--card-bg);
-    border-radius: 20px;
-    box-shadow: 0 1px 8px rgba(0,0,0,0.05);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
     overflow: hidden;
+    animation: cardSlideUp 0.3s var(--ease-out) both;
 }
 .group-detail-cover {
-    height: 140px;
-    background: linear-gradient(135deg, var(--dark-bg) 0%, var(--dark-bg-light) 100%);
+    height: 150px;
+    background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+    position: relative;
+    overflow: hidden;
+}
+.group-detail-cover::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.3), transparent);
 }
 .group-detail-cover img {
     width: 100%;
@@ -256,43 +293,24 @@
     object-fit: cover;
 }
 .group-detail-info {
-    padding: 1.2rem 1.5rem;
+    padding: 1rem 1.2rem 1.2rem;
 }
 
-/* Group posts */
+/* ─── Group Post Input (Instagram-like) ─────────────────── */
 .group-post-input {
     background: var(--card-bg);
-    border-radius: 20px;
-    box-shadow: 0 1px 8px rgba(0,0,0,0.05);
-    padding: 1rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    padding: 0.8rem 1rem;
     margin-bottom: 0.8rem;
+    animation: cardSlideUp 0.3s var(--ease-out) both;
 }
-.group-post-input textarea {
-    border-radius: 12px;
-    border: 1.5px solid var(--input-border);
-    background: var(--input-bg);
-    color: var(--text-primary);
-    resize: none;
-    font-size: 0.9rem;
-}
-.group-post-input textarea:focus {
-    border-color: var(--gold);
-    box-shadow: 0 0 0 3px rgba(131,58,180,0.15);
-}
-.gp-card {
-    background: var(--card-bg);
-    border-radius: 20px;
-    box-shadow: 0 1px 8px rgba(0,0,0,0.05);
-    padding: 1rem 1.2rem;
-    margin-bottom: 0.8rem;
-}
-.gp-card-header {
+.gp-input-row {
     display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    margin-bottom: 0.6rem;
+    gap: 0.7rem;
+    align-items: flex-start;
 }
-.gp-card-header .gp-avatar {
+.gp-input-avatar {
     width: 36px;
     height: 36px;
     border-radius: 50%;
@@ -303,7 +321,115 @@
     color: #fff;
     font-weight: 700;
     font-size: 0.8rem;
+    flex-shrink: 0;
     overflow: hidden;
+}
+.gp-input-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.group-post-input textarea {
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    background: var(--input-bg);
+    color: var(--text-primary);
+    resize: none;
+    font-size: 0.9rem;
+    padding: 0.55rem 0.8rem;
+    transition: border-color 0.2s;
+}
+.group-post-input textarea:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 2px rgba(139, 115, 85, 0.1);
+}
+.gp-input-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 0.5rem;
+    padding-left: 44px;
+}
+.gp-attach-btn {
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0.2rem 0.4rem;
+    border-radius: 8px;
+    transition: color 0.2s, background 0.2s;
+}
+.gp-attach-btn:hover {
+    color: var(--gold);
+    background: var(--hover-bg);
+}
+.gp-image-preview {
+    position: relative;
+    margin-top: 0.5rem;
+    padding-left: 44px;
+}
+.gp-image-preview img {
+    max-height: 180px;
+    border-radius: var(--radius-md);
+    object-fit: cover;
+}
+.gp-preview-remove {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: background 0.2s;
+}
+.gp-preview-remove:hover {
+    background: rgba(0,0,0,0.8);
+}
+
+/* ─── Group Post Cards (Twitter-like) ───────────────────── */
+.gp-card {
+    background: var(--card-bg);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    padding: 0.9rem 1rem;
+    margin-bottom: 0.6rem;
+    transition: background 0.15s;
+    animation: cardSlideUp 0.35s var(--ease-out) both;
+}
+.gp-card:hover {
+    background: var(--hover-bg);
+}
+.gp-card:nth-child(1) { animation-delay: 0s; }
+.gp-card:nth-child(2) { animation-delay: 0.05s; }
+.gp-card:nth-child(3) { animation-delay: 0.1s; }
+
+.gp-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.5rem;
+}
+.gp-card-header .gp-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold-light), var(--gold-dark));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.8rem;
+    overflow: hidden;
+    flex-shrink: 0;
+    text-decoration: none;
 }
 .gp-card-header .gp-avatar img {
     width: 100%;
@@ -311,14 +437,16 @@
     object-fit: cover;
 }
 .gp-card-content {
-    font-size: 0.9rem;
+    font-size: 0.92rem;
     color: var(--text-secondary);
-    line-height: 1.5;
+    line-height: 1.55;
     white-space: pre-wrap;
+    word-break: break-word;
+    padding-left: 44px;
 }
 .gp-card-content img {
     width: 100%;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     margin-top: 0.5rem;
     max-height: 400px;
     object-fit: cover;
@@ -329,10 +457,11 @@
     display: flex;
     align-items: center;
     gap: 0.8rem;
-    padding: 0.6rem 0;
-    border-bottom: 1px solid var(--border-color);
+    padding: 0.6rem 0.3rem;
+    border-radius: var(--radius-sm);
+    transition: background 0.15s;
 }
-.gm-item:last-child { border-bottom: none; }
+.gm-item:hover { background: var(--hover-bg); }
 .gm-item .gm-avatar {
     width: 44px;
     height: 44px;
@@ -345,6 +474,7 @@
     font-weight: 700;
     overflow: hidden;
     flex-shrink: 0;
+    text-decoration: none;
 }
 .gm-item .gm-avatar img {
     width: 100%;
@@ -355,18 +485,16 @@
 .gm-item .gm-name {
     font-weight: 600;
     color: var(--text-primary);
-    font-size: 0.95rem;
+    font-size: 0.92rem;
 }
 .gm-item .gm-role {
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     padding: 0.15rem 0.5rem;
-    border-radius: 8px;
-    font-weight: 600;
+    border-radius: var(--radius-full);
+    font-weight: 700;
 }
-.gm-role.admin { background: #fff3cd; color: #856404; }
-.gm-role.mod { background: #cce5ff; color: #004085; }
-[data-theme="dark"] .gm-role.admin { background: #3d3500; color: #ffc107; }
-[data-theme="dark"] .gm-role.mod { background: #0a2540; color: #5bc0de; }
+.gm-role.admin { background: rgba(139,115,85,0.15); color: var(--gold-dark); }
+.gm-role.mod { background: rgba(124,92,138,0.15); color: var(--ig-purple); }
 
 /* Create group form */
 #createGroupModal .form-label {
@@ -376,7 +504,7 @@
 }
 #createGroupModal .form-control,
 #createGroupModal .form-select {
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     border: 1.5px solid var(--input-border);
     background: var(--input-bg);
     color: var(--text-primary);
@@ -384,7 +512,7 @@
 #createGroupModal .form-control:focus,
 #createGroupModal .form-select:focus {
     border-color: var(--gold);
-    box-shadow: 0 0 0 3px rgba(131,58,180,0.15);
+    box-shadow: 0 0 0 3px rgba(139,115,85,0.1);
 }
 </style>
 
@@ -396,6 +524,13 @@ const GROUP_TYPE_LABELS = {
     study: 'Estudio',
     general: 'General'
 };
+const GROUP_TYPE_ICONS = {
+    country: 'bi-globe2',
+    musical: 'bi-music-note-beamed',
+    youth: 'bi-lightning-fill',
+    study: 'bi-book-fill',
+    general: 'bi-chat-dots-fill'
+};
 
 let allGroups = [];
 let currentGroupType = '';
@@ -403,12 +538,34 @@ let currentGroupTab = 'browse';
 let activeGroupId = null;
 let activeGroupData = null;
 let me = {};
+let groupImageFile = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     if (!isLoggedIn()) { window.location.href = '/login/'; return; }
     me = JSON.parse(localStorage.getItem('user_data') || '{}');
     loadGroups();
+
+    // Image attachment for group posts
+    document.getElementById('gd-post-image').addEventListener('change', function() {
+        if (!this.files || !this.files[0]) return;
+        groupImageFile = this.files[0];
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            document.getElementById('gd-preview-img').src = e.target.result;
+            document.getElementById('gd-image-preview').style.display = 'block';
+        };
+        reader.readAsDataURL(groupImageFile);
+    });
+
+    // Initialize @mention autocomplete for group post input
+    initMentionAutocomplete('gd-post-content', 'gd-mention-dropdown');
 });
+
+function clearGroupImage() {
+    groupImageFile = null;
+    document.getElementById('gd-image-preview').style.display = 'none';
+    document.getElementById('gd-post-image').value = '';
+}
 
 // ─── Tab Switching ───
 function switchGroupTab(tab) {
@@ -423,7 +580,7 @@ function switchGroupTab(tab) {
 
 function filterGroupType(btn, type) {
     currentGroupType = type;
-    document.querySelectorAll('.group-type-chip').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.explore-chip').forEach(c => c.classList.remove('active'));
     btn.classList.add('active');
     loadGroups();
 }
@@ -434,9 +591,10 @@ async function loadGroups() {
     const list = document.getElementById('groups-list');
     const empty = document.getElementById('groups-empty');
 
-    // Hide detail view
+    // Show main view, hide detail
+    document.getElementById('groups-main-view').style.display = 'block';
     document.getElementById('group-detail-view').style.display = 'none';
-    list.style.display = 'block';
+
     spinner.style.display = 'block';
     list.innerHTML = '';
     empty.style.display = 'none';
@@ -479,7 +637,10 @@ function renderGroupCard(group) {
     const avatarInner = group.avatar ? `<img src="${group.avatar}" alt="">` : initial;
     const coverInner = group.cover ? `<img src="${group.cover}" alt="">` : '';
     const typeLabel = GROUP_TYPE_LABELS[group.group_type] || group.group_type;
-    const memberBadge = group.is_member ? '<span style="color:var(--gold); font-weight:600;">Miembro</span>' : '';
+    const typeIcon = GROUP_TYPE_ICONS[group.group_type] || 'bi-people';
+    const memberBadge = group.is_member
+        ? '<span class="group-member-badge"><i class="bi bi-check-circle-fill me-1"></i>Miembro</span>'
+        : '';
 
     return `
     <div class="group-card" onclick="openGroupDetail(${group.id})">
@@ -491,9 +652,9 @@ function renderGroupCard(group) {
             <h5>${escapeHtml(group.name)}</h5>
             ${group.description ? `<div class="group-card-desc">${escapeHtml(group.description)}</div>` : ''}
             <div class="group-card-meta">
-                <span><i class="bi bi-people me-1"></i>${group.member_count} miembros</span>
-                <span class="meta-badge">${typeLabel}</span>
-                ${group.is_private ? '<span><i class="bi bi-lock"></i> Privado</span>' : ''}
+                <span><i class="bi bi-people-fill me-1"></i>${group.member_count}</span>
+                <span class="meta-badge" style="font-size:0.72rem;"><i class="bi ${typeIcon} me-1"></i>${typeLabel}</span>
+                ${group.is_private ? '<span><i class="bi bi-lock-fill me-1"></i>Privado</span>' : ''}
                 ${memberBadge}
             </div>
         </div>
@@ -503,10 +664,11 @@ function renderGroupCard(group) {
 // ─── Group Detail ───
 async function openGroupDetail(groupId) {
     activeGroupId = groupId;
-    document.getElementById('groups-list').style.display = 'none';
-    document.getElementById('groups-empty').style.display = 'none';
-    document.getElementById('group-filters').style.display = 'none';
+    document.getElementById('groups-main-view').style.display = 'none';
     document.getElementById('group-detail-view').style.display = 'block';
+
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 
     try {
         const res = await authFetch(`/api/groups/${groupId}/`);
@@ -529,26 +691,37 @@ function renderGroupDetail(group) {
     document.getElementById('gd-name').textContent = group.name;
     document.getElementById('gd-description').textContent = group.description || '';
     document.getElementById('gd-member-count').textContent = group.member_count || 0;
-    document.getElementById('gd-type-badge').textContent = GROUP_TYPE_LABELS[group.group_type] || group.group_type;
+
+    const typeLabel = GROUP_TYPE_LABELS[group.group_type] || group.group_type;
+    const typeIcon = GROUP_TYPE_ICONS[group.group_type] || 'bi-people';
+    document.getElementById('gd-type-badge').innerHTML = `<i class="bi ${typeIcon} me-1"></i>${typeLabel}`;
 
     const privateBadge = document.getElementById('gd-private-badge');
     privateBadge.style.display = group.is_private ? 'inline-flex' : 'none';
 
     const countryInfo = document.getElementById('gd-country-info');
-    countryInfo.innerHTML = group.country ? `<i class="bi bi-geo-alt me-1"></i>${group.country}` : '';
+    countryInfo.innerHTML = group.country ? `<i class="bi bi-geo-alt-fill me-1"></i>${group.country}` : '';
+
+    // My avatar in post input
+    const myAvatar = document.getElementById('gd-my-avatar');
+    if (me.avatar) {
+        myAvatar.innerHTML = `<img src="${me.avatar}" alt="">`;
+    } else {
+        myAvatar.textContent = (me.first_name || me.username || '?')[0].toUpperCase();
+    }
 
     // Actions
     const actions = document.getElementById('gd-actions');
     if (group.is_member) {
         actions.innerHTML = `
-            <button class="btn btn-outline-secondary btn-sm px-3" style="border-radius:8px;" onclick="leaveGroup(${group.id})">
-                <i class="bi bi-box-arrow-right me-1"></i>Salir del grupo
+            <button class="ig-action-btn secondary" onclick="leaveGroup(${group.id})" style="font-size:0.8rem; padding:0.35rem 0.8rem;">
+                <i class="bi bi-box-arrow-right"></i> Salir
             </button>`;
         document.getElementById('gd-post-input').style.display = 'block';
     } else {
         actions.innerHTML = `
-            <button class="btn btn-gradient btn-sm px-4" onclick="joinGroup(${group.id})">
-                <i class="bi bi-plus-lg me-1"></i>Unirse
+            <button class="ig-action-btn primary" onclick="joinGroup(${group.id})" style="font-size:0.8rem; padding:0.35rem 1rem;">
+                <i class="bi bi-plus-lg"></i> Unirse
             </button>`;
         document.getElementById('gd-post-input').style.display = 'none';
     }
@@ -558,15 +731,12 @@ function closeGroupDetail() {
     activeGroupId = null;
     activeGroupData = null;
     document.getElementById('group-detail-view').style.display = 'none';
-    document.getElementById('groups-list').style.display = 'block';
-    if (currentGroupTab === 'browse') {
-        document.getElementById('group-filters').style.display = 'block';
-    }
+    document.getElementById('groups-main-view').style.display = 'block';
     loadGroups();
 }
 
 function switchDetailTab(tab) {
-    const tabs = document.querySelectorAll('#group-detail-view .hosting-tab');
+    const tabs = document.querySelectorAll('#group-detail-view .ig-tab');
     tabs.forEach((t, i) => t.classList.toggle('active', i === (tab === 'posts' ? 0 : 1)));
     document.getElementById('gd-panel-posts').style.display = tab === 'posts' ? 'block' : 'none';
     document.getElementById('gd-panel-members').style.display = tab === 'members' ? 'block' : 'none';
@@ -598,21 +768,28 @@ async function loadGroupPosts() {
             const initial = (name[0] || '?').toUpperCase();
             const avatarInner = a.avatar ? `<img src="${a.avatar}" alt="">` : initial;
             const time = formatTimeAgo(post.created_at);
-            const pinBadge = post.is_pinned ? '<span class="meta-badge" style="background:#fff3cd; color:#856404;"><i class="bi bi-pin-angle me-1"></i>Fijado</span>' : '';
+            const pinBadge = post.is_pinned
+                ? '<span class="meta-badge" style="font-size:0.68rem; margin-left:0.3rem;"><i class="bi bi-pin-angle-fill me-1"></i>Fijado</span>'
+                : '';
+
+            // Render content with @mentions and #hashtags
+            const contentHtml = renderHashtags(escapeHtml(post.content));
 
             return `
             <div class="gp-card">
                 <div class="gp-card-header">
                     <a href="/profile/${a.id}/" class="gp-avatar">${avatarInner}</a>
-                    <div style="flex:1;">
-                        <a href="/profile/${a.id}/" style="font-weight:700; color:var(--text-primary); text-decoration:none; font-size:0.9rem;">${escapeHtml(name)}</a>
-                        ${pinBadge}
-                        <div style="font-size:0.78rem; color:var(--text-muted);">${time}</div>
+                    <div style="flex:1; min-width:0;">
+                        <div style="display:flex; align-items:center; gap:0.3rem; flex-wrap:wrap;">
+                            <a href="/profile/${a.id}/" style="font-weight:700; color:var(--text-primary); text-decoration:none; font-size:0.9rem;">${escapeHtml(name)}</a>
+                            ${pinBadge}
+                        </div>
+                        <div style="font-size:0.75rem; color:var(--text-muted);">${time}</div>
                     </div>
                 </div>
                 <div class="gp-card-content">
-                    ${escapeHtml(post.content)}
-                    ${post.image ? `<img src="${post.image}" alt="">` : ''}
+                    ${contentHtml}
+                    ${post.image ? `<img src="${post.image}" alt="" loading="lazy">` : ''}
                 </div>
             </div>`;
         }).join('');
@@ -624,16 +801,17 @@ async function loadGroupPosts() {
 
 async function publishGroupPost() {
     const content = document.getElementById('gd-post-content').value.trim();
-    if (!content) { showToast('Escribe algo'); return; }
+    if (!content && !groupImageFile) { showToast('Escribe algo o adjunta una foto'); return; }
 
-    const imageInput = document.getElementById('gd-post-image');
-    const image = imageInput.files[0];
+    const btn = document.getElementById('gd-publish-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>';
 
     let body, headers;
-    if (image) {
+    if (groupImageFile) {
         body = new FormData();
-        body.append('content', content);
-        body.append('image', image);
+        if (content) body.append('content', content);
+        body.append('image', groupImageFile);
         headers = { 'Authorization': 'Bearer ' + getToken() };
     } else {
         body = JSON.stringify({ content });
@@ -643,12 +821,12 @@ async function publishGroupPost() {
         const res = await authFetch(`/api/groups/${activeGroupId}/posts/`, {
             method: 'POST',
             body,
-            ...(image ? { headers } : {})
+            ...(groupImageFile ? { headers } : {})
         });
         if (res.ok) {
             document.getElementById('gd-post-content').value = '';
-            imageInput.value = '';
-            showToast('Publicado');
+            clearGroupImage();
+            showToast('Publicado en el grupo');
             loadGroupPosts();
         } else {
             const data = await res.json();
@@ -656,6 +834,9 @@ async function publishGroupPost() {
         }
     } catch(e) {
         showToast('Error de conexion');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-send-fill me-1"></i>Publicar';
     }
 }
 
@@ -677,14 +858,14 @@ async function loadGroupMembers() {
             const avatarInner = u.avatar ? `<img src="${u.avatar}" alt="">` : initial;
             let roleHtml = '';
             if (m.role === 'admin') roleHtml = '<span class="gm-role admin">Admin</span>';
-            else if (m.role === 'mod') roleHtml = '<span class="gm-role mod">Mod</span>';
+            else if (m.role === 'moderator' || m.role === 'mod') roleHtml = '<span class="gm-role mod">Mod</span>';
 
             return `
             <div class="gm-item">
                 <a href="/profile/${u.id}/" class="gm-avatar">${avatarInner}</a>
                 <div class="gm-info">
                     <a href="/profile/${u.id}/" class="gm-name" style="text-decoration:none;">${escapeHtml(name)}</a>
-                    <div style="font-size:0.8rem; color:var(--text-muted);">@${u.username || ''}</div>
+                    <div style="font-size:0.78rem; color:var(--text-muted);">@${u.username || ''}</div>
                 </div>
                 ${roleHtml}
             </div>`;
@@ -701,8 +882,11 @@ async function joinGroup(groupId) {
         const res = await authFetch(`/api/groups/${groupId}/join/`, { method: 'POST' });
         if (res.ok) {
             const data = await res.json();
-            showToast(data.detail);
+            showToast(data.detail || 'Te uniste al grupo');
             openGroupDetail(groupId);
+        } else {
+            const data = await res.json();
+            showToast(data.detail || 'No se pudo unir');
         }
     } catch(e) {
         showToast('Error de conexion');
@@ -753,7 +937,6 @@ async function createGroup() {
         });
 
         if (res.ok) {
-            const group = await res.json();
             bootstrap.Modal.getInstance(document.getElementById('createGroupModal')).hide();
             showToast('Grupo creado');
             loadGroups();
