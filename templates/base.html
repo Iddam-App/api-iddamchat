@@ -57,11 +57,13 @@
                     <i class="bi bi-moon-fill"></i>
                 </button>
             </div>
-            <!-- Logged-in nav (minimal: just icons) -->
-            <div class="d-flex align-items-center gap-2" id="nav-user" style="display:none !important;">
-                <a href="/chat/" class="nav-icon-btn" id="nav-chat-btn" title="Mensajes">
-                    <i class="bi bi-chat-dots"></i>
-                    <span class="nav-badge" id="nav-unread-badge" style="display:none;">0</span>
+            <!-- Logged-in nav -->
+            <div class="d-flex align-items-center gap-1" id="nav-user" style="display:none !important;">
+                <a href="/hosting/" class="nav-icon-btn nav-hosting-btn" id="nav-hosting-btn" title="Hospedaje">
+                    <i class="bi bi-house-heart-fill"></i>
+                </a>
+                <a href="/groups/" class="nav-icon-btn" id="nav-groups-btn" title="Grupos">
+                    <i class="bi bi-people-fill"></i>
                 </a>
                 <a href="/notifications/" class="nav-icon-btn" id="nav-notif-btn" title="Notificaciones">
                     <i class="bi bi-heart"></i>
@@ -102,9 +104,10 @@
                 <i class="bi bi-plus-lg"></i>
             </div>
         </button>
-        <a href="/groups/" class="nav-tab" data-page="groups">
-            <i class="bi bi-people-fill"></i>
-            <span>Grupos</span>
+        <a href="/chat/" class="nav-tab" data-page="chat">
+            <i class="bi bi-send-fill"></i>
+            <span>Mensajes</span>
+            <span class="nav-badge bottom-unread-badge" id="nav-msg-badge" style="display:none;">0</span>
         </a>
         <a href="/profile/" class="nav-tab" data-page="profile">
             <div class="nav-profile-avatar" id="nav-profile-avatar">
@@ -234,7 +237,7 @@
             const page = tab.dataset.page;
             if (page === 'feed' && (path === '/feed/' || path === '/')) tab.classList.add('active');
             else if (page === 'hobbies' && path.startsWith('/hobbies')) tab.classList.add('active');
-            else if (page === 'groups' && path.startsWith('/groups')) tab.classList.add('active');
+            else if (page === 'chat' && path.startsWith('/chat')) tab.classList.add('active');
             else if (page === 'profile' && path.startsWith('/profile')) tab.classList.add('active');
         });
 
@@ -246,12 +249,17 @@
         }
 
         // Highlight top nav icons
-        if (path.startsWith('/chat')) {
-            document.getElementById('nav-chat-btn').classList.add('active');
-        }
         if (path.startsWith('/notifications')) {
             const nb = document.getElementById('nav-notif-btn');
             if (nb) nb.classList.add('active');
+        }
+        if (path.startsWith('/groups')) {
+            const gb = document.getElementById('nav-groups-btn');
+            if (gb) gb.classList.add('active');
+        }
+        if (path.startsWith('/hosting')) {
+            const hb = document.getElementById('nav-hosting-btn');
+            if (hb) hb.classList.add('active');
         }
 
         // Load unread count + notification count + user data in parallel (non-blocking)
@@ -289,16 +297,7 @@
             const data = await res.json();
             const count = data.unread_count || 0;
 
-            // Top navbar badge
-            const badge = document.getElementById('nav-unread-badge');
-            if (count > 0) {
-                badge.textContent = count > 99 ? '99+' : count;
-                badge.style.display = 'flex';
-            } else {
-                badge.style.display = 'none';
-            }
-
-            // Bottom nav badge
+            // Bottom nav Messages badge
             document.querySelectorAll('.bottom-unread-badge').forEach(b => {
                 if (count > 0) {
                     b.textContent = count > 99 ? '99+' : count;

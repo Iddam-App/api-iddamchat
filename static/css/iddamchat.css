@@ -256,6 +256,16 @@ body.has-bottom-nav main {
     transition: transform 0.3s var(--ease-out) !important;
 }
 
+/* Messages tab — rotated send icon like Instagram DM */
+.bottom-nav .nav-tab[data-page="chat"] i {
+    transform: rotate(-30deg);
+    display: inline-block;
+}
+
+.bottom-nav .nav-tab[data-page="chat"].active i {
+    transform: rotate(-30deg) scale(1.05);
+}
+
 /* Profile avatar in bottom nav */
 .nav-profile-avatar {
     width: 26px;
@@ -1688,6 +1698,20 @@ body.has-bottom-nav main {
     color: var(--gold);
 }
 
+/* Hosting button — highlighted in top nav */
+.nav-hosting-btn {
+    color: var(--gold) !important;
+    background: var(--gold-subtle);
+    border-radius: var(--radius-full);
+    font-size: 1.1rem;
+}
+
+.nav-hosting-btn:hover,
+.nav-hosting-btn.active {
+    background: var(--gold);
+    color: #fff !important;
+}
+
 .nav-badge {
     position: absolute;
     top: -2px;
@@ -1704,6 +1728,14 @@ body.has-bottom-nav main {
     align-items: center;
     justify-content: center;
     border: 2px solid var(--navbar-bg);
+}
+
+/* Bottom nav unread badge (Messages tab) */
+.bottom-nav .nav-tab .nav-badge {
+    top: 2px;
+    right: 50%;
+    transform: translateX(14px);
+    border-color: var(--bottom-nav-bg);
 }
 
 /* ─── Theme Toggle Button ───────────────────────────────────────── */

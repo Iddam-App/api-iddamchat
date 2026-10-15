@@ -345,30 +345,34 @@ function _spaExecScripts(container) {
         el.textContent = s.textContent;
         document.head.appendChild(el);
     });
-    // Then scripts
+    // Then scripts (replace top-level let/const with var for re-declaration safety)
     container.querySelectorAll('script').forEach(old => {
         const el = document.createElement('script');
         if (old.src) { el.src = old.src; }
-        else { el.textContent = old.textContent; }
+        else { el.textContent = old.textContent.replace(/^(let |const )/gm, 'var '); }
         document.body.appendChild(el);
         if (!old.src) el.remove();
     });
 }
 
 function _spaUpdateNav(path) {
+    // Bottom nav
     document.querySelectorAll('.bottom-nav .nav-tab').forEach(tab => {
         tab.classList.remove('active');
         const page = tab.dataset.page;
         if (!page) return;
         if (page === 'feed' && (path === '/feed/' || path === '/')) tab.classList.add('active');
         else if (page === 'hobbies' && path.startsWith('/hobbies')) tab.classList.add('active');
-        else if (page === 'groups' && path.startsWith('/groups')) tab.classList.add('active');
+        else if (page === 'chat' && path.startsWith('/chat')) tab.classList.add('active');
         else if (page === 'profile' && path.startsWith('/profile')) tab.classList.add('active');
     });
-    const chatBtn = document.getElementById('nav-chat-btn');
+    // Top nav
     const notifBtn = document.getElementById('nav-notif-btn');
-    if (chatBtn) chatBtn.classList.toggle('active', path.startsWith('/chat'));
+    const groupsBtn = document.getElementById('nav-groups-btn');
+    const hostingBtn = document.getElementById('nav-hosting-btn');
     if (notifBtn) notifBtn.classList.toggle('active', path.startsWith('/notifications'));
+    if (groupsBtn) groupsBtn.classList.toggle('active', path.startsWith('/groups'));
+    if (hostingBtn) hostingBtn.classList.toggle('active', path.startsWith('/hosting'));
 }
 
 function _spaShowBar() {

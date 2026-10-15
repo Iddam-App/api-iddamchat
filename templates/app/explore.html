@@ -42,7 +42,8 @@
         <div class="profile-grid" id="discover-grid"></div>
         <div class="empty-state" id="discover-empty" style="display:none;">
             <i class="bi bi-compass"></i>
-            <h5>No hay publicaciones</h5>
+            <h5>Nada por aqui todavia</h5>
+            <p>Se el primero en publicar algo</p>
         </div>
     </div>
 </div>
@@ -87,17 +88,22 @@ async function loadDiscoverGrid() {
     const empty = document.getElementById('discover-empty');
 
     try {
-        let url = '/api/posts/feed/';
-        const res = await authFetch(url);
+        const res = await authFetch('/api/posts/feed/');
         spinner.style.display = 'none';
         if (!res.ok) throw new Error('Failed');
 
         const data = await res.json();
         discoverPosts = data.results || data;
 
-        renderDiscoverGrid();
+        if (discoverPosts.length === 0) {
+            empty.style.display = 'block';
+            grid.innerHTML = '';
+        } else {
+            renderDiscoverGrid();
+        }
     } catch(e) {
         spinner.style.display = 'none';
+        empty.style.display = 'block';
         console.error(e);
     }
 }
