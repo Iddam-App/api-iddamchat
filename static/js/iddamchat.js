@@ -258,12 +258,22 @@ function initSpaRouter() {
     // Mark initial state
     history.replaceState({ spa: true }, '', window.location.href);
 
+    // Mark initial page styles for cleanup on first SPA navigation
+    const ps = document.getElementById('page-scripts');
+    if (ps) ps.querySelectorAll('style').forEach(s => s.setAttribute('data-spa-page', '1'));
+
     // Prefetch nav links on hover/touch
-    document.querySelectorAll('.bottom-nav .nav-tab[href], .nav-icon-btn[href]').forEach(link => {
+    const navLinks = document.querySelectorAll('.bottom-nav .nav-tab[href], .nav-icon-btn[href]');
+    navLinks.forEach(link => {
         const prefetch = () => _spaPrefetch(link.getAttribute('href'));
         link.addEventListener('mouseenter', prefetch, { passive: true, once: true });
         link.addEventListener('touchstart', prefetch, { passive: true, once: true });
     });
+
+    // Eagerly prefetch all nav pages after initial load for instant navigation
+    setTimeout(() => {
+        navLinks.forEach(link => _spaPrefetch(link.getAttribute('href')));
+    }, 1500);
 }
 
 function spaNavigate(path) {

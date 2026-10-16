@@ -250,6 +250,7 @@ async function loadFeed() {
         }
     } catch(e) {
         spinner.style.display = 'none';
+        if (currentPage === 1) document.getElementById('empty-state').style.display = 'block';
         console.error(e);
     }
 }
