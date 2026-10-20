@@ -4,38 +4,404 @@
 {% block title %}Iniciar Sesion — IddamChat{% endblock %}
 
 {% block content %}
-<div class="auth-wrapper">
-    <div class="auth-card">
-        <div class="logo-wrapper">
-            <img src="{% static 'img/logo_brown.png' %}" alt="COGWA">
+<div class="login-page">
+    <!-- Decorative background elements -->
+    <div class="login-bg-orb login-bg-orb--1"></div>
+    <div class="login-bg-orb login-bg-orb--2"></div>
+    <div class="login-bg-orb login-bg-orb--3"></div>
+
+    <div class="login-layout">
+        <!-- Branding / Welcome Panel -->
+        <div class="login-welcome">
+            <div class="login-welcome__inner">
+                <img src="{% static 'img/icons/icon.svg' %}" alt="COGWA" class="login-welcome__logo">
+                <h1 class="login-welcome__title">IddamChat</h1>
+                <p class="login-welcome__subtitle">La comunidad de la<br>Iglesia de Dios, Una Asociacion Mundial</p>
+
+                <div class="login-features">
+                    <div class="login-feature">
+                        <div class="login-feature__icon"><i class="bi bi-people-fill"></i></div>
+                        <div class="login-feature__text">
+                            <strong>Conecta</strong>
+                            <span>Con hermanos de todo el mundo</span>
+                        </div>
+                    </div>
+                    <div class="login-feature">
+                        <div class="login-feature__icon"><i class="bi bi-chat-heart-fill"></i></div>
+                        <div class="login-feature__text">
+                            <strong>Comparte</strong>
+                            <span>Testimonios, devocionales y mas</span>
+                        </div>
+                    </div>
+                    <div class="login-feature">
+                        <div class="login-feature__icon"><i class="bi bi-house-heart-fill"></i></div>
+                        <div class="login-feature__text">
+                            <strong>Hospedaje</strong>
+                            <span>Alojamiento con la comunidad</span>
+                        </div>
+                    </div>
+                    <div class="login-feature">
+                        <div class="login-feature__icon"><i class="bi bi-calendar-event"></i></div>
+                        <div class="login-feature__text">
+                            <strong>Eventos</strong>
+                            <span>Actividades y reuniones de la iglesia</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <h2>Iniciar Sesion</h2>
-        <p class="subtitle">Bienvenido de vuelta a IddamChat</p>
 
-        <div id="alert-box" class="alert-box alert"></div>
+        <!-- Form Panel -->
+        <div class="login-form-panel">
+            <div class="auth-card">
+                <div class="logo-wrapper login-mobile-logo">
+                    <img src="{% static 'img/icons/icon.svg' %}" alt="COGWA">
+                </div>
+                <h2>Iniciar Sesion</h2>
+                <p class="subtitle">Bienvenido de vuelta a IddamChat</p>
 
-        <form id="login-form" novalidate>
-            <div class="mb-3">
-                <label for="email" class="form-label">Correo Electronico</label>
-                <input type="email" class="form-control" id="email" placeholder="tu@correo.com" required>
+                <div id="alert-box" class="alert-box alert"></div>
+
+                <form id="login-form" novalidate>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Correo Electronico</label>
+                        <div class="login-input-wrap">
+                            <i class="bi bi-envelope"></i>
+                            <input type="email" class="form-control" id="email" placeholder="tu@correo.com" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Contraseña</label>
+                        <div class="login-input-wrap">
+                            <i class="bi bi-lock"></i>
+                            <input type="password" class="form-control" id="password" placeholder="Tu contraseña" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-gold" id="btn-submit">
+                        <i class="bi bi-box-arrow-in-right me-1"></i>Iniciar Sesion
+                    </button>
+                </form>
+
+                <div class="auth-footer">
+                    No tienes cuenta? <a href="/register/">Registrate aqui</a>
+                </div>
             </div>
-            <div class="mb-3">
-                <label for="password" class="form-label">Contraseña</label>
-                <input type="password" class="form-control" id="password" placeholder="Tu contraseña" required>
-            </div>
-            <button type="submit" class="btn btn-gold" id="btn-submit">
-                Iniciar Sesion
-            </button>
-        </form>
 
-        <div class="auth-footer">
-            No tienes cuenta? <a href="/register/">Registrate aqui</a>
+            <p class="login-copyright">&copy; 2026 Iglesia de Dios, Una Asociacion Mundial</p>
         </div>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
+<style>
+/* ─── Login Page Layout ─────────────────────────────────── */
+.login-page {
+    min-height: calc(100vh - 60px);
+    min-height: calc(100dvh - 60px);
+    display: flex;
+    position: relative;
+    overflow: hidden;
+    background: var(--body-bg);
+}
+
+/* Decorative gradient orbs */
+.login-bg-orb {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    filter: blur(80px);
+    opacity: 0.5;
+}
+.login-bg-orb--1 {
+    width: 400px;
+    height: 400px;
+    background: rgba(139, 115, 85, 0.15);
+    top: -100px;
+    right: -100px;
+}
+.login-bg-orb--2 {
+    width: 300px;
+    height: 300px;
+    background: rgba(200, 149, 109, 0.12);
+    bottom: -50px;
+    left: -50px;
+}
+.login-bg-orb--3 {
+    width: 200px;
+    height: 200px;
+    background: rgba(109, 90, 67, 0.1);
+    top: 50%;
+    left: 30%;
+}
+
+/* Layout Grid */
+.login-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+    min-height: calc(100vh - 60px);
+    min-height: calc(100dvh - 60px);
+    position: relative;
+    z-index: 1;
+}
+
+/* ─── Welcome / Branding Panel ───────────────────────────── */
+.login-welcome {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    background: linear-gradient(160deg, #6d5a43 0%, #8B7355 40%, #a8956f 80%, #c8956d 100%);
+    position: relative;
+    overflow: hidden;
+}
+.login-welcome::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(circle at 20% 80%, rgba(255,255,255,0.08) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05) 0%, transparent 40%);
+    pointer-events: none;
+}
+.login-welcome::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(255,255,255,0.1);
+}
+
+.login-welcome__inner {
+    position: relative;
+    z-index: 1;
+    max-width: 400px;
+    text-align: center;
+}
+
+.login-welcome__logo {
+    width: 100px;
+    height: 100px;
+    border-radius: 24px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    margin-bottom: 1.5rem;
+}
+
+.login-welcome__title {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 0.5rem;
+    letter-spacing: -0.02em;
+}
+
+.login-welcome__subtitle {
+    font-size: 1rem;
+    color: rgba(255,255,255,0.8);
+    line-height: 1.6;
+    margin-bottom: 2.5rem;
+    font-weight: 500;
+}
+
+/* Feature list */
+.login-features {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    text-align: left;
+}
+
+.login-feature {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.8rem 1rem;
+    background: rgba(255,255,255,0.1);
+    border-radius: 14px;
+    backdrop-filter: blur(4px);
+    transition: background 0.2s;
+}
+.login-feature:hover {
+    background: rgba(255,255,255,0.15);
+}
+
+.login-feature__icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.login-feature__text {
+    display: flex;
+    flex-direction: column;
+}
+.login-feature__text strong {
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+.login-feature__text span {
+    color: rgba(255,255,255,0.7);
+    font-size: 0.8rem;
+    font-weight: 400;
+}
+
+/* ─── Form Panel ─────────────────────────────────────────── */
+.login-form-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    position: relative;
+}
+
+.login-form-panel .auth-card {
+    width: 100%;
+    max-width: 400px;
+}
+
+/* Hide mobile logo on desktop (shown in welcome panel instead) */
+.login-mobile-logo {
+    display: none;
+}
+
+/* Input with icon */
+.login-input-wrap {
+    position: relative;
+}
+.login-input-wrap > i {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gold);
+    font-size: 0.9rem;
+    z-index: 1;
+    opacity: 0.7;
+}
+.login-input-wrap .form-control {
+    padding-left: 2.6rem;
+}
+
+/* Copyright */
+.login-copyright {
+    margin-top: 1.5rem;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+/* ─── Dark Mode ──────────────────────────────────────────── */
+[data-theme="dark"] .login-welcome {
+    background: linear-gradient(160deg, #2a2118 0%, #3d3025 40%, #4a3a2a 80%, #5c4a35 100%);
+}
+[data-theme="dark"] .login-bg-orb--1 {
+    background: rgba(139, 115, 85, 0.1);
+}
+[data-theme="dark"] .login-bg-orb--2 {
+    background: rgba(200, 149, 109, 0.08);
+}
+
+/* ─── Responsive ─────────────────────────────────────────── */
+@media (max-width: 991px) {
+    .login-layout {
+        grid-template-columns: 1fr;
+        min-height: auto;
+    }
+
+    .login-welcome {
+        padding: 2.5rem 1.5rem 2rem;
+    }
+
+    .login-welcome__logo {
+        width: 72px;
+        height: 72px;
+        border-radius: 18px;
+        margin-bottom: 1rem;
+    }
+
+    .login-welcome__title {
+        font-size: 1.6rem;
+        margin-bottom: 0.3rem;
+    }
+
+    .login-welcome__subtitle {
+        font-size: 0.88rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .login-features {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.6rem;
+    }
+
+    .login-feature {
+        padding: 0.6rem 0.7rem;
+        border-radius: 12px;
+        gap: 0.6rem;
+    }
+
+    .login-feature__icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        font-size: 0.95rem;
+    }
+
+    .login-feature__text strong {
+        font-size: 0.82rem;
+    }
+    .login-feature__text span {
+        font-size: 0.72rem;
+    }
+
+    .login-form-panel {
+        padding: 1.5rem 1rem 2rem;
+    }
+
+    /* Show mobile logo on small screens */
+    .login-mobile-logo {
+        display: block;
+    }
+    .login-mobile-logo img {
+        max-width: 140px;
+    }
+}
+
+@media (max-width: 480px) {
+    .login-features {
+        grid-template-columns: 1fr;
+    }
+
+    .login-welcome {
+        padding: 2rem 1rem 1.5rem;
+    }
+
+    .login-welcome__subtitle {
+        margin-bottom: 1rem;
+    }
+}
+
+@media (min-width: 992px) {
+    .login-page {
+        min-height: 100vh;
+        min-height: 100dvh;
+    }
+}
+</style>
+
 <script>
 document.getElementById('login-form').addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -50,7 +416,7 @@ document.getElementById('login-form').addEventListener('submit', async function(
     }
 
     btn.disabled = true;
-    btn.textContent = 'Ingresando...';
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Ingresando...';
 
     try {
         const res = await fetch('/api/auth/login/', {
@@ -84,7 +450,7 @@ document.getElementById('login-form').addEventListener('submit', async function(
         showAlert('Error de conexion. Intenta nuevamente.', 'danger');
     } finally {
         btn.disabled = false;
-        btn.textContent = 'Iniciar Sesion';
+        btn.innerHTML = '<i class="bi bi-box-arrow-in-right me-1"></i>Iniciar Sesion';
     }
 });
 

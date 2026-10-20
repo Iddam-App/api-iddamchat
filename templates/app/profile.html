@@ -605,6 +605,8 @@ async function loadProfile() {
         loadStats();
     } catch(e) {
         document.getElementById('profile-name').textContent = 'Usuario no encontrado';
+        document.getElementById('profile-username').textContent = '';
+        document.getElementById('posts-spinner').style.display = 'none';
         console.error(e);
     }
 }
@@ -651,6 +653,7 @@ async function loadUserPosts() {
         renderPostsList();
     } catch(e) {
         spinner.style.display = 'none';
+        document.getElementById('empty-posts').style.display = 'block';
         console.error(e);
     }
 }

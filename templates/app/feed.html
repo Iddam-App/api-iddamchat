@@ -1004,6 +1004,10 @@ async function loadFeed() {
     } catch(e) {
         skeleton.style.display = 'none';
         infiniteSpinner.classList.remove('visible');
+        if (currentPage === 1) {
+            document.getElementById('empty-state').style.display = 'block';
+            feedHasMore = false;
+        }
         console.error(e);
     } finally {
         feedLoading = false;
