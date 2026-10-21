@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from apps.core.serializers import UserMinimalSerializer
 
-from .models import Conversation, Message
+from .models import Conversation, Message, UserSlangTerm
 
 
 class MessageSerializer(serializers.ModelSerializer):
@@ -56,3 +56,10 @@ class ConversationSerializer(serializers.ModelSerializer):
             return obj._unread_count
         request = self.context['request']
         return obj.messages.filter(is_read=False).exclude(sender=request.user).count()
+
+
+class UserSlangTermSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserSlangTerm
+        fields = ['id', 'term', 'language', 'explanation', 'created_at']
+        read_only_fields = ['id', 'created_at']

@@ -4,6 +4,8 @@ import json
 
 from django.conf import settings
 
+from .slang_dictionary import expand_slang
+
 
 def translate_text(text, target_language, source_language=None):
     """Translate text using Google Cloud Translate v2 API.
@@ -14,9 +16,12 @@ def translate_text(text, target_language, source_language=None):
     if not api_key:
         raise ValueError('GOOGLE_TRANSLATE_API_KEY not configured.')
 
+    # Pre-process: expand slang / abbreviations for better translation quality
+    expanded_text = expand_slang(text, source_language)
+
     url = 'https://translation.googleapis.com/language/translate/v2'
     params = {
-        'q': text,
+        'q': expanded_text,
         'target': target_language,
         'format': 'text',
         'key': api_key,

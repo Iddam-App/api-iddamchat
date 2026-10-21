@@ -72,3 +72,45 @@ class MessageTranslation(models.Model):
 
     def __str__(self):
         return f"Translation of msg {self.message_id} to {self.target_language}"
+
+
+class UserSlangTerm(models.Model):
+    """Diccionario personal de modismos / slang de un usuario."""
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='slang_terms',
+    )
+    term = models.CharField(max_length=100)
+    language = models.CharField(max_length=10)
+    explanation = models.TextField(max_length=500)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'term', 'language')
+        ordering = ['term']
+
+    def __str__(self):
+        return f"{self.user} — {self.term} ({self.language})"
+
+
+class ConversationTranslationPref(models.Model):
+    """Preferencia de auto-traducción por usuario/conversación."""
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='translation_prefs',
+    )
+    conversation = models.ForeignKey(
+        Conversation, on_delete=models.CASCADE,
+        related_name='translation_prefs',
+    )
+    auto_translate = models.BooleanField(default=False)
+    target_language = models.CharField(max_length=10, default='es')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('user', 'conversation')
+
+    def __str__(self):
+        state = 'ON' if self.auto_translate else 'OFF'
+        return f"{self.user} → conv {self.conversation_id}: {state} ({self.target_language})"

@@ -56,6 +56,14 @@
                         <div class="chat-thread-status" id="thread-status"></div>
                     </div>
                 </a>
+                <div class="chat-thread-actions">
+                    <button class="chat-action-btn" id="btn-auto-translate" onclick="toggleAutoTranslate()" title="Auto-traducir conversacion">
+                        <i class="bi bi-translate"></i>
+                    </button>
+                    <button class="chat-action-btn" onclick="openSlangModal()" title="Diccionario de modismos">
+                        <i class="bi bi-book"></i>
+                    </button>
+                </div>
             </div>
 
             <!-- Messages -->
@@ -96,6 +104,43 @@
         </div>
     </div>
 </div>
+<!-- Slang Dictionary Modal -->
+<div class="modal fade" id="slangModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-book me-2"></i>Mi Diccionario de Modismos</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1rem;">
+                    Agrega modismos o expresiones locales que usas. Cuando alguien traduzca tus mensajes, veran una explicacion resaltada de cada modismo.
+                </p>
+                <div class="slang-form">
+                    <input type="text" class="form-control" id="slang-term-input" placeholder="Modismo (ej: bacan)">
+                    <select class="form-select" id="slang-lang-select">
+                        <option value="es">Espanol</option>
+                        <option value="en">English</option>
+                        <option value="pt">Portugues</option>
+                        <option value="fr">Francais</option>
+                    </select>
+                    <input type="text" class="form-control" id="slang-explanation-input" placeholder="Explicacion (ej: algo genial)">
+                    <button class="btn btn-gradient btn-sm" onclick="addSlangTerm()">
+                        <i class="bi bi-plus-lg"></i> Agregar
+                    </button>
+                </div>
+                <div id="slang-term-list" style="margin-top:1rem; max-height:300px; overflow-y:auto;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Slang Popover (positioned absolutely) -->
+<div class="slang-popover" id="slang-popover" style="display:none;">
+    <div class="slang-popover-term" id="slang-popover-term"></div>
+    <div class="slang-popover-explanation" id="slang-popover-explanation"></div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -468,6 +513,170 @@
 .new-chat-user .ncu-username { font-weight: 600; color: var(--text-primary); font-size: 0.95rem; }
 .new-chat-user .ncu-name { font-size: 0.82rem; color: var(--text-muted); }
 
+/* ─── Thread header actions ──────────────────────────────── */
+.chat-thread-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-left: auto;
+}
+.chat-action-btn {
+    border: none;
+    background: var(--hover-bg);
+    color: var(--text-secondary);
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.2s;
+}
+.chat-action-btn:hover { color: var(--gold); background: var(--border-color); }
+.chat-action-btn.active {
+    background: var(--gold);
+    color: #fff;
+}
+
+/* ─── Translate button on messages ───────────────────────── */
+.msg-translate-btn {
+    border: none;
+    background: none;
+    color: var(--text-light);
+    cursor: pointer;
+    font-size: 0.75rem;
+    padding: 0;
+    transition: color 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+}
+.msg-translate-btn:hover { color: var(--gold); }
+.msg-translate-btn.loading { opacity: 0.5; pointer-events: none; }
+
+/* ─── Translation bubble ─────────────────────────────────── */
+.msg-translation {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    padding: 0.35rem 0.7rem;
+    margin-top: 0.2rem;
+    border-left: 3px solid var(--gold);
+    background: rgba(139,115,85,0.06);
+    border-radius: 0 8px 8px 0;
+    line-height: 1.4;
+}
+.msg-translation .translation-label {
+    font-size: 0.7rem;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-bottom: 0.15rem;
+}
+
+/* ─── Slang note chips ───────────────────────────────────── */
+.slang-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-top: 0.3rem;
+}
+.slang-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.15rem 0.5rem;
+    background: rgba(139,115,85,0.12);
+    border: 1px solid rgba(139,115,85,0.25);
+    border-radius: 12px;
+    font-size: 0.72rem;
+    color: var(--gold-dark, #8b7355);
+    cursor: pointer;
+    transition: background 0.2s;
+    font-weight: 600;
+}
+.slang-chip:hover {
+    background: rgba(139,115,85,0.22);
+}
+.slang-chip i { font-size: 0.65rem; }
+
+/* ─── Slang popover ──────────────────────────────────────── */
+.slang-popover {
+    position: fixed;
+    z-index: 9999;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 0.6rem 0.8rem;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    max-width: 250px;
+    pointer-events: none;
+}
+.slang-popover-term {
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--gold-dark, #8b7355);
+    margin-bottom: 0.2rem;
+}
+.slang-popover-explanation {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    line-height: 1.35;
+}
+
+/* ─── Slang modal form ───────────────────────────────────── */
+.slang-form {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto;
+    gap: 0.5rem;
+    align-items: center;
+}
+.slang-form .form-control,
+.slang-form .form-select {
+    border-radius: 10px;
+    font-size: 0.85rem;
+    padding: 0.45rem 0.7rem;
+}
+.slang-term-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0.6rem;
+    border-bottom: 1px solid var(--border-color);
+    gap: 0.5rem;
+}
+.slang-term-item:last-child { border-bottom: none; }
+.slang-term-info { flex: 1; min-width: 0; }
+.slang-term-info .st-term {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+}
+.slang-term-info .st-lang {
+    font-size: 0.7rem;
+    background: var(--hover-bg);
+    padding: 0.1rem 0.4rem;
+    border-radius: 6px;
+    color: var(--text-muted);
+    margin-left: 0.3rem;
+}
+.slang-term-info .st-explanation {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 0.1rem;
+}
+.slang-term-delete {
+    border: none;
+    background: none;
+    color: var(--text-light);
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0.2rem;
+    transition: color 0.2s;
+}
+.slang-term-delete:hover { color: #dc3545; }
+
 /* ─── Mobile: stacked layout ─────────────────────────────── */
 @media (max-width: 768px) {
     .chat-page {
@@ -494,6 +703,9 @@
     .chat-back-btn {
         display: block;
     }
+    .slang-form {
+        grid-template-columns: 1fr;
+    }
 }
 </style>
 
@@ -504,6 +716,9 @@ let activeOtherUser = null;
 let chatImageFile = null;
 let chatPollTimer = null;
 let me = {};
+let translationCache = {};
+let autoTranslateActive = false;
+let autoTranslateTargetLang = 'es';
 
 onPageReady(() => {
     if (!isLoggedIn()) { window.location.href = '/login/'; return; }
@@ -674,8 +889,14 @@ function openConversation(convId, userJson) {
     // Highlight in list
     renderConversationList();
 
-    // Load messages
+    // Reset translation state for new conversation
+    translationCache = {};
+    autoTranslateActive = false;
+    document.getElementById('btn-auto-translate').classList.remove('active');
+
+    // Load messages & auto-translate preference
     loadMessages(convId);
+    loadAutoTranslatePref();
 
     // Focus input
     setTimeout(() => document.getElementById('chat-msg-input').focus(), 100);
@@ -729,19 +950,40 @@ async function loadMessages(convId, silent) {
                 imageHtml = `<img src="${msg.image}" alt="Imagen" loading="lazy" onclick="window.open('${msg.image}', '_blank')">`;
             }
 
+            const translateBtn = !isMine && msg.content
+                ? `<button class="msg-translate-btn" onclick="translateMessage(${msg.id}, this)" title="Traducir"><i class="bi bi-translate"></i></button>`
+                : '';
+
             html += `
-            <div class="chat-msg ${cls}">
+            <div class="chat-msg ${cls}" data-msg-id="${msg.id}">
                 <div class="bubble">
                     ${msg.content ? escapeHtml(msg.content) : ''}
                     ${imageHtml}
                 </div>
-                <div class="msg-meta">${time} ${readIcon}</div>
+                <div class="msg-meta">${translateBtn} ${time} ${readIcon}</div>
+                <div class="msg-translation" id="translation-${msg.id}" style="display:none;">
+                    <div class="translation-label">Traduccion</div>
+                    <div class="translation-text"></div>
+                    <div class="slang-chips"></div>
+                </div>
             </div>`;
         });
 
         container.innerHTML = html;
+
+        // Restore cached translations
+        messages.forEach(msg => {
+            const cached = translationCache[msg.id];
+            if (cached) showTranslationInUI(msg.id, cached);
+        });
+
         if (wasAtBottom || !silent) {
             container.scrollTop = container.scrollHeight;
+        }
+
+        // Auto-translate incoming messages if enabled
+        if (autoTranslateActive && !silent) {
+            autoTranslateAllVisible(messages);
         }
 
         // Update unread in sidebar
@@ -870,6 +1112,226 @@ async function searchUsers(query) {
 async function selectNewChatUser(userId) {
     bootstrap.Modal.getInstance(document.getElementById('newChatModal')).hide();
     await startConversationWith(userId);
+}
+
+// ─── Translation ───
+async function translateMessage(msgId, btn) {
+    // Check local cache first
+    if (translationCache[msgId]) {
+        showTranslationInUI(msgId, translationCache[msgId]);
+        return;
+    }
+
+    if (btn) {
+        btn.classList.add('loading');
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:0.7rem;height:0.7rem;"></span>';
+    }
+
+    try {
+        const res = await authFetch(`/api/chat/messages/${msgId}/translate/`, {
+            method: 'POST',
+            body: JSON.stringify({ target_language: autoTranslateTargetLang })
+        });
+        if (!res.ok) throw new Error('Translation failed');
+        const data = await res.json();
+
+        // Store in local cache
+        translationCache[msgId] = data;
+        showTranslationInUI(msgId, data);
+    } catch(e) {
+        console.error('Translation error:', e);
+        if (btn) showToast('Error al traducir el mensaje');
+    } finally {
+        if (btn) {
+            btn.classList.remove('loading');
+            btn.innerHTML = '<i class="bi bi-translate"></i>';
+        }
+    }
+}
+
+function showTranslationInUI(msgId, data) {
+    const el = document.getElementById(`translation-${msgId}`);
+    if (!el) return;
+
+    const textEl = el.querySelector('.translation-text');
+    const chipsEl = el.querySelector('.slang-chips');
+
+    textEl.textContent = data.translated_text;
+
+    // Show slang note chips if any
+    if (data.slang_notes && data.slang_notes.length > 0) {
+        chipsEl.innerHTML = data.slang_notes.map(note =>
+            `<span class="slang-chip" onmouseenter="showSlangPopover(event, '${escapeHtml(note.term)}', '${escapeHtml(note.explanation)}')" onmouseleave="hideSlangPopover()">
+                <i class="bi bi-info-circle"></i> ${escapeHtml(note.term)}
+            </span>`
+        ).join('');
+    } else {
+        chipsEl.innerHTML = '';
+    }
+
+    el.style.display = 'block';
+}
+
+function showSlangPopover(event, term, explanation) {
+    const pop = document.getElementById('slang-popover');
+    document.getElementById('slang-popover-term').textContent = term;
+    document.getElementById('slang-popover-explanation').textContent = explanation;
+
+    const rect = event.target.getBoundingClientRect();
+    pop.style.left = rect.left + 'px';
+    pop.style.top = (rect.bottom + 6) + 'px';
+    pop.style.display = 'block';
+}
+
+function hideSlangPopover() {
+    document.getElementById('slang-popover').style.display = 'none';
+}
+
+// ─── Auto-translate toggle ───
+async function toggleAutoTranslate() {
+    if (!activeConvId) return;
+
+    const newState = !autoTranslateActive;
+    const btn = document.getElementById('btn-auto-translate');
+
+    try {
+        const res = await authFetch(`/api/chat/conversations/${activeConvId}/auto-translate/`, {
+            method: 'POST',
+            body: JSON.stringify({
+                auto_translate: newState,
+                target_language: me.preferred_language || 'es',
+            })
+        });
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+
+        autoTranslateActive = data.auto_translate;
+        autoTranslateTargetLang = data.target_language;
+        btn.classList.toggle('active', autoTranslateActive);
+
+        if (autoTranslateActive) {
+            showToast('Auto-traduccion activada');
+            // Translate all visible incoming messages
+            autoTranslateAllVisible();
+        } else {
+            showToast('Auto-traduccion desactivada');
+        }
+    } catch(e) {
+        console.error(e);
+        showToast('Error al cambiar auto-traduccion');
+    }
+}
+
+async function loadAutoTranslatePref() {
+    if (!activeConvId) return;
+    try {
+        const res = await authFetch(`/api/chat/conversations/${activeConvId}/auto-translate/`);
+        if (!res.ok) return;
+        const data = await res.json();
+        autoTranslateActive = data.auto_translate;
+        autoTranslateTargetLang = data.target_language;
+        document.getElementById('btn-auto-translate').classList.toggle('active', autoTranslateActive);
+    } catch(e) {
+        console.error(e);
+    }
+}
+
+function autoTranslateAllVisible(messages) {
+    const container = document.getElementById('chat-messages');
+    const msgElements = container.querySelectorAll('.chat-msg.theirs');
+    msgElements.forEach(el => {
+        const msgId = el.dataset.msgId;
+        if (msgId && !translationCache[msgId]) {
+            const btn = el.querySelector('.msg-translate-btn');
+            translateMessage(parseInt(msgId), btn);
+        }
+    });
+}
+
+// ─── Slang Dictionary Modal ───
+function openSlangModal() {
+    loadSlangTerms();
+    new bootstrap.Modal(document.getElementById('slangModal')).show();
+}
+
+async function loadSlangTerms() {
+    const list = document.getElementById('slang-term-list');
+    list.innerHTML = '<div class="text-center p-2"><span class="spinner-border spinner-border-sm"></span></div>';
+
+    try {
+        const res = await authFetch('/api/chat/slang-terms/');
+        if (!res.ok) throw new Error('Failed');
+        const terms = await res.json();
+
+        if (terms.length === 0) {
+            list.innerHTML = '<p class="text-center" style="color:var(--text-muted); font-size:0.85rem; padding:1rem;">No tienes modismos guardados</p>';
+            return;
+        }
+
+        list.innerHTML = terms.map(t => `
+            <div class="slang-term-item">
+                <div class="slang-term-info">
+                    <span class="st-term">${escapeHtml(t.term)}</span>
+                    <span class="st-lang">${t.language.toUpperCase()}</span>
+                    <div class="st-explanation">${escapeHtml(t.explanation)}</div>
+                </div>
+                <button class="slang-term-delete" onclick="deleteSlangTerm(${t.id})" title="Eliminar">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        `).join('');
+    } catch(e) {
+        list.innerHTML = '<p class="text-center text-danger" style="font-size:0.85rem;">Error al cargar</p>';
+    }
+}
+
+async function addSlangTerm() {
+    const termInput = document.getElementById('slang-term-input');
+    const langSelect = document.getElementById('slang-lang-select');
+    const explInput = document.getElementById('slang-explanation-input');
+
+    const term = termInput.value.trim();
+    const language = langSelect.value;
+    const explanation = explInput.value.trim();
+
+    if (!term || !explanation) {
+        showToast('Completa el modismo y la explicacion');
+        return;
+    }
+
+    try {
+        const res = await authFetch('/api/chat/slang-terms/', {
+            method: 'POST',
+            body: JSON.stringify({ term, language, explanation })
+        });
+        if (!res.ok) {
+            const data = await res.json();
+            showToast(data.detail || data.non_field_errors?.[0] || 'Error al agregar');
+            return;
+        }
+
+        termInput.value = '';
+        explInput.value = '';
+        loadSlangTerms();
+        showToast('Modismo agregado');
+    } catch(e) {
+        showToast('Error de conexion');
+    }
+}
+
+async function deleteSlangTerm(id) {
+    try {
+        const res = await authFetch(`/api/chat/slang-terms/${id}/`, {
+            method: 'DELETE'
+        });
+        if (res.ok || res.status === 204) {
+            loadSlangTerms();
+        } else {
+            showToast('Error al eliminar');
+        }
+    } catch(e) {
+        showToast('Error de conexion');
+    }
 }
 </script>
 {% endblock %}

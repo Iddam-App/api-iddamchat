@@ -8,8 +8,13 @@ from rest_framework.views import APIView
 from apps.moderation.filter import check_and_flag
 from apps.notifications.services import create_notification
 
-from .models import Conversation, Message, MessageTranslation
-from .serializers import ConversationSerializer, MessageSerializer
+from .models import (
+    Conversation, Message, MessageTranslation,
+    UserSlangTerm, ConversationTranslationPref,
+)
+from .serializers import (
+    ConversationSerializer, MessageSerializer, UserSlangTermSerializer,
+)
 
 User = get_user_model()
 
@@ -180,35 +185,122 @@ class TranslateMessageView(APIView):
         cached = MessageTranslation.objects.filter(
             message=msg, target_language=target_language,
         ).first()
+
         if cached:
-            return Response({
-                'translated_text': cached.translated_text,
-                'source_language': cached.source_language,
-                'target_language': target_language,
-                'cached': True,
-            })
+            translated_text = cached.translated_text
+            source_language = cached.source_language
+            was_cached = True
+        else:
+            # Translate
+            from .translation import translate_text
+            try:
+                result = translate_text(msg.content, target_language)
+            except Exception as e:
+                return Response(
+                    {'detail': f'Error de traducción: {str(e)}'},
+                    status=status.HTTP_502_BAD_GATEWAY,
+                )
 
-        # Translate
-        from .translation import translate_text
-        try:
-            result = translate_text(msg.content, target_language)
-        except Exception as e:
-            return Response(
-                {'detail': f'Error de traducción: {str(e)}'},
-                status=status.HTTP_502_BAD_GATEWAY,
+            # Cache the translation
+            translation = MessageTranslation.objects.create(
+                message=msg,
+                target_language=target_language,
+                translated_text=result['translated_text'],
+                source_language=result['detected_source_language'],
             )
+            translated_text = translation.translated_text
+            source_language = translation.source_language
+            was_cached = False
 
-        # Cache the translation
-        translation = MessageTranslation.objects.create(
-            message=msg,
-            target_language=target_language,
-            translated_text=result['translated_text'],
-            source_language=result['detected_source_language'],
-        )
+        # Look up sender's personal slang terms that appear in the original message
+        slang_notes = []
+        sender_terms = UserSlangTerm.objects.filter(user=msg.sender)
+        original_lower = msg.content.lower()
+        for st in sender_terms:
+            if st.term.lower() in original_lower:
+                slang_notes.append({
+                    'term': st.term,
+                    'language': st.language,
+                    'explanation': st.explanation,
+                })
 
         return Response({
-            'translated_text': translation.translated_text,
-            'source_language': translation.source_language,
+            'translated_text': translated_text,
+            'source_language': source_language,
             'target_language': target_language,
-            'cached': False,
+            'cached': was_cached,
+            'slang_notes': slang_notes,
+        })
+
+
+class UserSlangTermListCreateView(APIView):
+    """GET: lista modismos del usuario. POST: crear nuevo modismo."""
+
+    def get(self, request):
+        terms = UserSlangTerm.objects.filter(user=request.user)
+        serializer = UserSlangTermSerializer(terms, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        serializer = UserSlangTermSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(user=request.user)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class UserSlangTermDestroyView(APIView):
+    """DELETE: eliminar un modismo del usuario."""
+
+    def delete(self, request, term_id):
+        term = generics.get_object_or_404(
+            UserSlangTerm, pk=term_id, user=request.user,
+        )
+        term.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ConversationAutoTranslateView(APIView):
+    """GET/POST preferencia de auto-traducción por conversación."""
+
+    def get(self, request, conv_id):
+        conv = generics.get_object_or_404(Conversation, pk=conv_id)
+        user = request.user
+        if user not in (conv.user1, conv.user2):
+            return Response(
+                {'detail': 'No autorizado.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        pref = ConversationTranslationPref.objects.filter(
+            user=user, conversation=conv,
+        ).first()
+        return Response({
+            'auto_translate': pref.auto_translate if pref else False,
+            'target_language': pref.target_language if pref else (
+                user.preferred_language or 'es'
+            ),
+        })
+
+    def post(self, request, conv_id):
+        conv = generics.get_object_or_404(Conversation, pk=conv_id)
+        user = request.user
+        if user not in (conv.user1, conv.user2):
+            return Response(
+                {'detail': 'No autorizado.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        pref, _created = ConversationTranslationPref.objects.get_or_create(
+            user=user, conversation=conv,
+            defaults={'target_language': user.preferred_language or 'es'},
+        )
+
+        if 'auto_translate' in request.data:
+            pref.auto_translate = bool(request.data['auto_translate'])
+        if 'target_language' in request.data:
+            pref.target_language = request.data['target_language']
+        pref.save()
+
+        return Response({
+            'auto_translate': pref.auto_translate,
+            'target_language': pref.target_language,
         })

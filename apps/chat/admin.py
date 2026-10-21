@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 
-from .models import Conversation, Message
+from .models import Conversation, ConversationTranslationPref, Message, UserSlangTerm
 
 
 class MessageInline(admin.TabularInline):
@@ -67,3 +67,19 @@ class MessageAdmin(admin.ModelAdmin):
                 obj.original_content[:200],
             )
         return format_html('<span style="color:green">OK</span>')
+
+
+@admin.register(UserSlangTerm)
+class UserSlangTermAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'term', 'language', 'explanation', 'created_at')
+    list_filter = ('language', 'created_at')
+    search_fields = ('term', 'explanation', 'user__username', 'user__email')
+    raw_id_fields = ('user',)
+
+
+@admin.register(ConversationTranslationPref)
+class ConversationTranslationPrefAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'conversation', 'auto_translate', 'target_language', 'updated_at')
+    list_filter = ('auto_translate', 'target_language')
+    search_fields = ('user__username', 'user__email')
+    raw_id_fields = ('user', 'conversation')

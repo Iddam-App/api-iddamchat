@@ -11,4 +11,7 @@ urlpatterns = [
     path('conversations/<int:conv_id>/send/', views.MessageSendView.as_view(), name='message_send'),
     path('unread/', views.UnreadCountView.as_view(), name='unread_count'),
     path('messages/<int:message_id>/translate/', views.TranslateMessageView.as_view(), name='translate_message'),
+    path('conversations/<int:conv_id>/auto-translate/', views.ConversationAutoTranslateView.as_view(), name='auto_translate'),
+    path('slang-terms/', views.UserSlangTermListCreateView.as_view(), name='slang_term_list_create'),
+    path('slang-terms/<int:term_id>/', views.UserSlangTermDestroyView.as_view(), name='slang_term_destroy'),
 ]
