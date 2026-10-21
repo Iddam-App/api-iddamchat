@@ -27,8 +27,8 @@
         <div class="prompt-text">Comparte tu hobby con la comunidad...</div>
     </div>
 
-    <!-- Loading spinner -->
-    <div class="feed-spinner" id="feed-spinner">
+    <!-- Loading spinner (hidden by default, shown by JS) -->
+    <div class="feed-spinner" id="feed-spinner" style="display:none;">
         <div class="spinner-border" role="status"></div>
     </div>
 
@@ -223,12 +223,15 @@ async function loadFeed() {
     const spinner = document.getElementById('feed-spinner');
     if (currentPage === 1) spinner.style.display = 'block';
 
+    // Timeout to prevent infinite spinner
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+
     try {
-        const res = await authFetch(`/api/posts/hobbies/?page=${currentPage}`);
+        const res = await authFetch(`/api/posts/hobbies/?page=${currentPage}`, { signal: controller.signal });
         if (!res.ok) throw new Error('Failed');
         const data = await res.json();
 
-        spinner.style.display = 'none';
         const feed = document.getElementById('posts-feed');
         const posts = data.results || data;
 
@@ -248,9 +251,11 @@ async function loadFeed() {
             document.getElementById('load-more-container').style.display = 'none';
         }
     } catch(e) {
-        spinner.style.display = 'none';
         if (currentPage === 1) document.getElementById('empty-state').style.display = 'block';
-        console.error(e);
+        console.error('loadFeed error:', e);
+    } finally {
+        clearTimeout(timeout);
+        spinner.style.display = 'none';
     }
 }
 </script>

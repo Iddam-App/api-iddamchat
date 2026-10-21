@@ -636,9 +636,11 @@ async function loadStats() {
 // ─── Load User Posts ───
 async function loadUserPosts() {
     const spinner = document.getElementById('posts-spinner');
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+
     try {
-        const res = await authFetch(`/api/posts/user/${profileUserId}/`);
-        spinner.style.display = 'none';
+        const res = await authFetch(`/api/posts/user/${profileUserId}/`, { signal: controller.signal });
         if (!res.ok) throw new Error('Failed');
         const data = await res.json();
         userPosts = data.results || data;
@@ -652,9 +654,11 @@ async function loadUserPosts() {
         renderPostsGrid();
         renderPostsList();
     } catch(e) {
-        spinner.style.display = 'none';
         document.getElementById('empty-posts').style.display = 'block';
         console.error(e);
+    } finally {
+        clearTimeout(timeout);
+        spinner.style.display = 'none';
     }
 }
 

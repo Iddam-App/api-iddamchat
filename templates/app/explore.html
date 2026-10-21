@@ -87,9 +87,11 @@ async function loadDiscoverGrid() {
     const grid = document.getElementById('discover-grid');
     const empty = document.getElementById('discover-empty');
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+
     try {
-        const res = await authFetch('/api/posts/feed/');
-        spinner.style.display = 'none';
+        const res = await authFetch('/api/posts/feed/', { signal: controller.signal });
         if (!res.ok) throw new Error('Failed');
 
         const data = await res.json();
@@ -102,9 +104,11 @@ async function loadDiscoverGrid() {
             renderDiscoverGrid();
         }
     } catch(e) {
-        spinner.style.display = 'none';
         empty.style.display = 'block';
         console.error(e);
+    } finally {
+        clearTimeout(timeout);
+        spinner.style.display = 'none';
     }
 }
 

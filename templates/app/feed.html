@@ -967,13 +967,15 @@ async function loadFeed() {
         infiniteSpinner.classList.add('visible');
     }
 
+    // Timeout to prevent infinite spinner
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+
     try {
-        const res = await authFetch(`/api/posts/feed/?page=${currentPage}`);
+        const res = await authFetch(`/api/posts/feed/?page=${currentPage}`, { signal: controller.signal });
         if (!res.ok) throw new Error('Failed');
         const data = await res.json();
 
-        skeleton.style.display = 'none';
-        infiniteSpinner.classList.remove('visible');
         const feed = document.getElementById('posts-feed');
         const posts = data.results || data;
 
@@ -1002,14 +1004,15 @@ async function loadFeed() {
             }
         }
     } catch(e) {
-        skeleton.style.display = 'none';
-        infiniteSpinner.classList.remove('visible');
         if (currentPage === 1) {
             document.getElementById('empty-state').style.display = 'block';
             feedHasMore = false;
         }
         console.error(e);
     } finally {
+        clearTimeout(timeout);
+        skeleton.style.display = 'none';
+        infiniteSpinner.classList.remove('visible');
         feedLoading = false;
     }
 }
