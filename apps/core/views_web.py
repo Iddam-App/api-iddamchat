@@ -55,3 +55,7 @@ def explore_view(request):
 
 def events_view(request):
     return render(request, 'app/events.html')
+
+
+def jobs_view(request):
+    return render(request, 'app/jobs.html')

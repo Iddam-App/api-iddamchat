@@ -63,6 +63,9 @@
                 <a href="/hosting/" class="nav-icon-btn nav-hosting-btn" id="nav-hosting-btn" title="Hospedaje">
                     <i class="bi bi-house-heart-fill"></i>
                 </a>
+                <a href="/jobs/" class="nav-icon-btn" id="nav-jobs-btn" title="Oportunidades Laborales">
+                    <i class="bi bi-briefcase-fill"></i>
+                </a>
                 <a href="/groups/" class="nav-icon-btn" id="nav-groups-btn" title="Grupos">
                     <i class="bi bi-people-fill"></i>
                 </a>
@@ -261,6 +264,10 @@
         if (path.startsWith('/hosting')) {
             const hb = document.getElementById('nav-hosting-btn');
             if (hb) hb.classList.add('active');
+        }
+        if (path.startsWith('/jobs')) {
+            const jb = document.getElementById('nav-jobs-btn');
+            if (jb) jb.classList.add('active');
         }
 
         // Load unread count + notification count + user data in parallel (non-blocking)

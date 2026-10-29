@@ -8,7 +8,7 @@ from apps.core.views_web import (
     landing_view, login_view, register_view,
     feed_view, hobbies_view, hosting_view, chat_view, groups_view,
     profile_view, edit_profile_view, post_detail_view,
-    notifications_view, explore_view, events_view,
+    notifications_view, explore_view, events_view, jobs_view,
 )
 
 
@@ -61,6 +61,7 @@ urlpatterns = [
     path('notifications/', notifications_view, name='notifications'),
     path('explore/', explore_view, name='explore'),
     path('events/', events_view, name='events'),
+    path('jobs/', jobs_view, name='jobs'),
 
     path('admin/', admin.site.urls),
 
@@ -78,6 +79,7 @@ urlpatterns = [
     path('api/chat/', include('apps.chat.urls', namespace='chat')),
     path('api/moderation/', include('apps.moderation.urls', namespace='moderation')),
     path('api/notifications/', include('apps.notifications.urls', namespace='notifications')),
+    path('api/jobs/', include('apps.jobs.urls', namespace='jobs')),
 ]
 
 if settings.DEBUG:

@@ -1,0 +1,1449 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Oportunidades Laborales — IddamChat{% endblock %}
+
+{% block content %}
+<div class="feed-container">
+    <div class="feed-header">
+        <h2><i class="bi bi-briefcase me-2"></i>Oportunidades Laborales</h2>
+    </div>
+
+    <!-- Tabs -->
+    <div class="hosting-tabs">
+        <button class="hosting-tab active" data-tab="browse"><i class="bi bi-search"></i> Buscar</button>
+        <button class="hosting-tab" data-tab="publish"><i class="bi bi-plus-circle"></i> Publicar</button>
+        <button class="hosting-tab" data-tab="tips"><i class="bi bi-lightbulb"></i> Consejos</button>
+        <button class="hosting-tab" data-tab="my-postings"><i class="bi bi-file-earmark-text"></i> Mis Ofertas</button>
+        <button class="hosting-tab" data-tab="saved"><i class="bi bi-bookmark"></i> Guardados</button>
+    </div>
+
+    <!-- ═══ TAB: Browse Jobs ═══ -->
+    <div class="jobs-panel" id="panel-browse">
+        <!-- Notifications banner -->
+        <div class="jobs-notif-banner" id="jobs-notif-banner" style="display:none;">
+            <i class="bi bi-bell"></i>
+            <span id="jobs-notif-text"></span>
+        </div>
+
+        <!-- Filters -->
+        <div class="jobs-filter-bar">
+            <input type="text" class="form-control" id="filter-search" placeholder="Buscar puesto, empresa, habilidad...">
+            <button class="btn btn-gradient btn-sm" id="btn-search-jobs"><i class="bi bi-search"></i></button>
+        </div>
+        <div class="jobs-filter-row">
+            <select class="form-select form-select-sm" id="filter-category">
+                <option value="">Categoria</option>
+            </select>
+            <select class="form-select form-select-sm" id="filter-type">
+                <option value="">Tipo</option>
+                <option value="full_time">Tiempo completo</option>
+                <option value="part_time">Medio tiempo</option>
+                <option value="contract">Contrato</option>
+                <option value="freelance">Freelance</option>
+                <option value="internship">Pasantia</option>
+                <option value="volunteer">Voluntariado</option>
+            </select>
+            <select class="form-select form-select-sm" id="filter-modality">
+                <option value="">Modalidad</option>
+                <option value="on_site">Presencial</option>
+                <option value="remote">Remoto</option>
+                <option value="hybrid">Hibrido</option>
+            </select>
+            <select class="form-select form-select-sm" id="filter-exp">
+                <option value="">Experiencia</option>
+                <option value="entry">Junior</option>
+                <option value="mid">Intermedio</option>
+                <option value="senior">Senior</option>
+                <option value="any">No importa</option>
+            </select>
+        </div>
+
+        <div class="feed-spinner" id="jobs-spinner">
+            <div class="spinner-border" role="status"></div>
+            <p class="mt-2">Buscando ofertas...</p>
+        </div>
+
+        <div id="jobs-list"></div>
+
+        <div class="empty-state" id="jobs-empty" style="display:none;">
+            <i class="bi bi-briefcase"></i>
+            <h5>No se encontraron ofertas</h5>
+            <p>Prueba con otros filtros o vuelve mas tarde</p>
+        </div>
+    </div>
+
+    <!-- ═══ TAB: Publish ═══ -->
+    <div class="jobs-panel" id="panel-publish" style="display:none;">
+        <div class="info-card">
+            <h5><i class="bi bi-megaphone me-2"></i>Publicar Oferta de Empleo</h5>
+            <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1rem;">Completa el formulario para publicar una oportunidad laboral.</p>
+
+            <div class="row g-3">
+                <div class="col-sm-6">
+                    <label class="form-label">Titulo del puesto *</label>
+                    <input type="text" class="form-control" id="pub-title" placeholder="Ej: Desarrollador Web" required>
+                </div>
+                <div class="col-sm-6">
+                    <label class="form-label">Empresa / Organizacion</label>
+                    <input type="text" class="form-control" id="pub-company" placeholder="Nombre de la empresa">
+                </div>
+                <div class="col-sm-4">
+                    <label class="form-label">Categoria</label>
+                    <select class="form-select" id="pub-category">
+                        <option value="">Seleccionar...</option>
+                    </select>
+                </div>
+                <div class="col-sm-4">
+                    <label class="form-label">Tipo de empleo</label>
+                    <select class="form-select" id="pub-type">
+                        <option value="full_time">Tiempo completo</option>
+                        <option value="part_time">Medio tiempo</option>
+                        <option value="contract">Contrato</option>
+                        <option value="freelance">Freelance</option>
+                        <option value="internship">Pasantia</option>
+                        <option value="volunteer">Voluntariado</option>
+                    </select>
+                </div>
+                <div class="col-sm-4">
+                    <label class="form-label">Modalidad</label>
+                    <select class="form-select" id="pub-modality">
+                        <option value="on_site">Presencial</option>
+                        <option value="remote">Remoto</option>
+                        <option value="hybrid">Hibrido</option>
+                    </select>
+                </div>
+                <div class="col-sm-4">
+                    <label class="form-label">Nivel de experiencia</label>
+                    <select class="form-select" id="pub-experience">
+                        <option value="any">No importa</option>
+                        <option value="entry">Junior</option>
+                        <option value="mid">Intermedio</option>
+                        <option value="senior">Senior</option>
+                    </select>
+                </div>
+                <div class="col-sm-4">
+                    <label class="form-label">Ciudad</label>
+                    <input type="text" class="form-control" id="pub-city" placeholder="Ej: Santiago">
+                </div>
+                <div class="col-sm-4">
+                    <label class="form-label">Pais</label>
+                    <select class="form-select" id="pub-country">
+                        <option value="">Seleccionar...</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Descripcion del trabajo *</label>
+                    <textarea class="form-control" id="pub-description" rows="4" placeholder="Describe las responsabilidades y detalles del puesto..." required></textarea>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Habilidades requeridas</label>
+                    <input type="text" class="form-control" id="pub-skills" placeholder="Excel, Ingles, Python, Trabajo en equipo...">
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Requisitos adicionales</label>
+                    <textarea class="form-control" id="pub-requirements" rows="2" placeholder="Titulo universitario, certificaciones, etc."></textarea>
+                </div>
+                <div class="col-sm-4">
+                    <label class="form-label">Salario minimo</label>
+                    <input type="number" class="form-control" id="pub-salary-min" placeholder="Ej: 500" min="0">
+                </div>
+                <div class="col-sm-4">
+                    <label class="form-label">Salario maximo</label>
+                    <input type="number" class="form-control" id="pub-salary-max" placeholder="Ej: 1500" min="0">
+                </div>
+                <div class="col-sm-4">
+                    <label class="form-label">Moneda</label>
+                    <select class="form-select" id="pub-currency">
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                        <option value="MXN">MXN</option>
+                        <option value="CLP">CLP</option>
+                        <option value="ARS">ARS</option>
+                        <option value="COP">COP</option>
+                        <option value="PEN">PEN</option>
+                        <option value="BRL">BRL</option>
+                    </select>
+                </div>
+                <div class="col-sm-4">
+                    <label class="form-label">Email de contacto</label>
+                    <input type="email" class="form-control" id="pub-email" placeholder="correo@empresa.com">
+                </div>
+                <div class="col-sm-4">
+                    <label class="form-label">Telefono</label>
+                    <input type="text" class="form-control" id="pub-phone" placeholder="+56 9 1234 5678">
+                </div>
+                <div class="col-sm-4">
+                    <label class="form-label">Enlace para postular</label>
+                    <input type="url" class="form-control" id="pub-url" placeholder="https://...">
+                </div>
+                <div class="col-sm-6">
+                    <label class="form-label">Fecha limite de postulacion</label>
+                    <input type="date" class="form-control" id="pub-deadline">
+                </div>
+                <div class="col-sm-6">
+                    <label class="form-label">Imagen (opcional)</label>
+                    <input type="file" class="form-control" id="pub-image" accept="image/*">
+                </div>
+            </div>
+
+            <button class="btn btn-gradient mt-3 w-100" id="btn-publish-job">
+                <i class="bi bi-send me-1"></i>Publicar Oferta
+            </button>
+        </div>
+    </div>
+
+    <!-- ═══ TAB: Tips ═══ -->
+    <div class="jobs-panel" id="panel-tips" style="display:none;">
+        <!-- Category chips -->
+        <div class="tips-chips-wrapper">
+            <div class="tips-chips" id="tips-chips">
+                <button class="tip-chip active" data-cat="">Todos</button>
+            </div>
+        </div>
+
+        <!-- Subcategory chips -->
+        <div class="tips-chips-wrapper" id="tips-subchips-wrapper" style="display:none;">
+            <div class="tips-chips" id="tips-subchips"></div>
+        </div>
+
+        <div class="feed-spinner" id="tips-spinner">
+            <div class="spinner-border" role="status"></div>
+            <p class="mt-2">Cargando consejos...</p>
+        </div>
+
+        <div id="tips-list"></div>
+
+        <div class="empty-state" id="tips-empty" style="display:none;">
+            <i class="bi bi-lightbulb"></i>
+            <h5>No hay consejos aun</h5>
+            <p>Se el primero en compartir un consejo laboral</p>
+        </div>
+
+        <!-- FAB create tip -->
+        <button class="jobs-fab" id="btn-open-tip-modal" title="Crear consejo">
+            <i class="bi bi-plus-lg"></i>
+        </button>
+    </div>
+
+    <!-- ═══ TAB: My Postings ═══ -->
+    <div class="jobs-panel" id="panel-my-postings" style="display:none;">
+        <div class="feed-spinner" id="my-postings-spinner">
+            <div class="spinner-border" role="status"></div>
+            <p class="mt-2">Cargando tus ofertas...</p>
+        </div>
+
+        <div id="my-postings-list"></div>
+
+        <div class="empty-state" id="my-postings-empty" style="display:none;">
+            <i class="bi bi-file-earmark-text"></i>
+            <h5>No has publicado ofertas</h5>
+            <p>Ve a la pestana "Publicar" para crear tu primera oferta</p>
+        </div>
+    </div>
+
+    <!-- ═══ TAB: Saved ═══ -->
+    <div class="jobs-panel" id="panel-saved" style="display:none;">
+        <div class="feed-spinner" id="saved-spinner">
+            <div class="spinner-border" role="status"></div>
+            <p class="mt-2">Cargando guardados...</p>
+        </div>
+
+        <div id="saved-list"></div>
+
+        <div class="empty-state" id="saved-empty" style="display:none;">
+            <i class="bi bi-bookmark"></i>
+            <h5>No tienes ofertas guardadas</h5>
+            <p>Guarda ofertas que te interesen para revisarlas despues</p>
+        </div>
+    </div>
+</div>
+
+<!-- Job Detail Modal -->
+<div class="modal fade" id="jobDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-briefcase me-2"></i>Detalle de Oferta</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="job-detail-body"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Tip Modal -->
+<div class="modal fade" id="tipModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-lightbulb me-2"></i>Nuevo Consejo Laboral</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Titulo *</label>
+                    <input type="text" class="form-control" id="tip-title" placeholder="Ej: Como preparar tu CV para tech">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Categoria</label>
+                    <select class="form-select" id="tip-category">
+                        <option value="">Sin categoria</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Contenido *</label>
+                    <textarea class="form-control" id="tip-content" rows="5" placeholder="Comparte tu consejo o experiencia..."></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Imagen (opcional)</label>
+                    <input type="file" class="form-control" id="tip-image" accept="image/*">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-gradient w-100" id="btn-create-tip">
+                    <i class="bi bi-send me-1"></i>Publicar Consejo
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+/* ─── Jobs-specific styles ─── */
+.jobs-filter-bar {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+.jobs-filter-bar .form-control {
+    border-radius: 12px;
+    border: 1.5px solid var(--input-border);
+    background: var(--input-bg);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    padding: 0.5rem 0.8rem;
+}
+.jobs-filter-bar .form-control:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(139,115,85,0.15);
+}
+.jobs-filter-row {
+    display: flex;
+    gap: 0.4rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+.jobs-filter-row .form-select {
+    border-radius: 10px;
+    border: 1.5px solid var(--input-border);
+    background: var(--input-bg);
+    color: var(--text-primary);
+    font-size: 0.8rem;
+    padding: 0.35rem 0.6rem;
+    flex: 1;
+    min-width: 100px;
+}
+.jobs-filter-row .form-select:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(139,115,85,0.15);
+}
+
+/* Notification banner */
+.jobs-notif-banner {
+    background: linear-gradient(135deg, var(--gold-light), var(--gold-dark));
+    color: #fff;
+    padding: 0.6rem 1rem;
+    border-radius: 12px;
+    margin-bottom: 0.8rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Job Card */
+.job-card {
+    background: var(--card-bg);
+    border-radius: 20px;
+    box-shadow: 0 1px 8px rgba(0,0,0,0.05);
+    padding: 1.2rem;
+    margin-bottom: 0.8rem;
+    transition: box-shadow 0.2s;
+}
+.job-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+.job-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin-bottom: 0.6rem;
+}
+.job-card-header .job-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold-light), var(--gold-dark));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 1rem;
+    flex-shrink: 0;
+    overflow: hidden;
+    text-decoration: none;
+}
+.job-card-header .job-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.job-card-header .job-info { flex: 1; }
+.job-card-header .job-author {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    text-decoration: none;
+}
+.job-card-header .job-author:hover { color: var(--gold); }
+.job-card-header .job-company {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+.job-card-header .job-time {
+    font-size: 0.75rem;
+    color: var(--text-light);
+}
+.job-card-title {
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+    cursor: pointer;
+}
+.job-card-title:hover { color: var(--gold); }
+.job-card-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-bottom: 0.5rem;
+}
+.job-badge {
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 0.2rem 0.55rem;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+.job-badge.type { background: #e8f5e9; color: #2e7d32; }
+.job-badge.modality { background: #e3f2fd; color: #1565c0; }
+.job-badge.exp { background: #fff3e0; color: #e65100; }
+.job-badge.location { background: #f3e5f5; color: #7b1fa2; }
+[data-theme="dark"] .job-badge.type { background: #1b3a1b; color: #66bb6a; }
+[data-theme="dark"] .job-badge.modality { background: #0d2137; color: #64b5f6; }
+[data-theme="dark"] .job-badge.exp { background: #3e2000; color: #ffb74d; }
+[data-theme="dark"] .job-badge.location { background: #2a1030; color: #ce93d8; }
+
+.job-card-skills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-bottom: 0.5rem;
+}
+.skill-chip {
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 0.18rem 0.5rem;
+    border-radius: 20px;
+    background: linear-gradient(135deg, rgba(139,115,85,0.15), rgba(139,115,85,0.08));
+    color: var(--gold-dark, #8b7355);
+    border: 1px solid rgba(139,115,85,0.25);
+}
+[data-theme="dark"] .skill-chip {
+    background: rgba(139,115,85,0.2);
+    color: #c9a96e;
+    border-color: rgba(201,169,110,0.3);
+}
+.job-card-salary {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--gold);
+    margin-bottom: 0.4rem;
+}
+.job-card-desc {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+.job-card-image {
+    width: 100%;
+    max-height: 220px;
+    object-fit: cover;
+    border-radius: 12px;
+    margin-bottom: 0.5rem;
+}
+.job-card-footer {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+/* Publish form */
+#panel-publish .form-label {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+#panel-publish .form-control,
+#panel-publish .form-select {
+    border-radius: 10px;
+    border: 1.5px solid var(--input-border);
+    background: var(--input-bg);
+    color: var(--text-primary);
+    padding: 0.6rem 1rem;
+}
+#panel-publish .form-control:focus,
+#panel-publish .form-select:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(139,115,85,0.15);
+}
+#panel-publish textarea.form-control {
+    resize: vertical;
+    min-height: 60px;
+}
+
+/* Tips chips */
+.tips-chips-wrapper {
+    overflow-x: auto;
+    margin-bottom: 0.6rem;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+.tips-chips-wrapper::-webkit-scrollbar { display: none; }
+.tips-chips {
+    display: flex;
+    gap: 0.4rem;
+    padding: 0.2rem 0;
+    white-space: nowrap;
+}
+.tip-chip {
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.35rem 0.8rem;
+    border-radius: 20px;
+    border: 1.5px solid var(--input-border);
+    background: var(--card-bg);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+.tip-chip:hover {
+    border-color: var(--gold);
+    color: var(--gold);
+}
+.tip-chip.active {
+    background: var(--gold);
+    color: #fff;
+    border-color: var(--gold);
+}
+
+/* Tip Card */
+.tip-card {
+    background: var(--card-bg);
+    border-radius: 20px;
+    box-shadow: 0 1px 8px rgba(0,0,0,0.05);
+    padding: 1.2rem;
+    margin-bottom: 0.8rem;
+    transition: box-shadow 0.2s;
+}
+.tip-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+.tip-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin-bottom: 0.5rem;
+}
+.tip-card-header .tip-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold-light), var(--gold-dark));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+    overflow: hidden;
+    text-decoration: none;
+}
+.tip-card-header .tip-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.tip-card-breadcrumb {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-bottom: 0.3rem;
+}
+.tip-card-title {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--text-primary);
+    margin-bottom: 0.4rem;
+}
+.tip-card-content {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+.tip-card-image {
+    width: 100%;
+    max-height: 200px;
+    object-fit: cover;
+    border-radius: 12px;
+    margin-bottom: 0.5rem;
+}
+.tip-card-footer {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+}
+.tip-like-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.3rem 0.5rem;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+.tip-like-btn:hover { background: var(--hover-bg); }
+.tip-like-btn.liked { color: #e53935; }
+.tip-like-btn.liked i { font-weight: 900; }
+
+/* FAB */
+.jobs-fab {
+    position: fixed;
+    bottom: 80px;
+    right: 20px;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold-light), var(--gold-dark));
+    color: #fff;
+    border: none;
+    font-size: 1.3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(139,115,85,0.4);
+    cursor: pointer;
+    z-index: 100;
+    transition: transform 0.2s;
+}
+.jobs-fab:hover { transform: scale(1.1); }
+
+/* Bookmark button */
+.bookmark-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    padding: 0.3rem;
+    transition: color 0.2s;
+}
+.bookmark-btn:hover { color: var(--gold); }
+.bookmark-btn.active { color: var(--gold); }
+
+/* Modal form styles */
+#tipModal .form-label {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+#tipModal .form-control,
+#tipModal .form-select {
+    border-radius: 10px;
+    border: 1.5px solid var(--input-border);
+    background: var(--input-bg);
+    color: var(--text-primary);
+    padding: 0.6rem 1rem;
+}
+#tipModal .form-control:focus,
+#tipModal .form-select:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(139,115,85,0.15);
+}
+#tipModal textarea.form-control {
+    resize: vertical;
+    min-height: 80px;
+}
+
+/* Detail modal */
+#job-detail-body .detail-section {
+    margin-bottom: 1rem;
+}
+#job-detail-body .detail-label {
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 0.3rem;
+}
+#job-detail-body .detail-value {
+    font-size: 0.92rem;
+    color: var(--text-primary);
+    line-height: 1.6;
+}
+</style>
+
+<script>
+const JOB_TYPE_LABELS = {
+    full_time: 'Tiempo completo', part_time: 'Medio tiempo',
+    contract: 'Contrato', freelance: 'Freelance',
+    internship: 'Pasantia', volunteer: 'Voluntariado'
+};
+const MODALITY_LABELS = {
+    on_site: 'Presencial', remote: 'Remoto', hybrid: 'Hibrido'
+};
+const EXP_LABELS = {
+    entry: 'Junior', mid: 'Intermedio', senior: 'Senior', any: 'No importa'
+};
+
+let currentTab = 'browse';
+let me = {};
+let jobCategories = [];
+let tipCategories = [];
+let selectedTipCat = '';
+
+onPageReady(() => {
+    if (!isLoggedIn()) { window.location.href = '/login/'; return; }
+
+    me = JSON.parse(localStorage.getItem('user_data') || '{}');
+
+    // Tab switching
+    document.querySelectorAll('.hosting-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.hosting-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            const target = tab.dataset.tab;
+            document.querySelectorAll('.jobs-panel').forEach(p => p.style.display = 'none');
+            document.getElementById('panel-' + target).style.display = 'block';
+
+            if (target !== currentTab) {
+                currentTab = target;
+                if (target === 'browse') loadJobs();
+                else if (target === 'tips') loadTips();
+                else if (target === 'my-postings') loadMyPostings();
+                else if (target === 'saved') loadSaved();
+            }
+        });
+    });
+
+    // Search
+    document.getElementById('btn-search-jobs').addEventListener('click', loadJobs);
+    document.getElementById('filter-search').addEventListener('keydown', e => {
+        if (e.key === 'Enter') loadJobs();
+    });
+    document.getElementById('filter-category').addEventListener('change', loadJobs);
+    document.getElementById('filter-type').addEventListener('change', loadJobs);
+    document.getElementById('filter-modality').addEventListener('change', loadJobs);
+    document.getElementById('filter-exp').addEventListener('change', loadJobs);
+
+    // Publish
+    document.getElementById('btn-publish-job').addEventListener('click', publishJob);
+
+    // Tips
+    document.getElementById('btn-open-tip-modal').addEventListener('click', () => {
+        document.getElementById('tip-title').value = '';
+        document.getElementById('tip-category').value = '';
+        document.getElementById('tip-content').value = '';
+        document.getElementById('tip-image').value = '';
+        new bootstrap.Modal(document.getElementById('tipModal')).show();
+    });
+    document.getElementById('btn-create-tip').addEventListener('click', createTip);
+
+    // Load initial data
+    loadCategories();
+    loadCountryOptions();
+    loadJobs();
+});
+
+// ─── Country Options ───
+function loadCountryOptions() {
+    const countries = [
+        ['AR', 'Argentina'], ['BO', 'Bolivia'], ['BR', 'Brasil'], ['CA', 'Canada'],
+        ['CL', 'Chile'], ['CO', 'Colombia'], ['CR', 'Costa Rica'], ['CU', 'Cuba'],
+        ['EC', 'Ecuador'], ['SV', 'El Salvador'], ['US', 'Estados Unidos'],
+        ['GT', 'Guatemala'], ['HN', 'Honduras'], ['MX', 'Mexico'],
+        ['NI', 'Nicaragua'], ['PA', 'Panama'], ['PY', 'Paraguay'], ['PE', 'Peru'],
+        ['DO', 'Rep. Dominicana'], ['UY', 'Uruguay'], ['VE', 'Venezuela'],
+    ];
+    const sel = document.getElementById('pub-country');
+    countries.forEach(([code, name]) => {
+        sel.insertAdjacentHTML('beforeend', `<option value="${code}">${name}</option>`);
+    });
+}
+
+// ─── Load Categories ───
+async function loadCategories() {
+    try {
+        // Job categories
+        const res = await authFetch('/api/jobs/categories/');
+        if (res.ok) {
+            jobCategories = await res.json();
+            const filterCat = document.getElementById('filter-category');
+            const pubCat = document.getElementById('pub-category');
+            jobCategories.forEach(c => {
+                const opt = `<option value="${c.id}">${escapeHtml(c.name)}</option>`;
+                filterCat.insertAdjacentHTML('beforeend', opt);
+                pubCat.insertAdjacentHTML('beforeend', opt);
+            });
+        }
+
+        // Tip categories
+        const res2 = await authFetch('/api/jobs/tip-categories/');
+        if (res2.ok) {
+            tipCategories = await res2.json();
+            buildTipChips();
+            buildTipCategorySelect();
+        }
+    } catch(e) {
+        console.error('Error loading categories:', e);
+    }
+}
+
+function buildTipChips() {
+    const container = document.getElementById('tips-chips');
+    tipCategories.forEach(cat => {
+        container.insertAdjacentHTML('beforeend',
+            `<button class="tip-chip" data-cat="${cat.id}">${escapeHtml(cat.name)}</button>`
+        );
+    });
+
+    container.addEventListener('click', (e) => {
+        const chip = e.target.closest('.tip-chip');
+        if (!chip) return;
+        container.querySelectorAll('.tip-chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        selectedTipCat = chip.dataset.cat;
+
+        // Show subcategories
+        const subWrapper = document.getElementById('tips-subchips-wrapper');
+        const subContainer = document.getElementById('tips-subchips');
+        const parent = tipCategories.find(c => String(c.id) === selectedTipCat);
+
+        if (parent && parent.children && parent.children.length > 0) {
+            subContainer.innerHTML = `<button class="tip-chip active" data-cat="${parent.id}">Todos</button>`;
+            parent.children.forEach(sub => {
+                subContainer.insertAdjacentHTML('beforeend',
+                    `<button class="tip-chip" data-cat="${sub.id}">${escapeHtml(sub.name)}</button>`
+                );
+            });
+            subWrapper.style.display = 'block';
+
+            subContainer.onclick = (ev) => {
+                const sc = ev.target.closest('.tip-chip');
+                if (!sc) return;
+                subContainer.querySelectorAll('.tip-chip').forEach(c => c.classList.remove('active'));
+                sc.classList.add('active');
+                selectedTipCat = sc.dataset.cat;
+                loadTips();
+            };
+        } else {
+            subWrapper.style.display = 'none';
+        }
+
+        loadTips();
+    });
+}
+
+function buildTipCategorySelect() {
+    const sel = document.getElementById('tip-category');
+    tipCategories.forEach(parent => {
+        if (parent.children && parent.children.length > 0) {
+            const group = document.createElement('optgroup');
+            group.label = parent.name;
+            parent.children.forEach(child => {
+                const opt = document.createElement('option');
+                opt.value = child.id;
+                opt.textContent = child.name;
+                group.appendChild(opt);
+            });
+            sel.appendChild(group);
+        } else {
+            const opt = document.createElement('option');
+            opt.value = parent.id;
+            opt.textContent = parent.name;
+            sel.appendChild(opt);
+        }
+    });
+}
+
+// ─── Load Jobs ───
+async function loadJobs() {
+    const spinner = document.getElementById('jobs-spinner');
+    const list = document.getElementById('jobs-list');
+    const empty = document.getElementById('jobs-empty');
+
+    spinner.style.display = 'block';
+    list.innerHTML = '';
+    empty.style.display = 'none';
+
+    const search = document.getElementById('filter-search').value.trim();
+    const category = document.getElementById('filter-category').value;
+    const jobType = document.getElementById('filter-type').value;
+    const modality = document.getElementById('filter-modality').value;
+    const exp = document.getElementById('filter-exp').value;
+
+    let url = '/api/jobs/postings/?';
+    if (search) url += 'search=' + encodeURIComponent(search) + '&';
+    if (category) url += 'category=' + encodeURIComponent(category) + '&';
+    if (jobType) url += 'job_type=' + encodeURIComponent(jobType) + '&';
+    if (modality) url += 'modality=' + encodeURIComponent(modality) + '&';
+    if (exp) url += 'experience_level=' + encodeURIComponent(exp) + '&';
+
+    try {
+        const res = await authFetch(url);
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+        const jobs = data.results || data;
+
+        spinner.style.display = 'none';
+
+        // Notification banner
+        const banner = document.getElementById('jobs-notif-banner');
+        const thisWeek = jobs.filter(j => {
+            const d = new Date(j.created_at);
+            const now = new Date();
+            return (now - d) < 7 * 24 * 60 * 60 * 1000;
+        });
+        if (thisWeek.length > 0) {
+            document.getElementById('jobs-notif-text').textContent =
+                `${thisWeek.length} nueva${thisWeek.length > 1 ? 's' : ''} oferta${thisWeek.length > 1 ? 's' : ''} esta semana`;
+            banner.style.display = 'flex';
+        } else {
+            banner.style.display = 'none';
+        }
+
+        if (jobs.length === 0) {
+            empty.style.display = 'block';
+            return;
+        }
+
+        jobs.forEach(job => {
+            list.insertAdjacentHTML('beforeend', renderJobCard(job));
+        });
+    } catch(e) {
+        spinner.style.display = 'none';
+        showToast('Error al cargar ofertas');
+        console.error(e);
+    }
+}
+
+function renderJobCard(job) {
+    const u = job.author || {};
+    const initial = (u.first_name || u.username || '?')[0].toUpperCase();
+    const avatarInner = u.avatar ? `<img src="${u.avatar}" alt="">` : initial;
+    const displayName = u.display_name || u.first_name || u.username || 'Usuario';
+    const companyLine = job.company_name ? `<span class="job-company">${escapeHtml(job.company_name)}</span>` : '';
+
+    // Badges
+    let badgesHtml = '';
+    badgesHtml += `<span class="job-badge type"><i class="bi bi-clock"></i> ${JOB_TYPE_LABELS[job.job_type] || job.job_type}</span>`;
+    badgesHtml += `<span class="job-badge modality"><i class="bi bi-geo"></i> ${MODALITY_LABELS[job.modality] || job.modality}</span>`;
+    badgesHtml += `<span class="job-badge exp"><i class="bi bi-bar-chart"></i> ${EXP_LABELS[job.experience_level] || job.experience_level}</span>`;
+    const loc = [job.location_city, job.location_country].filter(Boolean).join(', ');
+    if (loc) badgesHtml += `<span class="job-badge location"><i class="bi bi-pin-map"></i> ${escapeHtml(loc)}</span>`;
+
+    // Skills
+    let skillsHtml = '';
+    if (job.skills) {
+        const skillList = job.skills.split(',').map(s => s.trim()).filter(Boolean).slice(0, 6);
+        skillsHtml = '<div class="job-card-skills">' +
+            skillList.map(s => `<span class="skill-chip">${escapeHtml(s)}</span>`).join('') +
+            '</div>';
+    }
+
+    // Salary
+    let salaryHtml = '';
+    if (job.salary_min || job.salary_max) {
+        const cur = job.salary_currency || 'USD';
+        if (job.salary_min && job.salary_max) {
+            salaryHtml = `<div class="job-card-salary"><i class="bi bi-cash me-1"></i>${cur} ${job.salary_min.toLocaleString()} - ${job.salary_max.toLocaleString()}</div>`;
+        } else if (job.salary_min) {
+            salaryHtml = `<div class="job-card-salary"><i class="bi bi-cash me-1"></i>Desde ${cur} ${job.salary_min.toLocaleString()}</div>`;
+        } else {
+            salaryHtml = `<div class="job-card-salary"><i class="bi bi-cash me-1"></i>Hasta ${cur} ${job.salary_max.toLocaleString()}</div>`;
+        }
+    }
+
+    // Image
+    const imageHtml = job.image ? `<img src="${job.image}" class="job-card-image" alt="">` : '';
+
+    // Bookmark
+    const bmClass = job.is_bookmarked ? 'active' : '';
+    const bmIcon = job.is_bookmarked ? 'bi-bookmark-fill' : 'bi-bookmark';
+
+    // Owner controls
+    const isOwner = u.id === me.id;
+    const ownerBtns = isOwner ? `<button class="btn btn-outline-danger btn-sm" style="border-radius:8px; font-size:0.78rem;" onclick="deleteJob(${job.id})"><i class="bi bi-trash me-1"></i>Desactivar</button>` : '';
+
+    return `
+    <div class="job-card" id="job-${job.id}">
+        <div class="job-card-header">
+            <a href="/profile/${u.id}/" class="job-avatar">${avatarInner}</a>
+            <div class="job-info">
+                <div>
+                    <a href="/profile/${u.id}/" class="job-author">${escapeHtml(displayName)}</a>
+                    ${companyLine ? ' · ' + companyLine : ''}
+                </div>
+                <span class="job-time">${formatTimeAgo(job.created_at)}</span>
+            </div>
+        </div>
+        <div class="job-card-title" onclick="openJobDetail(${job.id})">${escapeHtml(job.title)}</div>
+        <div class="job-card-badges">${badgesHtml}</div>
+        ${skillsHtml}
+        ${salaryHtml}
+        <div class="job-card-desc">${escapeHtml(job.description)}</div>
+        ${imageHtml}
+        <div class="job-card-footer">
+            <button class="btn btn-gradient btn-sm px-3" style="font-size:0.82rem;" onclick="openJobDetail(${job.id})">
+                <i class="bi bi-eye me-1"></i>Ver detalles
+            </button>
+            <button class="bookmark-btn ${bmClass}" onclick="toggleBookmark(${job.id}, this)" title="Guardar">
+                <i class="bi ${bmIcon}"></i>
+            </button>
+            ${ownerBtns}
+            <span style="flex:1;"></span>
+            ${job.category_name ? `<span style="font-size:0.75rem; color:var(--text-light);"><i class="bi bi-tag me-1"></i>${escapeHtml(job.category_name)}</span>` : ''}
+        </div>
+    </div>`;
+}
+
+// ─── Job Detail ───
+async function openJobDetail(jobId) {
+    const body = document.getElementById('job-detail-body');
+    body.innerHTML = '<div class="text-center py-4"><div class="spinner-border"></div></div>';
+    new bootstrap.Modal(document.getElementById('jobDetailModal')).show();
+
+    try {
+        const res = await authFetch(`/api/jobs/postings/${jobId}/`);
+        if (!res.ok) throw new Error('Failed');
+        const job = await res.json();
+        const u = job.author || {};
+        const displayName = u.display_name || u.first_name || u.username || 'Usuario';
+        const loc = [job.location_city, job.location_country].filter(Boolean).join(', ');
+
+        let salaryText = '';
+        if (job.salary_min || job.salary_max) {
+            const cur = job.salary_currency || 'USD';
+            if (job.salary_min && job.salary_max) salaryText = `${cur} ${job.salary_min.toLocaleString()} - ${job.salary_max.toLocaleString()}`;
+            else if (job.salary_min) salaryText = `Desde ${cur} ${job.salary_min.toLocaleString()}`;
+            else salaryText = `Hasta ${cur} ${job.salary_max.toLocaleString()}`;
+        }
+
+        let contactHtml = '';
+        if (job.contact_email) contactHtml += `<a href="mailto:${escapeHtml(job.contact_email)}" class="btn btn-outline-secondary btn-sm me-1" style="border-radius:8px;"><i class="bi bi-envelope me-1"></i>${escapeHtml(job.contact_email)}</a>`;
+        if (job.contact_phone) contactHtml += `<a href="tel:${escapeHtml(job.contact_phone)}" class="btn btn-outline-secondary btn-sm me-1" style="border-radius:8px;"><i class="bi bi-telephone me-1"></i>${escapeHtml(job.contact_phone)}</a>`;
+        if (job.contact_url) contactHtml += `<a href="${escapeHtml(job.contact_url)}" target="_blank" rel="noopener" class="btn btn-gradient btn-sm" style="border-radius:8px;"><i class="bi bi-box-arrow-up-right me-1"></i>Postular</a>`;
+
+        let skillsHtml = '';
+        if (job.skills) {
+            const skillList = job.skills.split(',').map(s => s.trim()).filter(Boolean);
+            skillsHtml = skillList.map(s => `<span class="skill-chip">${escapeHtml(s)}</span>`).join(' ');
+        }
+
+        body.innerHTML = `
+            <div class="d-flex align-items-center gap-3 mb-3">
+                <a href="/profile/${u.id}/" class="job-avatar" style="width:52px;height:52px;font-size:1.2rem;">
+                    ${u.avatar ? `<img src="${u.avatar}" alt="">` : (u.first_name || u.username || '?')[0].toUpperCase()}
+                </a>
+                <div>
+                    <div style="font-weight:700; font-size:1rem;">${escapeHtml(displayName)}</div>
+                    ${job.company_name ? `<div style="font-size:0.85rem; color:var(--text-muted);">${escapeHtml(job.company_name)}</div>` : ''}
+                    <div style="font-size:0.78rem; color:var(--text-light);">${formatTimeAgo(job.created_at)}</div>
+                </div>
+            </div>
+            <h4 style="font-weight:800; margin-bottom:0.8rem;">${escapeHtml(job.title)}</h4>
+            <div class="job-card-badges mb-3">
+                <span class="job-badge type"><i class="bi bi-clock"></i> ${JOB_TYPE_LABELS[job.job_type] || job.job_type}</span>
+                <span class="job-badge modality"><i class="bi bi-geo"></i> ${MODALITY_LABELS[job.modality] || job.modality}</span>
+                <span class="job-badge exp"><i class="bi bi-bar-chart"></i> ${EXP_LABELS[job.experience_level] || job.experience_level}</span>
+                ${loc ? `<span class="job-badge location"><i class="bi bi-pin-map"></i> ${escapeHtml(loc)}</span>` : ''}
+                ${job.category_name ? `<span class="job-badge" style="background:var(--hover-bg); color:var(--text-secondary);"><i class="bi bi-tag"></i> ${escapeHtml(job.category_name)}</span>` : ''}
+            </div>
+            ${salaryText ? `<div class="detail-section"><div class="detail-label">Salario</div><div class="detail-value job-card-salary">${salaryText}</div></div>` : ''}
+            ${skillsHtml ? `<div class="detail-section"><div class="detail-label">Habilidades</div><div class="detail-value job-card-skills" style="display:flex; flex-wrap:wrap; gap:0.3rem;">${skillsHtml}</div></div>` : ''}
+            <div class="detail-section">
+                <div class="detail-label">Descripcion</div>
+                <div class="detail-value" style="white-space:pre-line;">${escapeHtml(job.description)}</div>
+            </div>
+            ${job.requirements ? `<div class="detail-section"><div class="detail-label">Requisitos</div><div class="detail-value" style="white-space:pre-line;">${escapeHtml(job.requirements)}</div></div>` : ''}
+            ${job.application_deadline ? `<div class="detail-section"><div class="detail-label">Fecha limite</div><div class="detail-value">${job.application_deadline}</div></div>` : ''}
+            ${job.image ? `<img src="${job.image}" class="job-card-image mb-3" alt="">` : ''}
+            ${contactHtml ? `<div class="detail-section"><div class="detail-label">Contacto</div><div class="d-flex flex-wrap gap-2 mt-1">${contactHtml}</div></div>` : ''}
+        `;
+    } catch(e) {
+        body.innerHTML = '<div class="text-center text-danger py-3">Error al cargar detalle</div>';
+        console.error(e);
+    }
+}
+
+// ─── Publish Job ───
+async function publishJob() {
+    const title = document.getElementById('pub-title').value.trim();
+    const description = document.getElementById('pub-description').value.trim();
+
+    if (!title) { showToast('Ingresa el titulo del puesto'); return; }
+    if (!description) { showToast('Ingresa la descripcion del trabajo'); return; }
+
+    const btn = document.getElementById('btn-publish-job');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Publicando...';
+
+    const formData = new FormData();
+    formData.append('title', title);
+    formData.append('description', description);
+
+    const category = document.getElementById('pub-category').value;
+    if (category) formData.append('category', category);
+    const company = document.getElementById('pub-company').value.trim();
+    if (company) formData.append('company_name', company);
+    formData.append('job_type', document.getElementById('pub-type').value);
+    formData.append('modality', document.getElementById('pub-modality').value);
+    formData.append('experience_level', document.getElementById('pub-experience').value);
+    const city = document.getElementById('pub-city').value.trim();
+    if (city) formData.append('location_city', city);
+    const country = document.getElementById('pub-country').value;
+    if (country) formData.append('location_country', country);
+    const skills = document.getElementById('pub-skills').value.trim();
+    if (skills) formData.append('skills', skills);
+    const requirements = document.getElementById('pub-requirements').value.trim();
+    if (requirements) formData.append('requirements', requirements);
+    const salaryMin = document.getElementById('pub-salary-min').value;
+    if (salaryMin) formData.append('salary_min', salaryMin);
+    const salaryMax = document.getElementById('pub-salary-max').value;
+    if (salaryMax) formData.append('salary_max', salaryMax);
+    formData.append('salary_currency', document.getElementById('pub-currency').value);
+    const email = document.getElementById('pub-email').value.trim();
+    if (email) formData.append('contact_email', email);
+    const phone = document.getElementById('pub-phone').value.trim();
+    if (phone) formData.append('contact_phone', phone);
+    const url = document.getElementById('pub-url').value.trim();
+    if (url) formData.append('contact_url', url);
+    const deadline = document.getElementById('pub-deadline').value;
+    if (deadline) formData.append('application_deadline', deadline);
+    const imageInput = document.getElementById('pub-image');
+    if (imageInput.files[0]) formData.append('image', imageInput.files[0]);
+
+    try {
+        const res = await authFetch('/api/jobs/postings/create/', {
+            method: 'POST',
+            body: formData,
+        });
+
+        if (res.ok) {
+            showToast('Oferta publicada exitosamente!');
+            // Reset form
+            document.getElementById('pub-title').value = '';
+            document.getElementById('pub-company').value = '';
+            document.getElementById('pub-category').value = '';
+            document.getElementById('pub-type').value = 'full_time';
+            document.getElementById('pub-modality').value = 'on_site';
+            document.getElementById('pub-experience').value = 'any';
+            document.getElementById('pub-city').value = '';
+            document.getElementById('pub-country').value = '';
+            document.getElementById('pub-description').value = '';
+            document.getElementById('pub-skills').value = '';
+            document.getElementById('pub-requirements').value = '';
+            document.getElementById('pub-salary-min').value = '';
+            document.getElementById('pub-salary-max').value = '';
+            document.getElementById('pub-currency').value = 'USD';
+            document.getElementById('pub-email').value = '';
+            document.getElementById('pub-phone').value = '';
+            document.getElementById('pub-url').value = '';
+            document.getElementById('pub-deadline').value = '';
+            imageInput.value = '';
+            // Switch to browse
+            document.querySelector('.hosting-tab[data-tab="browse"]').click();
+        } else {
+            const data = await res.json();
+            showToast(Object.values(data).flat().join(', ') || 'Error al publicar');
+        }
+    } catch(e) {
+        showToast('Error de conexion');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-send me-1"></i>Publicar Oferta';
+    }
+}
+
+// ─── Toggle Bookmark ───
+async function toggleBookmark(jobId, btn) {
+    try {
+        const res = await authFetch(`/api/jobs/postings/${jobId}/bookmark/`, { method: 'POST' });
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+        const icon = btn.querySelector('i');
+        if (data.bookmarked) {
+            btn.classList.add('active');
+            icon.className = 'bi bi-bookmark-fill';
+            showToast('Oferta guardada');
+        } else {
+            btn.classList.remove('active');
+            icon.className = 'bi bi-bookmark';
+            showToast('Oferta removida de guardados');
+        }
+    } catch(e) {
+        showToast('Error al guardar');
+    }
+}
+
+// ─── Delete Job ───
+async function deleteJob(jobId) {
+    if (!confirm('Desactivar esta oferta?')) return;
+    try {
+        const res = await authFetch(`/api/jobs/postings/${jobId}/delete/`, { method: 'POST' });
+        if (res.ok) {
+            showToast('Oferta desactivada');
+            const card = document.getElementById('job-' + jobId);
+            if (card) card.remove();
+        } else {
+            showToast('Error al desactivar');
+        }
+    } catch(e) {
+        showToast('Error de conexion');
+    }
+}
+
+// ─── My Postings ───
+async function loadMyPostings() {
+    const spinner = document.getElementById('my-postings-spinner');
+    const list = document.getElementById('my-postings-list');
+    const empty = document.getElementById('my-postings-empty');
+
+    spinner.style.display = 'block';
+    list.innerHTML = '';
+    empty.style.display = 'none';
+
+    try {
+        const res = await authFetch('/api/jobs/my-postings/');
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+        const jobs = data.results || data;
+
+        spinner.style.display = 'none';
+
+        if (jobs.length === 0) {
+            empty.style.display = 'block';
+            return;
+        }
+
+        jobs.forEach(job => {
+            list.insertAdjacentHTML('beforeend', renderJobCard(job));
+        });
+    } catch(e) {
+        spinner.style.display = 'none';
+        showToast('Error al cargar tus ofertas');
+        console.error(e);
+    }
+}
+
+// ─── Saved Jobs ───
+async function loadSaved() {
+    const spinner = document.getElementById('saved-spinner');
+    const list = document.getElementById('saved-list');
+    const empty = document.getElementById('saved-empty');
+
+    spinner.style.display = 'block';
+    list.innerHTML = '';
+    empty.style.display = 'none';
+
+    try {
+        const res = await authFetch('/api/jobs/my-bookmarks/');
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+        const jobs = data.results || data;
+
+        spinner.style.display = 'none';
+
+        if (jobs.length === 0) {
+            empty.style.display = 'block';
+            return;
+        }
+
+        jobs.forEach(job => {
+            list.insertAdjacentHTML('beforeend', renderJobCard(job));
+        });
+    } catch(e) {
+        spinner.style.display = 'none';
+        showToast('Error al cargar guardados');
+        console.error(e);
+    }
+}
+
+// ─── Tips ───
+async function loadTips() {
+    const spinner = document.getElementById('tips-spinner');
+    const list = document.getElementById('tips-list');
+    const empty = document.getElementById('tips-empty');
+
+    spinner.style.display = 'block';
+    list.innerHTML = '';
+    empty.style.display = 'none';
+
+    let url = '/api/jobs/tips/?';
+    if (selectedTipCat) url += 'category=' + encodeURIComponent(selectedTipCat) + '&';
+
+    try {
+        const res = await authFetch(url);
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+        const tips = data.results || data;
+
+        spinner.style.display = 'none';
+
+        if (tips.length === 0) {
+            empty.style.display = 'block';
+            return;
+        }
+
+        tips.forEach(tip => {
+            list.insertAdjacentHTML('beforeend', renderTipCard(tip));
+        });
+    } catch(e) {
+        spinner.style.display = 'none';
+        showToast('Error al cargar consejos');
+        console.error(e);
+    }
+}
+
+function renderTipCard(tip) {
+    const u = tip.author || {};
+    const initial = (u.first_name || u.username || '?')[0].toUpperCase();
+    const avatarInner = u.avatar ? `<img src="${u.avatar}" alt="">` : initial;
+    const displayName = u.display_name || u.first_name || u.username || 'Usuario';
+
+    const breadcrumb = tip.category_name || '';
+    const likedClass = tip.is_liked ? 'liked' : '';
+    const likeIcon = tip.is_liked ? 'bi-heart-fill' : 'bi-heart';
+    const imageHtml = tip.image ? `<img src="${tip.image}" class="tip-card-image" alt="">` : '';
+
+    return `
+    <div class="tip-card">
+        <div class="tip-card-header">
+            <a href="/profile/${u.id}/" class="tip-avatar">${avatarInner}</a>
+            <div style="flex:1;">
+                <a href="/profile/${u.id}/" style="font-weight:700; font-size:0.9rem; color:var(--text-primary); text-decoration:none;">${escapeHtml(displayName)}</a>
+                <div style="font-size:0.75rem; color:var(--text-light);">${formatTimeAgo(tip.created_at)}</div>
+            </div>
+        </div>
+        ${breadcrumb ? `<div class="tip-card-breadcrumb"><i class="bi bi-folder2 me-1"></i>${escapeHtml(breadcrumb)}</div>` : ''}
+        <div class="tip-card-title">${escapeHtml(tip.title)}</div>
+        <div class="tip-card-content">${escapeHtml(tip.content)}</div>
+        ${imageHtml}
+        <div class="tip-card-footer">
+            <button class="tip-like-btn ${likedClass}" onclick="toggleTipLike(${tip.id}, this)">
+                <i class="bi ${likeIcon}"></i>
+                <span>${tip.likes_count}</span>
+            </button>
+        </div>
+    </div>`;
+}
+
+// ─── Create Tip ───
+async function createTip() {
+    const title = document.getElementById('tip-title').value.trim();
+    const content = document.getElementById('tip-content').value.trim();
+
+    if (!title) { showToast('Ingresa un titulo'); return; }
+    if (!content) { showToast('Escribe el contenido del consejo'); return; }
+
+    const btn = document.getElementById('btn-create-tip');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Publicando...';
+
+    const formData = new FormData();
+    formData.append('title', title);
+    formData.append('content', content);
+    const category = document.getElementById('tip-category').value;
+    if (category) formData.append('category', category);
+    const imageInput = document.getElementById('tip-image');
+    if (imageInput.files[0]) formData.append('image', imageInput.files[0]);
+
+    try {
+        const res = await authFetch('/api/jobs/tips/create/', {
+            method: 'POST',
+            body: formData,
+        });
+
+        if (res.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('tipModal')).hide();
+            showToast('Consejo publicado!');
+            loadTips();
+        } else {
+            const data = await res.json();
+            showToast(Object.values(data).flat().join(', ') || 'Error al publicar');
+        }
+    } catch(e) {
+        showToast('Error de conexion');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-send me-1"></i>Publicar Consejo';
+    }
+}
+
+// ─── Toggle Tip Like ───
+async function toggleTipLike(tipId, btn) {
+    try {
+        const res = await authFetch(`/api/jobs/tips/${tipId}/like/`, { method: 'POST' });
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+        const icon = btn.querySelector('i');
+        const countSpan = btn.querySelector('span');
+
+        if (data.liked) {
+            btn.classList.add('liked');
+            icon.className = 'bi bi-heart-fill';
+        } else {
+            btn.classList.remove('liked');
+            icon.className = 'bi bi-heart';
+        }
+        countSpan.textContent = data.likes_count;
+    } catch(e) {
+        showToast('Error');
+    }
+}
+</script>
+{% endblock %}
