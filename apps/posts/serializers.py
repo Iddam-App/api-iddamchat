@@ -90,7 +90,8 @@ class PostCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Post
-        fields = ['post_type', 'visibility', 'title', 'content', 'images']
+        fields = ['id', 'post_type', 'visibility', 'title', 'content', 'images']
+        read_only_fields = ['id']
 
     def create(self, validated_data):
         images = validated_data.pop('images', [])

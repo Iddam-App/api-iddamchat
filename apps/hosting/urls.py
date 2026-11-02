@@ -10,6 +10,6 @@ urlpatterns = [
     path('request/', views.HostingRequestCreateView.as_view(), name='request_create'),
     path('my-requests/', views.MyHostingRequestsView.as_view(), name='my_requests'),
     path('received/', views.ReceivedHostingRequestsView.as_view(), name='received_requests'),
-    path('request/<int:pk>/<str:action>/', views.RespondHostingRequestView.as_view(), name='respond_request'),
     path('request/<int:pk>/message/', views.HostingMessageCreateView.as_view(), name='send_message'),
+    path('request/<int:pk>/<str:action>/', views.RespondHostingRequestView.as_view(), name='respond_request'),
 ]

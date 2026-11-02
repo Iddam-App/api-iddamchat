@@ -40,7 +40,8 @@ class StorySerializer(serializers.ModelSerializer):
 class StoryCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Story
-        fields = ['image', 'text', 'background_color', 'expires_at']
+        fields = ['id', 'image', 'text', 'background_color', 'expires_at']
+        read_only_fields = ['id']
 
 
 class StoryHighlightItemSerializer(serializers.ModelSerializer):
@@ -80,4 +81,5 @@ class StoryHighlightSerializer(serializers.ModelSerializer):
 class StoryHighlightCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = StoryHighlight
-        fields = ['name', 'cover_image', 'order']
+        fields = ['id', 'name', 'cover_image', 'order']
+        read_only_fields = ['id']

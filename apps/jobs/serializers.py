@@ -25,7 +25,7 @@ class JobPostingListSerializer(serializers.ModelSerializer):
             'id', 'author', 'title', 'description', 'category', 'category_name',
             'company_name', 'job_type', 'modality', 'experience_level',
             'location_city', 'location_country', 'skills',
-            'salary_min', 'salary_max', 'salary_currency',
+            'salary_type', 'salary_min', 'salary_max', 'salary_currency',
             'contact_email', 'contact_phone', 'contact_url',
             'image', 'is_active', 'application_deadline',
             'is_bookmarked', 'created_at',
@@ -51,13 +51,14 @@ class JobPostingCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = JobPosting
         fields = [
-            'title', 'description', 'category', 'company_name',
+            'id', 'title', 'description', 'category', 'company_name',
             'job_type', 'modality', 'experience_level',
             'location_city', 'location_country', 'skills', 'requirements',
-            'salary_min', 'salary_max', 'salary_currency',
+            'salary_type', 'salary_min', 'salary_max', 'salary_currency',
             'contact_email', 'contact_phone', 'contact_url',
             'image', 'application_deadline',
         ]
+        read_only_fields = ['id']
 
 
 class JobPostingDetailSerializer(serializers.ModelSerializer):
@@ -71,7 +72,7 @@ class JobPostingDetailSerializer(serializers.ModelSerializer):
             'id', 'author', 'title', 'description', 'category', 'category_name',
             'company_name', 'job_type', 'modality', 'experience_level',
             'location_city', 'location_country', 'skills', 'requirements',
-            'salary_min', 'salary_max', 'salary_currency',
+            'salary_type', 'salary_min', 'salary_max', 'salary_currency',
             'contact_email', 'contact_phone', 'contact_url',
             'image', 'is_active', 'application_deadline',
             'is_bookmarked', 'created_at', 'updated_at',
@@ -131,7 +132,8 @@ class CareerTipListSerializer(serializers.ModelSerializer):
 class CareerTipCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = CareerTip
-        fields = ['title', 'content', 'category', 'image']
+        fields = ['id', 'title', 'content', 'category', 'image']
+        read_only_fields = ['id']
 
 
 class CareerTipDetailSerializer(serializers.ModelSerializer):

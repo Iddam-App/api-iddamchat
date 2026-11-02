@@ -35,6 +35,12 @@ class JobPosting(models.Model):
         ('senior', 'Senior'),
         ('any', 'No importa'),
     ]
+    SALARY_TYPE_CHOICES = [
+        ('range', 'Rango salarial'),
+        ('negotiable', 'A convenir'),
+        ('contact', 'Contactar personalmente'),
+        ('volunteer', 'Voluntariado / Sin remuneracion'),
+    ]
 
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
@@ -55,6 +61,9 @@ class JobPosting(models.Model):
     )
     experience_level = models.CharField(
         max_length=10, choices=EXPERIENCE_CHOICES, default='any',
+    )
+    salary_type = models.CharField(
+        max_length=15, choices=SALARY_TYPE_CHOICES, default='negotiable',
     )
     location_city = models.CharField(max_length=100, blank=True)
     location_country = models.CharField(max_length=5, blank=True)

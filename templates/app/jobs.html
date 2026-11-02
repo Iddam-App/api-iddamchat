@@ -145,14 +145,23 @@
                     <textarea class="form-control" id="pub-requirements" rows="2" placeholder="Titulo universitario, certificaciones, etc."></textarea>
                 </div>
                 <div class="col-sm-4">
+                    <label class="form-label">Compensacion</label>
+                    <select class="form-select" id="pub-salary-type" onchange="toggleSalaryFields()">
+                        <option value="negotiable">A convenir</option>
+                        <option value="range">Rango salarial</option>
+                        <option value="contact">Contactar personalmente</option>
+                        <option value="volunteer">Voluntariado / Sin remuneracion</option>
+                    </select>
+                </div>
+                <div class="col-sm-4 salary-range-field" style="display:none;">
                     <label class="form-label">Salario minimo</label>
                     <input type="number" class="form-control" id="pub-salary-min" placeholder="Ej: 500" min="0">
                 </div>
-                <div class="col-sm-4">
+                <div class="col-sm-4 salary-range-field" style="display:none;">
                     <label class="form-label">Salario maximo</label>
                     <input type="number" class="form-control" id="pub-salary-max" placeholder="Ej: 1500" min="0">
                 </div>
-                <div class="col-sm-4">
+                <div class="col-sm-4 salary-range-field" style="display:none;">
                     <label class="form-label">Moneda</label>
                     <select class="form-select" id="pub-currency">
                         <option value="USD">USD</option>
@@ -728,6 +737,11 @@
 </style>
 
 <script>
+const SALARY_TYPE_LABELS = {
+    range: 'Rango salarial', negotiable: 'A convenir',
+    contact: 'Contactar personalmente', volunteer: 'Voluntariado'
+};
+
 const JOB_TYPE_LABELS = {
     full_time: 'Tiempo completo', part_time: 'Medio tiempo',
     contract: 'Contrato', freelance: 'Freelance',
@@ -813,6 +827,19 @@ function loadCountryOptions() {
     countries.forEach(([code, name]) => {
         sel.insertAdjacentHTML('beforeend', `<option value="${code}">${name}</option>`);
     });
+}
+
+// ─── Toggle Salary Fields ───
+function toggleSalaryFields() {
+    const salaryType = document.getElementById('pub-salary-type').value;
+    const fields = document.querySelectorAll('.salary-range-field');
+    if (salaryType === 'range') {
+        fields.forEach(f => f.style.display = '');
+    } else {
+        fields.forEach(f => f.style.display = 'none');
+        document.getElementById('pub-salary-min').value = '';
+        document.getElementById('pub-salary-max').value = '';
+    }
 }
 
 // ─── Load Categories ───
@@ -997,7 +1024,8 @@ function renderJobCard(job) {
 
     // Salary
     let salaryHtml = '';
-    if (job.salary_min || job.salary_max) {
+    const st = job.salary_type || 'negotiable';
+    if (st === 'range' && (job.salary_min || job.salary_max)) {
         const cur = job.salary_currency || 'USD';
         if (job.salary_min && job.salary_max) {
             salaryHtml = `<div class="job-card-salary"><i class="bi bi-cash me-1"></i>${cur} ${job.salary_min.toLocaleString()} - ${job.salary_max.toLocaleString()}</div>`;
@@ -1006,6 +1034,12 @@ function renderJobCard(job) {
         } else {
             salaryHtml = `<div class="job-card-salary"><i class="bi bi-cash me-1"></i>Hasta ${cur} ${job.salary_max.toLocaleString()}</div>`;
         }
+    } else if (st === 'negotiable') {
+        salaryHtml = `<div class="job-card-salary"><i class="bi bi-chat-left-text me-1"></i>A convenir</div>`;
+    } else if (st === 'contact') {
+        salaryHtml = `<div class="job-card-salary"><i class="bi bi-person-lines-fill me-1"></i>Contactar personalmente</div>`;
+    } else if (st === 'volunteer') {
+        salaryHtml = `<div class="job-card-salary" style="color:var(--text-muted);"><i class="bi bi-heart me-1"></i>Voluntariado</div>`;
     }
 
     // Image
@@ -1066,11 +1100,18 @@ async function openJobDetail(jobId) {
         const loc = [job.location_city, job.location_country].filter(Boolean).join(', ');
 
         let salaryText = '';
-        if (job.salary_min || job.salary_max) {
+        const dst = job.salary_type || 'negotiable';
+        if (dst === 'range' && (job.salary_min || job.salary_max)) {
             const cur = job.salary_currency || 'USD';
             if (job.salary_min && job.salary_max) salaryText = `${cur} ${job.salary_min.toLocaleString()} - ${job.salary_max.toLocaleString()}`;
             else if (job.salary_min) salaryText = `Desde ${cur} ${job.salary_min.toLocaleString()}`;
             else salaryText = `Hasta ${cur} ${job.salary_max.toLocaleString()}`;
+        } else if (dst === 'negotiable') {
+            salaryText = 'A convenir';
+        } else if (dst === 'contact') {
+            salaryText = 'Contactar personalmente';
+        } else if (dst === 'volunteer') {
+            salaryText = 'Voluntariado / Sin remuneracion';
         }
 
         let contactHtml = '';
@@ -1151,11 +1192,15 @@ async function publishJob() {
     if (skills) formData.append('skills', skills);
     const requirements = document.getElementById('pub-requirements').value.trim();
     if (requirements) formData.append('requirements', requirements);
-    const salaryMin = document.getElementById('pub-salary-min').value;
-    if (salaryMin) formData.append('salary_min', salaryMin);
-    const salaryMax = document.getElementById('pub-salary-max').value;
-    if (salaryMax) formData.append('salary_max', salaryMax);
-    formData.append('salary_currency', document.getElementById('pub-currency').value);
+    const salaryType = document.getElementById('pub-salary-type').value;
+    formData.append('salary_type', salaryType);
+    if (salaryType === 'range') {
+        const salaryMin = document.getElementById('pub-salary-min').value;
+        if (salaryMin) formData.append('salary_min', salaryMin);
+        const salaryMax = document.getElementById('pub-salary-max').value;
+        if (salaryMax) formData.append('salary_max', salaryMax);
+        formData.append('salary_currency', document.getElementById('pub-currency').value);
+    }
     const email = document.getElementById('pub-email').value.trim();
     if (email) formData.append('contact_email', email);
     const phone = document.getElementById('pub-phone').value.trim();
@@ -1187,9 +1232,11 @@ async function publishJob() {
             document.getElementById('pub-description').value = '';
             document.getElementById('pub-skills').value = '';
             document.getElementById('pub-requirements').value = '';
+            document.getElementById('pub-salary-type').value = 'negotiable';
             document.getElementById('pub-salary-min').value = '';
             document.getElementById('pub-salary-max').value = '';
             document.getElementById('pub-currency').value = 'USD';
+            toggleSalaryFields();
             document.getElementById('pub-email').value = '';
             document.getElementById('pub-phone').value = '';
             document.getElementById('pub-url').value = '';

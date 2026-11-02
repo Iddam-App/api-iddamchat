@@ -45,4 +45,5 @@ class HostingRequestSerializer(serializers.ModelSerializer):
 class HostingRequestCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = HostingRequest
-        fields = ['host', 'message', 'arrival_date', 'departure_date', 'num_guests']
+        fields = ['id', 'host', 'message', 'arrival_date', 'departure_date', 'num_guests']
+        read_only_fields = ['id']
