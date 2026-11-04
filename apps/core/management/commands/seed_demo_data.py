@@ -1298,7 +1298,6 @@ class Command(BaseCommand):
         counters['job_postings'] = self._create_job_postings()
         counters['career_tips'] = self._create_career_tips()
         counters['pro_profiles'] = self._create_professional_profiles()
-        counters['real_user_links'] = self._link_real_users()
 
         self.stdout.write('')
         self.stdout.write(self.style.SUCCESS('═' * 50))
@@ -1823,92 +1822,3 @@ class Command(BaseCommand):
         self.stdout.write(f'Professional profiles: {created} created')
         return created
 
-    # ── Link real users to demo users ─────────────────────────────────────
-
-    def _link_real_users(self):
-        """
-        Make all existing non-demo users mutually follow some demo users
-        and join the main group, so they see demo content in their feed.
-        """
-        demo_emails = {d['email'] for d in USERS_DATA}
-        real_users = User.objects.exclude(
-            email__endswith=f'@{DEMO_DOMAIN}',
-        ).exclude(is_superuser=True)
-
-        if not real_users.exists():
-            self.stdout.write('No real users found to link.')
-            return 0
-
-        # Key demo users that real users will follow (and be followed by)
-        key_demo_emails = [
-            'matias@demo.iddam.app',
-            'david@demo.iddam.app',
-            'daniela@demo.iddam.app',
-            'lucas@demo.iddam.app',
-            'pablo@demo.iddam.app',
-            'facundo@demo.iddam.app',
-            'sarah@demo.iddam.app',
-            'genesis@demo.iddam.app',
-            'camila@demo.iddam.app',
-            'jose@demo.iddam.app',
-            'ana@demo.iddam.app',
-            'maria@demo.iddam.app',
-        ]
-
-        created_follows = 0
-        created_memberships = 0
-        created_friendships = 0
-        created_conversations = 0
-        created_messages = 0
-
-        for real_user in real_users:
-            for demo_email in key_demo_emails:
-                demo_user = self._get_user(demo_email)
-                # Mutual follow
-                for follower, followed in [(real_user, demo_user), (demo_user, real_user)]:
-                    _, was_created = Follow.objects.get_or_create(
-                        follower=follower, followed=followed,
-                    )
-                    if was_created:
-                        created_follows += 1
-
-            # Add real user as friend of a couple demo users
-            for demo_email in ['matias@demo.iddam.app', 'david@demo.iddam.app']:
-                demo_user = self._get_user(demo_email)
-                u1, u2 = (real_user, demo_user) if real_user.pk < demo_user.pk else (demo_user, real_user)
-                _, was_created = Friendship.objects.get_or_create(user1=u1, user2=u2)
-                if was_created:
-                    created_friendships += 1
-
-            # Add real user to the main general group
-            general_group = Group.objects.filter(name='General COGWA Jóvenes').first()
-            if general_group:
-                _, was_created = GroupMembership.objects.get_or_create(
-                    group=general_group, user=real_user,
-                    defaults=dict(role='member'),
-                )
-                if was_created:
-                    created_memberships += 1
-
-            # Create a welcome chat conversation with matias
-            matias = self._get_user('matias@demo.iddam.app')
-            u1, u2 = (real_user, matias) if real_user.pk < matias.pk else (matias, real_user)
-            conv, was_created = Conversation.objects.get_or_create(
-                user1=u1, user2=u2,
-            )
-            if was_created:
-                created_conversations += 1
-                Message.objects.create(
-                    conversation=conv,
-                    sender=matias,
-                    content='Hola! Bienvenido a IDDAM Chat. Soy Matías, si necesitas algo no dudes en escribirme!',
-                )
-                created_messages += 1
-
-        self.stdout.write(
-            f'Real user links: {created_follows} follows, '
-            f'{created_friendships} friendships, '
-            f'{created_memberships} group memberships, '
-            f'{created_conversations} conversations'
-        )
-        return created_follows
