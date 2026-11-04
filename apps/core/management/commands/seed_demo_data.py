@@ -18,6 +18,9 @@ from apps.events.models import Event, RSVP
 from apps.groups.models import (
     Group, GroupMembership, GroupPost, Proposal, ProposalParticipant,
 )
+from apps.jobs.models import (
+    CareerTip, JobCategory, JobPosting, ProfessionalProfile, TipCategory,
+)
 from apps.posts.models import Comment, Hashtag, Post, PostHashtag, Reaction
 from apps.profiles.models import Story, StoryHighlight, StoryHighlightItem
 from apps.social.models import Follow, FriendRequest, Friendship
@@ -1000,6 +1003,265 @@ FRIEND_REQUESTS_DATA = [
     ('ana@demo.iddam.app', 'sarah@demo.iddam.app', 'pending', 'Hi Sarah! Would love to connect.'),
 ]
 
+# ── Job categories & postings ─────────────────────────────────────────────
+
+JOB_CATEGORIES_DATA = [
+    dict(name='Tecnología', icon='bi-laptop', order=1),
+    dict(name='Diseño', icon='bi-palette', order=2),
+    dict(name='Educación', icon='bi-book', order=3),
+    dict(name='Administración', icon='bi-briefcase', order=4),
+    dict(name='Cocina / Gastronomía', icon='bi-cup-hot', order=5),
+    dict(name='Música / Producción', icon='bi-music-note-beamed', order=6),
+]
+
+JOB_POSTINGS_DATA = [
+    dict(
+        author_email='pablo@demo.iddam.app',
+        title='Desarrollador Frontend React',
+        description=(
+            'Buscamos desarrollador frontend con experiencia en React y TypeScript. '
+            'Trabajo remoto, equipo internacional. Buen ambiente y horario flexible. '
+            'Se valora experiencia con Next.js y Tailwind CSS.'
+        ),
+        category_name='Tecnología',
+        company_name='TechSolutions Madrid',
+        job_type='full_time',
+        modality='remote',
+        experience_level='mid',
+        salary_type='range',
+        salary_min=2000,
+        salary_max=3500,
+        salary_currency='EUR',
+        location_city='Madrid',
+        location_country='ES',
+        skills='React, TypeScript, Next.js, Tailwind CSS, Git',
+        requirements='2+ años de experiencia en desarrollo frontend. Inglés intermedio.',
+        contact_email='pablo@demo.iddam.app',
+    ),
+    dict(
+        author_email='david@demo.iddam.app',
+        title='Youth Program Coordinator',
+        description=(
+            'We are looking for a coordinator for our youth programs. '
+            'Responsibilities include organizing events, managing volunteers, '
+            'and creating educational content for young adults. Part-time position '
+            'with flexible hours.'
+        ),
+        category_name='Educación',
+        company_name='Community Center Dallas',
+        job_type='part_time',
+        modality='on_site',
+        experience_level='entry',
+        salary_type='negotiable',
+        location_city='Dallas',
+        location_country='US',
+        skills='Event planning, Leadership, Communication',
+        requirements='Experience working with youth groups. Bilingual English/Spanish preferred.',
+        contact_email='david@demo.iddam.app',
+    ),
+    dict(
+        author_email='genesis@demo.iddam.app',
+        title='Diseñador Gráfico Freelance',
+        description=(
+            'Busco diseñador gráfico freelance para proyectos de branding y '
+            'redes sociales. Manejo de Illustrator, Photoshop y Figma. '
+            'Proyectos puntuales con posibilidad de continuidad.'
+        ),
+        category_name='Diseño',
+        company_name='',
+        job_type='freelance',
+        modality='remote',
+        experience_level='any',
+        salary_type='contact',
+        location_city='Caracas',
+        location_country='VE',
+        skills='Illustrator, Photoshop, Figma, Branding',
+        requirements='Portafolio con trabajos previos.',
+        contact_email='genesis@demo.iddam.app',
+    ),
+    dict(
+        author_email='lucas@demo.iddam.app',
+        title='Desenvolvedor Backend Python/Django',
+        description=(
+            'Procuramos desenvolvedor backend com experiência em Python e Django. '
+            'Projeto de aplicativo para comunidade. Trabalho remoto com reuniões '
+            'semanais por videoconferência. Ambiente colaborativo.'
+        ),
+        category_name='Tecnología',
+        company_name='DevBR Solutions',
+        job_type='contract',
+        modality='remote',
+        experience_level='mid',
+        salary_type='range',
+        salary_min=3000,
+        salary_max=5000,
+        salary_currency='BRL',
+        location_city='São Paulo',
+        location_country='BR',
+        skills='Python, Django, PostgreSQL, REST APIs, Docker',
+        requirements='Experiência com Django REST Framework. Português nativo.',
+        contact_email='lucas@demo.iddam.app',
+    ),
+    dict(
+        author_email='jose@demo.iddam.app',
+        title='Ayudante de cocina para eventos',
+        description=(
+            'Se necesita ayudante de cocina para los eventos fraternales de la '
+            'congregación. Apoyo en preparación de alimentos, servicio y limpieza. '
+            'Trabajo voluntario con almuerzo incluido.'
+        ),
+        category_name='Cocina / Gastronomía',
+        company_name='',
+        job_type='volunteer',
+        modality='on_site',
+        experience_level='any',
+        salary_type='volunteer',
+        location_city='Lima',
+        location_country='PE',
+        skills='Cocina básica, Trabajo en equipo',
+        requirements='Ganas de servir y buena disposición.',
+        contact_email='jose@demo.iddam.app',
+    ),
+    dict(
+        author_email='facundo@demo.iddam.app',
+        title='Profesor de guitarra online',
+        description=(
+            'Ofrezco clases de guitarra acústica y eléctrica por videollamada. '
+            'Todos los niveles, desde principiante hasta avanzado. Repertorio '
+            'variado incluyendo música de alabanza. Clases de 45 minutos.'
+        ),
+        category_name='Música / Producción',
+        company_name='',
+        job_type='freelance',
+        modality='remote',
+        experience_level='any',
+        salary_type='range',
+        salary_min=15,
+        salary_max=25,
+        salary_currency='USD',
+        location_city='Buenos Aires',
+        location_country='AR',
+        skills='Guitarra acústica, Guitarra eléctrica, Teoría musical',
+        requirements='Tener guitarra propia y conexión estable a internet.',
+        contact_email='facundo@demo.iddam.app',
+    ),
+]
+
+# ── Career tips ───────────────────────────────────────────────────────────
+
+TIP_CATEGORIES_DATA = [
+    dict(name='Búsqueda de empleo', order=1),
+    dict(name='Desarrollo profesional', order=2),
+    dict(name='Habilidades blandas', order=3),
+]
+
+CAREER_TIPS_DATA = [
+    dict(
+        author_email='pablo@demo.iddam.app',
+        category_name='Búsqueda de empleo',
+        title='Cómo armar un buen CV para tecnología',
+        content=(
+            'Un buen CV técnico debe ser conciso (máximo 2 páginas), incluir '
+            'tus proyectos más relevantes con links a GitHub o demos, listar '
+            'las tecnologías que manejas y tener una sección de logros medibles. '
+            'Evita incluir información irrelevante como tu foto o estado civil.'
+        ),
+    ),
+    dict(
+        author_email='david@demo.iddam.app',
+        category_name='Desarrollo profesional',
+        title='Tips for networking as a young professional',
+        content=(
+            'Networking is about building genuine relationships, not just collecting '
+            'contacts. Attend events related to your field, follow up with people '
+            'you meet, and offer value before asking for favors. LinkedIn is a great '
+            'tool but nothing beats a face-to-face conversation.'
+        ),
+    ),
+    dict(
+        author_email='genesis@demo.iddam.app',
+        category_name='Desarrollo profesional',
+        title='Cómo crear un portafolio de diseño que destaque',
+        content=(
+            'Tu portafolio es tu carta de presentación. Incluye solo tus mejores '
+            'trabajos (calidad sobre cantidad), explica el proceso detrás de cada '
+            'proyecto, y muestra el antes y después. Usa plataformas como Behance '
+            'o crea tu propio sitio web.'
+        ),
+    ),
+    dict(
+        author_email='sarah@demo.iddam.app',
+        category_name='Habilidades blandas',
+        title='The importance of communication skills at work',
+        content=(
+            'Good communication is the foundation of professional success. Practice '
+            'active listening, be clear and concise in emails, and learn to give '
+            'constructive feedback. Remember that communication is not just about '
+            'speaking, it is about making sure your message is understood.'
+        ),
+    ),
+    dict(
+        author_email='lucas@demo.iddam.app',
+        category_name='Búsqueda de empleo',
+        title='Como se preparar para entrevistas técnicas',
+        content=(
+            'Para entrevistas técnicas em programação: pratique algoritmos no '
+            'LeetCode, revise conceitos fundamentais, prepare exemplos de projetos '
+            'que você trabalhou e pratique explicar seu raciocínio em voz alta. '
+            'Não tenha medo de perguntar ao entrevistador quando não entender algo.'
+        ),
+    ),
+]
+
+# ── Professional profiles ─────────────────────────────────────────────────
+
+PROFESSIONAL_PROFILES_DATA = [
+    dict(
+        user_email='pablo@demo.iddam.app',
+        headline='Ingeniero de Software Full Stack',
+        summary='Desarrollador con 6 años de experiencia en aplicaciones web. Especializado en React, Django y arquitectura cloud.',
+        availability='available',
+        years_of_experience=6,
+        education='Ingeniería Informática - Universidad Complutense de Madrid',
+        skills='Python, Django, React, TypeScript, PostgreSQL, Docker, AWS',
+        services='Desarrollo web, Consultoría técnica, Mentoría',
+        category_name='Tecnología',
+    ),
+    dict(
+        user_email='genesis@demo.iddam.app',
+        headline='Diseñadora Gráfica y Fotógrafa',
+        summary='Diseñadora creativa con pasión por el branding y la fotografía. Experiencia en proyectos para iglesias y organizaciones sin fines de lucro.',
+        availability='available',
+        years_of_experience=3,
+        education='Diseño Gráfico - Universidad Central de Venezuela',
+        skills='Photoshop, Illustrator, Figma, Fotografía, Video',
+        services='Diseño de marca, Fotografía de eventos, Material gráfico para redes',
+        category_name='Diseño',
+    ),
+    dict(
+        user_email='lucas@demo.iddam.app',
+        headline='Desenvolvedor Backend Python',
+        summary='Programador backend focado em APIs REST e microsserviços. Experiência com Django, FastAPI e bancos de dados relacionais.',
+        availability='busy',
+        years_of_experience=4,
+        education='Ciência da Computação - USP',
+        skills='Python, Django, FastAPI, PostgreSQL, Redis, Docker, Linux',
+        services='Desenvolvimento backend, APIs REST, Automação',
+        category_name='Tecnología',
+    ),
+    dict(
+        user_email='facundo@demo.iddam.app',
+        headline='Músico y Productor Musical',
+        summary='Guitarrista y productor con experiencia en grabación y producción de música de alabanza. Clases de guitarra online.',
+        availability='available',
+        years_of_experience=8,
+        education='Producción Musical - Berklee Online',
+        skills='Guitarra, Producción musical, Ableton, Logic Pro, Mezcla',
+        services='Clases de guitarra, Producción musical, Arreglos',
+        category_name='Música / Producción',
+    ),
+]
+
 
 class Command(BaseCommand):
     help = 'Seed the database with realistic demo data for testing.'
@@ -1033,6 +1295,10 @@ class Command(BaseCommand):
         counters['conversations'] = self._create_conversations()
         counters['events'] = self._create_events()
         counters['proposals'] = self._create_proposals()
+        counters['job_postings'] = self._create_job_postings()
+        counters['career_tips'] = self._create_career_tips()
+        counters['pro_profiles'] = self._create_professional_profiles()
+        counters['real_user_links'] = self._link_real_users()
 
         self.stdout.write('')
         self.stdout.write(self.style.SUCCESS('═' * 50))
@@ -1053,6 +1319,16 @@ class Command(BaseCommand):
         # Delete groups created by demo users (SET_NULL doesn't cascade)
         group_names = [g['name'] for g in GROUPS_DATA]
         g_count, _ = Group.objects.filter(name__in=group_names).delete()
+        # Remove follows/friendships between real users and demo users
+        demo_ids = list(demo_users.values_list('pk', flat=True))
+        if demo_ids:
+            from django.db.models import Q
+            Follow.objects.filter(
+                Q(follower_id__in=demo_ids) | Q(followed_id__in=demo_ids),
+            ).delete()
+            Friendship.objects.filter(
+                Q(user1_id__in=demo_ids) | Q(user2_id__in=demo_ids),
+            ).delete()
         if count == 0 and g_count == 0:
             self.stdout.write('No demo data found to flush.')
             return
@@ -1451,3 +1727,188 @@ class Command(BaseCommand):
             f'{created_participants} participants'
         )
         return created_proposals
+
+    # ── Job postings ──────────────────────────────────────────────────────
+
+    def _create_job_postings(self):
+        created = 0
+        # Ensure categories exist
+        cat_cache = {}
+        for data in JOB_CATEGORIES_DATA:
+            cat, _ = JobCategory.objects.get_or_create(
+                name=data['name'],
+                defaults=dict(icon=data.get('icon', ''), order=data.get('order', 0)),
+            )
+            cat_cache[data['name']] = cat
+        for data in JOB_POSTINGS_DATA:
+            author = self._get_user(data['author_email'])
+            category = cat_cache.get(data.get('category_name'))
+            _, was_created = JobPosting.objects.get_or_create(
+                title=data['title'],
+                author=author,
+                defaults=dict(
+                    description=data['description'],
+                    category=category,
+                    company_name=data.get('company_name', ''),
+                    job_type=data.get('job_type', 'full_time'),
+                    modality=data.get('modality', 'on_site'),
+                    experience_level=data.get('experience_level', 'any'),
+                    salary_type=data.get('salary_type', 'negotiable'),
+                    salary_min=data.get('salary_min'),
+                    salary_max=data.get('salary_max'),
+                    salary_currency=data.get('salary_currency', 'USD'),
+                    location_city=data.get('location_city', ''),
+                    location_country=data.get('location_country', ''),
+                    skills=data.get('skills', ''),
+                    requirements=data.get('requirements', ''),
+                    contact_email=data.get('contact_email', ''),
+                ),
+            )
+            if was_created:
+                created += 1
+        self.stdout.write(f'Job postings: {created} created ({len(JOB_CATEGORIES_DATA)} categories)')
+        return created
+
+    # ── Career tips ───────────────────────────────────────────────────────
+
+    def _create_career_tips(self):
+        created = 0
+        tip_cat_cache = {}
+        for data in TIP_CATEGORIES_DATA:
+            cat, _ = TipCategory.objects.get_or_create(
+                name=data['name'],
+                defaults=dict(order=data.get('order', 0)),
+            )
+            tip_cat_cache[data['name']] = cat
+        for data in CAREER_TIPS_DATA:
+            author = self._get_user(data['author_email'])
+            category = tip_cat_cache.get(data.get('category_name'))
+            _, was_created = CareerTip.objects.get_or_create(
+                title=data['title'],
+                author=author,
+                defaults=dict(
+                    content=data['content'],
+                    category=category,
+                ),
+            )
+            if was_created:
+                created += 1
+        self.stdout.write(f'Career tips: {created} created')
+        return created
+
+    # ── Professional profiles ─────────────────────────────────────────────
+
+    def _create_professional_profiles(self):
+        created = 0
+        for data in PROFESSIONAL_PROFILES_DATA:
+            user = self._get_user(data['user_email'])
+            cat = None
+            if data.get('category_name'):
+                cat = JobCategory.objects.filter(name=data['category_name']).first()
+            _, was_created = ProfessionalProfile.objects.get_or_create(
+                user=user,
+                defaults=dict(
+                    headline=data['headline'],
+                    summary=data.get('summary', ''),
+                    availability=data.get('availability', 'available'),
+                    years_of_experience=data.get('years_of_experience'),
+                    education=data.get('education', ''),
+                    skills=data.get('skills', ''),
+                    services=data.get('services', ''),
+                    category=cat,
+                ),
+            )
+            if was_created:
+                created += 1
+        self.stdout.write(f'Professional profiles: {created} created')
+        return created
+
+    # ── Link real users to demo users ─────────────────────────────────────
+
+    def _link_real_users(self):
+        """
+        Make all existing non-demo users mutually follow some demo users
+        and join the main group, so they see demo content in their feed.
+        """
+        demo_emails = {d['email'] for d in USERS_DATA}
+        real_users = User.objects.exclude(
+            email__endswith=f'@{DEMO_DOMAIN}',
+        ).exclude(is_superuser=True)
+
+        if not real_users.exists():
+            self.stdout.write('No real users found to link.')
+            return 0
+
+        # Key demo users that real users will follow (and be followed by)
+        key_demo_emails = [
+            'matias@demo.iddam.app',
+            'david@demo.iddam.app',
+            'daniela@demo.iddam.app',
+            'lucas@demo.iddam.app',
+            'pablo@demo.iddam.app',
+            'facundo@demo.iddam.app',
+            'sarah@demo.iddam.app',
+            'genesis@demo.iddam.app',
+            'camila@demo.iddam.app',
+            'jose@demo.iddam.app',
+            'ana@demo.iddam.app',
+            'maria@demo.iddam.app',
+        ]
+
+        created_follows = 0
+        created_memberships = 0
+        created_friendships = 0
+        created_conversations = 0
+        created_messages = 0
+
+        for real_user in real_users:
+            for demo_email in key_demo_emails:
+                demo_user = self._get_user(demo_email)
+                # Mutual follow
+                for follower, followed in [(real_user, demo_user), (demo_user, real_user)]:
+                    _, was_created = Follow.objects.get_or_create(
+                        follower=follower, followed=followed,
+                    )
+                    if was_created:
+                        created_follows += 1
+
+            # Add real user as friend of a couple demo users
+            for demo_email in ['matias@demo.iddam.app', 'david@demo.iddam.app']:
+                demo_user = self._get_user(demo_email)
+                u1, u2 = (real_user, demo_user) if real_user.pk < demo_user.pk else (demo_user, real_user)
+                _, was_created = Friendship.objects.get_or_create(user1=u1, user2=u2)
+                if was_created:
+                    created_friendships += 1
+
+            # Add real user to the main general group
+            general_group = Group.objects.filter(name='General COGWA Jóvenes').first()
+            if general_group:
+                _, was_created = GroupMembership.objects.get_or_create(
+                    group=general_group, user=real_user,
+                    defaults=dict(role='member'),
+                )
+                if was_created:
+                    created_memberships += 1
+
+            # Create a welcome chat conversation with matias
+            matias = self._get_user('matias@demo.iddam.app')
+            u1, u2 = (real_user, matias) if real_user.pk < matias.pk else (matias, real_user)
+            conv, was_created = Conversation.objects.get_or_create(
+                user1=u1, user2=u2,
+            )
+            if was_created:
+                created_conversations += 1
+                Message.objects.create(
+                    conversation=conv,
+                    sender=matias,
+                    content='Hola! Bienvenido a IDDAM Chat. Soy Matías, si necesitas algo no dudes en escribirme!',
+                )
+                created_messages += 1
+
+        self.stdout.write(
+            f'Real user links: {created_follows} follows, '
+            f'{created_friendships} friendships, '
+            f'{created_memberships} group memberships, '
+            f'{created_conversations} conversations'
+        )
+        return created_follows
