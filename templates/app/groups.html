@@ -851,6 +851,11 @@ async function loadGroupMembers() {
         const data = await res.json();
         const members = data.results || data;
 
+        if (members.length === 0) {
+            list.innerHTML = '<div class="empty-state"><i class="bi bi-people"></i><h5>Sin miembros</h5></div>';
+            return;
+        }
+
         list.innerHTML = members.map(m => {
             const u = m.user || {};
             const name = u.display_name || u.first_name || u.username || 'Usuario';
