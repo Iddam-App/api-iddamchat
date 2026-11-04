@@ -18,4 +18,12 @@ urlpatterns = [
     path('tips/create/', views.CareerTipCreateView.as_view(), name='tip_create'),
     path('tips/<int:pk>/', views.CareerTipDetailView.as_view(), name='tip_detail'),
     path('tips/<int:pk>/like/', views.ToggleTipLikeView.as_view(), name='tip_like'),
+    # Professional profiles
+    path('professionals/', views.ProfessionalProfileListView.as_view(), name='professional_list'),
+    path('professionals/<int:user_id>/', views.ProfessionalProfileDetailView.as_view(), name='professional_detail'),
+    path('my-professional-profile/', views.MyProfessionalProfileView.as_view(), name='my_professional_profile'),
+    path('portfolio/', views.PortfolioItemCreateView.as_view(), name='portfolio_create'),
+    path('portfolio/<int:pk>/', views.PortfolioItemDeleteView.as_view(), name='portfolio_delete'),
+    path('experience/', views.WorkExperienceCreateView.as_view(), name='experience_create'),
+    path('experience/<int:pk>/', views.WorkExperienceUpdateDeleteView.as_view(), name='experience_update_delete'),
 ]

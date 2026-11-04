@@ -1,10 +1,12 @@
 from rest_framework import serializers
 
-from apps.core.serializers import UserMinimalSerializer
+from apps.core.models import UserLanguage
+from apps.core.serializers import UserLanguageSerializer, UserMinimalSerializer
 
 from .models import (
     CareerTip, JobBookmark, JobCategory, JobPosting,
-    TipCategory, TipLike,
+    PortfolioItem, ProfessionalProfile, TipCategory, TipLike,
+    WorkExperience,
 )
 
 
@@ -159,3 +161,83 @@ class CareerTipDetailSerializer(serializers.ModelSerializer):
         if request and request.user.is_authenticated:
             return TipLike.objects.filter(user=request.user, tip=obj).exists()
         return False
+
+
+# ─── Professional Profile Serializers ────────────────────────────
+
+class ProfessionalUserSerializer(UserMinimalSerializer):
+    class Meta(UserMinimalSerializer.Meta):
+        fields = UserMinimalSerializer.Meta.fields + ['city']
+
+
+class PortfolioItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PortfolioItem
+        fields = ['id', 'title', 'description', 'image', 'url', 'order', 'created_at']
+        read_only_fields = ['id', 'created_at']
+
+
+class WorkExperienceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WorkExperience
+        fields = [
+            'id', 'company_name', 'position', 'description',
+            'start_date', 'end_date', 'is_current', 'order', 'created_at',
+        ]
+        read_only_fields = ['id', 'created_at']
+
+
+class ProfessionalProfileListSerializer(serializers.ModelSerializer):
+    user = ProfessionalUserSerializer(read_only=True)
+    category_name = serializers.CharField(source='category.name', read_only=True, default='')
+    languages = serializers.SerializerMethodField()
+    shared_languages_count = serializers.IntegerField(read_only=True, default=0)
+
+    class Meta:
+        model = ProfessionalProfile
+        fields = [
+            'id', 'user', 'headline', 'summary', 'availability',
+            'years_of_experience', 'skills', 'services', 'category',
+            'category_name', 'hourly_rate', 'rate_currency',
+            'languages', 'shared_languages_count', 'updated_at',
+        ]
+
+    def get_languages(self, obj):
+        langs = UserLanguage.objects.filter(user=obj.user)
+        return UserLanguageSerializer(langs, many=True).data
+
+
+class ProfessionalProfileDetailSerializer(serializers.ModelSerializer):
+    user = ProfessionalUserSerializer(read_only=True)
+    category_name = serializers.CharField(source='category.name', read_only=True, default='')
+    languages = serializers.SerializerMethodField()
+    portfolio_items = PortfolioItemSerializer(many=True, read_only=True)
+    work_experiences = WorkExperienceSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = ProfessionalProfile
+        fields = [
+            'id', 'user', 'headline', 'summary', 'availability',
+            'years_of_experience', 'education', 'skills', 'services',
+            'category', 'category_name', 'hourly_rate', 'rate_currency',
+            'linkedin_url', 'github_url', 'portfolio_url', 'other_url',
+            'is_public', 'languages', 'portfolio_items', 'work_experiences',
+            'created_at', 'updated_at',
+        ]
+
+    def get_languages(self, obj):
+        langs = UserLanguage.objects.filter(user=obj.user)
+        return UserLanguageSerializer(langs, many=True).data
+
+
+class ProfessionalProfileCreateUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProfessionalProfile
+        fields = [
+            'id', 'headline', 'summary', 'availability',
+            'years_of_experience', 'education', 'skills', 'services',
+            'category', 'hourly_rate', 'rate_currency',
+            'linkedin_url', 'github_url', 'portfolio_url', 'other_url',
+            'is_public',
+        ]
+        read_only_fields = ['id']

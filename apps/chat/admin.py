@@ -8,9 +8,9 @@ class MessageInline(admin.TabularInline):
     model = Message
     extra = 0
     readonly_fields = ('sender', 'content', 'original_content', 'was_filtered',
-                       'matched_words', 'is_read', 'created_at')
+                       'matched_words', 'image', 'audio', 'video', 'is_read', 'created_at')
     fields = ('sender', 'content', 'original_content', 'was_filtered',
-              'is_read', 'created_at')
+              'image', 'audio', 'video', 'is_read', 'created_at')
     ordering = ('-created_at',)
     max_num = 50
 
@@ -45,7 +45,7 @@ class ConversationAdmin(admin.ModelAdmin):
 class MessageAdmin(admin.ModelAdmin):
     list_display = (
         'id', 'conversation', 'sender', 'content_preview',
-        'filter_status', 'is_read', 'created_at',
+        'has_audio', 'filter_status', 'is_read', 'created_at',
     )
     list_filter = ('was_filtered', 'is_read', 'created_at')
     search_fields = (
@@ -58,6 +58,10 @@ class MessageAdmin(admin.ModelAdmin):
     @admin.display(description='Contenido')
     def content_preview(self, obj):
         return obj.content[:100]
+
+    @admin.display(description='Audio', boolean=True)
+    def has_audio(self, obj):
+        return bool(obj.audio)
 
     @admin.display(description='Filtro')
     def filter_status(self, obj):

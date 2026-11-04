@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.contrib.auth import get_user_model
 from django.db.models import Q
 from django.utils import timezone
@@ -17,6 +19,8 @@ from .serializers import (
 )
 
 User = get_user_model()
+
+MESSAGE_DELETE_WINDOW = timedelta(minutes=5)
 
 
 class ConversationListView(generics.ListAPIView):
@@ -88,9 +92,11 @@ class MessageSendView(APIView):
 
         content = request.data.get('content', '').strip()
         image = request.FILES.get('image')
+        audio = request.FILES.get('audio')
+        video = request.FILES.get('video')
         confirmed = request.data.get('confirmed', False)
 
-        if not content and not image:
+        if not content and not image and not audio and not video:
             return Response(
                 {'detail': 'El mensaje no puede estar vacío.'},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -127,6 +133,30 @@ class MessageSendView(APIView):
             if mod_result['severity']:
                 was_filtered = True
 
+        # Validate audio file type
+        if audio:
+            allowed_audio = (
+                'audio/mpeg', 'audio/mp4', 'audio/ogg', 'audio/webm',
+                'audio/wav', 'audio/x-m4a', 'audio/aac',
+            )
+            if audio.content_type not in allowed_audio:
+                return Response(
+                    {'detail': 'Formato de audio no soportado.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        # Validate video file type
+        if video:
+            allowed_video = (
+                'video/mp4', 'video/webm', 'video/quicktime',
+                'video/x-msvideo', 'video/x-matroska',
+            )
+            if video.content_type not in allowed_video:
+                return Response(
+                    {'detail': 'Formato de video no soportado.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
         msg = Message.objects.create(
             conversation=conv,
             sender=user,
@@ -134,6 +164,8 @@ class MessageSendView(APIView):
             original_content=content if was_filtered else '',
             was_filtered=was_filtered,
             image=image or '',
+            audio=audio or '',
+            video=video or '',
         )
 
         conv.save(update_fields=['updated_at'])
@@ -304,3 +336,34 @@ class ConversationAutoTranslateView(APIView):
             'auto_translate': pref.auto_translate,
             'target_language': pref.target_language,
         })
+
+
+class MessageDeleteView(APIView):
+    """DELETE: eliminar un mensaje propio dentro de los primeros 5 minutos."""
+
+    def delete(self, request, message_id):
+        msg = generics.get_object_or_404(Message, pk=message_id)
+
+        if msg.sender != request.user:
+            return Response(
+                {'detail': 'Solo puedes eliminar tus propios mensajes.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        elapsed = timezone.now() - msg.created_at
+        if elapsed > MESSAGE_DELETE_WINDOW:
+            return Response(
+                {'detail': 'Ya no puedes eliminar este mensaje (límite de 5 minutos).'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # Delete associated files
+        if msg.image:
+            msg.image.delete(save=False)
+        if msg.audio:
+            msg.audio.delete(save=False)
+        if msg.video:
+            msg.video.delete(save=False)
+
+        msg.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

@@ -168,3 +168,99 @@ class TipLike(models.Model):
 
     def __str__(self):
         return f"{self.user} likes {self.tip}"
+
+
+class ProfessionalProfile(models.Model):
+    AVAILABILITY_CHOICES = [
+        ('available', 'Disponible'),
+        ('busy', 'Ocupado'),
+        ('not_looking', 'No busco trabajo'),
+    ]
+    CURRENCY_CHOICES = [
+        ('USD', 'USD'), ('EUR', 'EUR'), ('MXN', 'MXN'),
+        ('CLP', 'CLP'), ('ARS', 'ARS'), ('COP', 'COP'),
+        ('PEN', 'PEN'), ('BRL', 'BRL'),
+    ]
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='professional_profile',
+    )
+    headline = models.CharField('Titulo profesional', max_length=200)
+    summary = models.TextField('Resumen profesional', max_length=2000, blank=True)
+    availability = models.CharField(
+        max_length=15, choices=AVAILABILITY_CHOICES, default='available',
+    )
+    years_of_experience = models.PositiveSmallIntegerField(
+        'Anos de experiencia', null=True, blank=True,
+    )
+    education = models.CharField('Educacion', max_length=200, blank=True)
+    skills = models.TextField('Habilidades', blank=True)
+    services = models.TextField('Servicios ofrecidos', blank=True)
+    category = models.ForeignKey(
+        JobCategory, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='professionals',
+    )
+    hourly_rate = models.PositiveIntegerField(
+        'Tarifa por hora', null=True, blank=True,
+    )
+    rate_currency = models.CharField(
+        max_length=5, choices=CURRENCY_CHOICES, default='USD',
+    )
+    linkedin_url = models.URLField('LinkedIn', blank=True)
+    github_url = models.URLField('GitHub', blank=True)
+    portfolio_url = models.URLField('Portafolio', blank=True)
+    other_url = models.URLField('Otro enlace', blank=True)
+    is_public = models.BooleanField('Perfil publico', default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+        indexes = [
+            models.Index(fields=['is_public', '-updated_at']),
+            models.Index(fields=['category', '-updated_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.user} — {self.headline}"
+
+
+class PortfolioItem(models.Model):
+    profile = models.ForeignKey(
+        ProfessionalProfile, on_delete=models.CASCADE,
+        related_name='portfolio_items',
+    )
+    title = models.CharField('Titulo', max_length=150)
+    description = models.TextField('Descripcion', max_length=500, blank=True)
+    image = models.ImageField(upload_to='professional/portfolio/%Y/%m/')
+    url = models.URLField('Enlace al proyecto', blank=True)
+    order = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['order', '-created_at']
+
+    def __str__(self):
+        return f"{self.profile.user} — {self.title}"
+
+
+class WorkExperience(models.Model):
+    profile = models.ForeignKey(
+        ProfessionalProfile, on_delete=models.CASCADE,
+        related_name='work_experiences',
+    )
+    company_name = models.CharField('Empresa', max_length=150)
+    position = models.CharField('Cargo', max_length=150)
+    description = models.TextField('Descripcion', max_length=1000, blank=True)
+    start_date = models.DateField('Fecha inicio')
+    end_date = models.DateField('Fecha fin', null=True, blank=True)
+    is_current = models.BooleanField('Actualmente', default=False)
+    order = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['order', '-start_date']
+
+    def __str__(self):
+        return f"{self.profile.user} — {self.position} en {self.company_name}"

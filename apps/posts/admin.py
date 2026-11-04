@@ -1,10 +1,15 @@
 from django.contrib import admin
 
-from .models import Post, PostImage, Reaction, Comment, SavedPost
+from .models import Post, PostImage, PostVideo, Reaction, Comment, SavedPost
 
 
 class PostImageInline(admin.TabularInline):
     model = PostImage
+    extra = 0
+
+
+class PostVideoInline(admin.TabularInline):
+    model = PostVideo
     extra = 0
 
 
@@ -17,7 +22,7 @@ class PostAdmin(admin.ModelAdmin):
     list_filter = ('post_type', 'is_pinned', 'is_church_official', 'created_at')
     search_fields = ('author__username', 'author__email', 'title', 'content')
     raw_id_fields = ('author',)
-    inlines = [PostImageInline]
+    inlines = [PostImageInline, PostVideoInline]
 
 
 @admin.register(Reaction)

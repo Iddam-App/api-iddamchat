@@ -1,19 +1,25 @@
-from django.db.models import F, Q
+from django.db.models import Count, F, Q, Subquery, OuterRef
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.core.models import UserLanguage
 from apps.notifications.services import create_notification
 
 from .models import (
     CareerTip, JobBookmark, JobCategory, JobPosting,
-    TipCategory, TipLike,
+    PortfolioItem, ProfessionalProfile, TipCategory, TipLike,
+    WorkExperience,
 )
 from .serializers import (
     CareerTipCreateSerializer, CareerTipDetailSerializer,
     CareerTipListSerializer, JobCategorySerializer,
     JobPostingCreateSerializer, JobPostingDetailSerializer,
-    JobPostingListSerializer, TipCategorySerializer,
+    JobPostingListSerializer, PortfolioItemSerializer,
+    ProfessionalProfileCreateUpdateSerializer,
+    ProfessionalProfileDetailSerializer,
+    ProfessionalProfileListSerializer, TipCategorySerializer,
+    WorkExperienceSerializer,
 )
 
 
@@ -216,3 +222,152 @@ class ToggleTipLikeView(APIView):
             CareerTip.objects.filter(pk=pk).update(likes_count=F('likes_count') - 1)
             tip.refresh_from_db()
             return Response({'liked': False, 'likes_count': tip.likes_count})
+
+
+# ─── Professional Profiles ───────────────────────────────────────
+
+class ProfessionalProfileListView(generics.ListAPIView):
+    serializer_class = ProfessionalProfileListSerializer
+
+    def get_queryset(self):
+        qs = ProfessionalProfile.objects.filter(
+            is_public=True,
+        ).select_related('user', 'category')
+
+        # Annotate shared languages count with current user
+        user = self.request.user
+        if user.is_authenticated:
+            my_langs = UserLanguage.objects.filter(
+                user=user,
+            ).values_list('language_code', flat=True)
+            shared = UserLanguage.objects.filter(
+                user=OuterRef('user'),
+                language_code__in=list(my_langs),
+            ).values('user').annotate(cnt=Count('id')).values('cnt')
+            qs = qs.annotate(
+                shared_languages_count=Subquery(shared),
+            ).order_by('-shared_languages_count', '-updated_at')
+        else:
+            qs = qs.order_by('-updated_at')
+
+        # Filters
+        category = self.request.query_params.get('category')
+        if category:
+            qs = qs.filter(category_id=category)
+
+        country = self.request.query_params.get('country')
+        if country:
+            qs = qs.filter(user__country=country)
+
+        language = self.request.query_params.get('language')
+        if language:
+            qs = qs.filter(user__languages__language_code=language).distinct()
+
+        availability = self.request.query_params.get('availability')
+        if availability:
+            qs = qs.filter(availability=availability)
+
+        search = self.request.query_params.get('search')
+        if search:
+            qs = qs.filter(
+                Q(headline__icontains=search)
+                | Q(skills__icontains=search)
+                | Q(services__icontains=search)
+                | Q(user__first_name__icontains=search)
+                | Q(user__last_name__icontains=search)
+            )
+
+        return qs
+
+
+class ProfessionalProfileDetailView(generics.RetrieveAPIView):
+    serializer_class = ProfessionalProfileDetailSerializer
+    lookup_field = 'user_id'
+
+    def get_queryset(self):
+        return ProfessionalProfile.objects.filter(
+            is_public=True,
+        ).select_related('user', 'category').prefetch_related(
+            'portfolio_items', 'work_experiences',
+        )
+
+
+class MyProfessionalProfileView(generics.RetrieveUpdateAPIView):
+    def get_serializer_class(self):
+        if self.request.method == 'PUT':
+            return ProfessionalProfileCreateUpdateSerializer
+        return ProfessionalProfileDetailSerializer
+
+    def get_object(self):
+        obj, _ = ProfessionalProfile.objects.get_or_create(
+            user=self.request.user,
+            defaults={'headline': ''},
+        )
+        return obj
+
+
+class PortfolioItemCreateView(generics.CreateAPIView):
+    serializer_class = PortfolioItemSerializer
+
+    def perform_create(self, serializer):
+        profile, _ = ProfessionalProfile.objects.get_or_create(
+            user=self.request.user,
+            defaults={'headline': ''},
+        )
+        serializer.save(profile=profile)
+
+
+class PortfolioItemDeleteView(APIView):
+    def delete(self, request, pk):
+        try:
+            item = PortfolioItem.objects.get(
+                pk=pk, profile__user=request.user,
+            )
+        except PortfolioItem.DoesNotExist:
+            return Response(
+                {'detail': 'No encontrado.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        item.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class WorkExperienceCreateView(generics.CreateAPIView):
+    serializer_class = WorkExperienceSerializer
+
+    def perform_create(self, serializer):
+        profile, _ = ProfessionalProfile.objects.get_or_create(
+            user=self.request.user,
+            defaults={'headline': ''},
+        )
+        serializer.save(profile=profile)
+
+
+class WorkExperienceUpdateDeleteView(APIView):
+    def put(self, request, pk):
+        try:
+            exp = WorkExperience.objects.get(
+                pk=pk, profile__user=request.user,
+            )
+        except WorkExperience.DoesNotExist:
+            return Response(
+                {'detail': 'No encontrado.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        serializer = WorkExperienceSerializer(exp, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    def delete(self, request, pk):
+        try:
+            exp = WorkExperience.objects.get(
+                pk=pk, profile__user=request.user,
+            )
+        except WorkExperience.DoesNotExist:
+            return Response(
+                {'detail': 'No encontrado.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        exp.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

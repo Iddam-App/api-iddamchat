@@ -59,6 +59,15 @@ class PostImage(models.Model):
         ordering = ['order']
 
 
+class PostVideo(models.Model):
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='videos')
+    video = models.FileField(upload_to='posts/videos/%Y/%m/')
+    order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order']
+
+
 class Reaction(models.Model):
     REACTION_TYPES = [
         ('like', '👍'),

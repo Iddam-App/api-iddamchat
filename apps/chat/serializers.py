@@ -12,7 +12,8 @@ class MessageSerializer(serializers.ModelSerializer):
         model = Message
         fields = [
             'id', 'conversation', 'sender', 'content',
-            'was_filtered', 'image', 'is_read', 'read_at', 'created_at',
+            'was_filtered', 'image', 'audio', 'video', 'is_read', 'read_at',
+            'created_at',
         ]
         read_only_fields = [
             'id', 'conversation', 'sender', 'was_filtered',
@@ -42,8 +43,13 @@ class ConversationSerializer(serializers.ModelSerializer):
         else:
             msg = obj.messages.order_by('-created_at').first()
         if msg:
+            content = msg.content[:100] if msg.content else ''
+            if not content and msg.audio:
+                content = 'Mensaje de voz'
+            elif not content and msg.video:
+                content = 'Video'
             return {
-                'content': msg.content[:100],
+                'content': content,
                 'sender_id': msg.sender_id,
                 'created_at': msg.created_at.isoformat(),
                 'is_read': msg.is_read,

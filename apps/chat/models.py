@@ -42,6 +42,8 @@ class Message(models.Model):
     was_filtered = models.BooleanField(default=False)
     matched_words = models.TextField(blank=True)
     image = models.ImageField(upload_to='chat/images/%Y/%m/', blank=True)
+    audio = models.FileField(upload_to='chat/audio/%Y/%m/', blank=True)
+    video = models.FileField(upload_to='chat/videos/%Y/%m/', blank=True)
     is_read = models.BooleanField(default=False)
     read_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

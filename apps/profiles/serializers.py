@@ -19,7 +19,7 @@ class StorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Story
-        fields = ['id', 'user', 'image', 'text', 'background_color',
+        fields = ['id', 'user', 'image', 'video', 'text', 'background_color',
                   'created_at', 'expires_at', 'view_count', 'is_viewed']
         read_only_fields = ['id', 'created_at']
 
@@ -40,7 +40,7 @@ class StorySerializer(serializers.ModelSerializer):
 class StoryCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Story
-        fields = ['id', 'image', 'text', 'background_color', 'expires_at']
+        fields = ['id', 'image', 'video', 'text', 'background_color', 'expires_at']
         read_only_fields = ['id']
 
 

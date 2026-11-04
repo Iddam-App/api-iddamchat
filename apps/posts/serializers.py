@@ -2,13 +2,19 @@ from rest_framework import serializers
 
 from apps.core.serializers import UserMinimalSerializer
 
-from .models import Comment, Hashtag, Post, PostHashtag, PostImage, Reaction, SavedPost
+from .models import Comment, Hashtag, Post, PostHashtag, PostImage, PostVideo, Reaction, SavedPost
 
 
 class PostImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = PostImage
         fields = ['id', 'image', 'order']
+
+
+class PostVideoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PostVideo
+        fields = ['id', 'video', 'order']
 
 
 class ReactionSerializer(serializers.ModelSerializer):
@@ -45,6 +51,7 @@ class HashtagSerializer(serializers.ModelSerializer):
 class PostSerializer(serializers.ModelSerializer):
     author = UserMinimalSerializer(read_only=True)
     images = PostImageSerializer(many=True, read_only=True)
+    videos = PostVideoSerializer(many=True, read_only=True)
     reaction_count = serializers.ReadOnlyField()
     comment_count = serializers.ReadOnlyField()
     my_reaction = serializers.SerializerMethodField()
@@ -55,7 +62,7 @@ class PostSerializer(serializers.ModelSerializer):
         model = Post
         fields = [
             'id', 'author', 'post_type', 'visibility', 'title', 'content',
-            'images', 'is_pinned', 'is_church_official', 'is_hidden',
+            'images', 'videos', 'is_pinned', 'is_church_official', 'is_hidden',
             'reaction_count', 'comment_count', 'my_reaction',
             'is_saved', 'hashtag_names', 'created_at', 'updated_at',
         ]
@@ -87,15 +94,22 @@ class PostCreateSerializer(serializers.ModelSerializer):
     images = serializers.ListField(
         child=serializers.ImageField(), required=False, write_only=True,
     )
+    videos = serializers.ListField(
+        child=serializers.FileField(), required=False, write_only=True,
+    )
 
     class Meta:
         model = Post
-        fields = ['id', 'post_type', 'visibility', 'title', 'content', 'images']
+        fields = ['id', 'post_type', 'visibility', 'title', 'content',
+                  'images', 'videos']
         read_only_fields = ['id']
 
     def create(self, validated_data):
         images = validated_data.pop('images', [])
+        videos = validated_data.pop('videos', [])
         post = Post.objects.create(**validated_data)
         for i, img in enumerate(images):
             PostImage.objects.create(post=post, image=img, order=i)
+        for i, vid in enumerate(videos):
+            PostVideo.objects.create(post=post, video=vid, order=i)
         return post

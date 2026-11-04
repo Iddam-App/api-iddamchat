@@ -58,7 +58,7 @@ class FeedView(generics.ListAPIView):
             Q(author_id__in=visible_users, visibility='public') |
             Q(author_id__in=all_friend_ids, visibility='friends'),
         ).select_related('author').prefetch_related(
-            'images', 'reactions',
+            'images', 'videos', 'reactions',
         ).annotate(
             _reaction_count=Count('reactions', distinct=True),
             _comment_count=Count('comments', distinct=True),
@@ -109,7 +109,7 @@ class PostDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_queryset(self):
         return Post.objects.select_related('author').prefetch_related(
-            'images', 'reactions',
+            'images', 'videos', 'reactions',
         )
 
     def perform_update(self, serializer):

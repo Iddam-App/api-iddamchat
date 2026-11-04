@@ -26,6 +26,7 @@ class Story(models.Model):
         related_name='stories',
     )
     image = models.ImageField(upload_to='stories/%Y/%m/%d/', blank=True)
+    video = models.FileField(upload_to='stories/videos/%Y/%m/%d/', blank=True)
     text = models.CharField(max_length=500, blank=True)
     background_color = models.CharField(max_length=7, default='#2EA3F2')
     created_at = models.DateTimeField(auto_now_add=True)
