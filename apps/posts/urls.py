@@ -6,6 +6,7 @@ app_name = 'posts'
 
 urlpatterns = [
     path('feed/', views.FeedView.as_view(), name='feed'),
+    path('discover/', views.DiscoverView.as_view(), name='discover'),
     path('create/', views.PostCreateView.as_view(), name='post_create'),
     path('<int:pk>/', views.PostDetailView.as_view(), name='post_detail'),
     path('<int:pk>/react/', views.ReactView.as_view(), name='react'),

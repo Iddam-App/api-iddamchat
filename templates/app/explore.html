@@ -27,6 +27,12 @@
         <button class="explore-chip" data-cat="news" onclick="filterCategory(this, 'news')">Noticias</button>
     </div>
 
+    <!-- User Suggestions -->
+    <div id="suggestions-section" style="display:none;">
+        <div class="search-section-label"><i class="bi bi-person-plus me-1"></i>Personas que quizás conozcas</div>
+        <div class="suggestions-scroll" id="suggestions-list"></div>
+    </div>
+
     <!-- Search Results -->
     <div id="search-results" style="display:none;">
         <div id="search-users"></div>
@@ -42,14 +48,91 @@
         <div class="profile-grid" id="discover-grid"></div>
         <div class="empty-state" id="discover-empty" style="display:none;">
             <i class="bi bi-compass"></i>
-            <h5>Nada por aqui todavia</h5>
-            <p>Se el primero en publicar algo</p>
+            <h5>Nada por aquí todavía</h5>
+            <p>Sé el primero en publicar algo</p>
         </div>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
+<style>
+.suggestions-scroll {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding: 8px 0 16px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.suggestions-scroll::-webkit-scrollbar { display: none; }
+
+.suggestion-card {
+    flex: 0 0 140px;
+    background: var(--card-bg, #1e1e1e);
+    border-radius: 16px;
+    padding: 16px 12px;
+    text-align: center;
+    text-decoration: none;
+    color: inherit;
+    border: 1px solid var(--border-color, #2a2a2a);
+    transition: transform 0.15s;
+}
+.suggestion-card:active { transform: scale(0.97); }
+
+.suggestion-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--accent-color, #2EA3F2);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0 auto 8px;
+    overflow: hidden;
+}
+.suggestion-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.suggestion-name {
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.suggestion-meta {
+    font-size: 11px;
+    opacity: 0.6;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+}
+.suggestion-btn {
+    margin-top: 10px;
+    padding: 5px 16px;
+    border-radius: 20px;
+    border: none;
+    background: var(--accent-color, #2EA3F2);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.suggestion-btn.following {
+    background: transparent;
+    border: 1px solid var(--border-color, #444);
+    color: var(--text-secondary, #aaa);
+}
+</style>
+
 <script>
 let discoverPosts = [];
 let currentCategory = '';
@@ -65,6 +148,7 @@ onPageReady(() => {
         document.getElementById('explore-search').value = '#' + hashtagParam;
         searchHashtag(hashtagParam);
     } else {
+        loadSuggestions();
         loadDiscoverGrid();
     }
 
@@ -76,11 +160,60 @@ onPageReady(() => {
         if (q.length < 2) {
             document.getElementById('search-results').style.display = 'none';
             document.getElementById('discover-section').style.display = 'block';
+            document.getElementById('suggestions-section').style.display =
+                document.getElementById('suggestions-list').children.length ? '' : 'none';
+            document.getElementById('explore-chips').style.display = '';
             return;
         }
         searchTimeout = setTimeout(() => performSearch(q), 300);
     });
 });
+
+async function loadSuggestions() {
+    try {
+        const res = await authFetch('/api/auth/users/suggestions/');
+        if (!res.ok) return;
+        const users = await res.json();
+        if (!users.length) return;
+
+        const list = document.getElementById('suggestions-list');
+        list.innerHTML = users.map(u => {
+            const name = u.display_name || u.first_name || u.username;
+            const initial = (name[0] || '?').toUpperCase();
+            const avatar = u.avatar
+                ? `<img src="${u.avatar}" alt="">`
+                : initial;
+            const country = u.country || '';
+            return `
+            <a href="/profile/${u.id}/" class="suggestion-card">
+                <div class="suggestion-avatar">${avatar}</div>
+                <div class="suggestion-name">${escapeHtml(name)}</div>
+                <div class="suggestion-meta">@${escapeHtml(u.username)}${country ? ' · ' + country : ''}</div>
+                <button class="suggestion-btn" onclick="toggleSugFollow(event, this, ${u.id})">Seguir</button>
+            </a>`;
+        }).join('');
+        document.getElementById('suggestions-section').style.display = '';
+    } catch(e) {
+        console.error(e);
+    }
+}
+
+async function toggleSugFollow(e, btn, userId) {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+        const res = await authFetch(`/api/social/follow/${userId}/`, { method: 'POST' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.status === 'following' || data.status === 'follow_request_sent') {
+            btn.textContent = data.status === 'follow_request_sent' ? 'Solicitado' : 'Siguiendo';
+            btn.classList.add('following');
+        } else {
+            btn.textContent = 'Seguir';
+            btn.classList.remove('following');
+        }
+    } catch(e) { console.error(e); }
+}
 
 async function loadDiscoverGrid() {
     const spinner = document.getElementById('discover-spinner');
@@ -91,7 +224,7 @@ async function loadDiscoverGrid() {
     const timeout = setTimeout(() => controller.abort(), 10000);
 
     try {
-        const res = await authFetch('/api/posts/feed/', { signal: controller.signal });
+        const res = await authFetch('/api/posts/discover/', { signal: controller.signal });
         if (!res.ok) throw new Error('Failed');
 
         const data = await res.json();
@@ -156,6 +289,8 @@ function filterCategory(btn, cat) {
 async function performSearch(query) {
     document.getElementById('search-results').style.display = 'block';
     document.getElementById('discover-section').style.display = 'none';
+    document.getElementById('suggestions-section').style.display = 'none';
+    document.getElementById('explore-chips').style.display = 'none';
 
     // Check if searching hashtag
     if (query.startsWith('#') && query.length > 1) {
@@ -233,6 +368,8 @@ async function searchGroups(query) {
 async function searchHashtag(tag) {
     document.getElementById('search-results').style.display = 'block';
     document.getElementById('discover-section').style.display = 'none';
+    document.getElementById('suggestions-section').style.display = 'none';
+    document.getElementById('explore-chips').style.display = 'none';
     document.getElementById('search-users').innerHTML = '';
     document.getElementById('search-groups').innerHTML = '';
 
@@ -278,6 +415,9 @@ function clearSearch() {
     document.getElementById('search-clear').style.display = 'none';
     document.getElementById('search-results').style.display = 'none';
     document.getElementById('discover-section').style.display = 'block';
+    document.getElementById('explore-chips').style.display = '';
+    document.getElementById('suggestions-section').style.display =
+        document.getElementById('suggestions-list').children.length ? '' : 'none';
     // Clear URL params
     if (window.location.search) {
         history.replaceState(null, '', '/explore/');

@@ -122,6 +122,26 @@ class UserSearchView(generics.ListAPIView):
         ).exclude(pk=self.request.user.pk)[:20]
 
 
+class UserSuggestionsView(generics.ListAPIView):
+    """Suggest users the current user is NOT following yet."""
+    serializer_class = UserMinimalSerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        from apps.social.models import Follow
+        user = self.request.user
+        following_ids = Follow.objects.filter(
+            follower=user,
+        ).values_list('followed_id', flat=True)
+        return User.objects.filter(
+            is_active=True,
+        ).exclude(
+            pk=user.pk,
+        ).exclude(
+            pk__in=following_ids,
+        ).order_by('?')[:12]
+
+
 class UserProfileView(generics.RetrieveAPIView):
     serializer_class = UserSerializer
     queryset = User.objects.filter(is_active=True)

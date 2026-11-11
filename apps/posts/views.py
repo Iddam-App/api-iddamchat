@@ -239,6 +239,31 @@ class UserPostsView(generics.ListAPIView):
         return qs
 
 
+class DiscoverView(generics.ListAPIView):
+    """Public discovery feed — all public, non-hidden posts."""
+    serializer_class = PostSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = Post.objects.filter(
+            visibility='public', is_hidden=False,
+        ).exclude(author=user).select_related('author').prefetch_related(
+            'images', 'videos', 'reactions',
+        ).annotate(
+            _reaction_count=Count('reactions', distinct=True),
+            _comment_count=Count('comments', distinct=True),
+            _is_saved=Exists(
+                SavedPost.objects.filter(user=user, post=OuterRef('pk')),
+            ),
+        ).distinct().order_by('-created_at')
+
+        # Optional post_type filter
+        post_type = self.request.query_params.get('type', '')
+        if post_type:
+            qs = qs.filter(post_type=post_type)
+        return qs
+
+
 class HobbiesFeedView(generics.ListAPIView):
     """Public feed of all hobby-type posts."""
     serializer_class = PostSerializer
