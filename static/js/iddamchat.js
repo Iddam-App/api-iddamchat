@@ -270,10 +270,16 @@ function initSpaRouter() {
         link.addEventListener('touchstart', prefetch, { passive: true, once: true });
     });
 
-    // Eagerly prefetch all nav pages after initial load for instant navigation
-    setTimeout(() => {
-        navLinks.forEach(link => _spaPrefetch(link.getAttribute('href')));
-    }, 1500);
+    // Prefetch nav pages lazily (staggered to avoid flooding the server)
+    let prefetchIdx = 0;
+    const prefetchNext = () => {
+        if (prefetchIdx < navLinks.length) {
+            _spaPrefetch(navLinks[prefetchIdx].getAttribute('href'));
+            prefetchIdx++;
+            setTimeout(prefetchNext, 3000);
+        }
+    };
+    setTimeout(prefetchNext, 4000);
 }
 
 function spaNavigate(path) {
