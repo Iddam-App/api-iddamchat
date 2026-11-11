@@ -43,13 +43,22 @@ def pwa_icon(request, filename):
 
 
 def run_seed(request):
-    """Temporary endpoint to run seed and see output/errors."""
-    out = io.StringIO()
-    try:
-        call_command('seed_demo_data', stdout=out, stderr=out)
-        return HttpResponse(f'<pre>OK\n\n{out.getvalue()}</pre>')
-    except Exception:
-        return HttpResponse(f'<pre>ERROR\n\n{out.getvalue()}\n\n{traceback.format_exc()}</pre>', status=500)
+    """Temporary endpoint to run seed in a background thread."""
+    import threading
+    from apps.core.models import User
+
+    # If already seeded, skip
+    if User.objects.filter(email='matias@demo.iddam.app').exists():
+        return HttpResponse('<pre>Seed already done. Demo users exist.</pre>')
+
+    def _do_seed():
+        try:
+            call_command('seed_demo_data')
+        except Exception:
+            pass  # runs in background
+
+    threading.Thread(target=_do_seed, daemon=True).start()
+    return HttpResponse('<pre>Seed started in background. Wait 1-2 minutes then refresh the app.</pre>')
 
 
 urlpatterns = [
