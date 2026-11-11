@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.db.models import Q
+from django.utils import timezone
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -275,3 +276,99 @@ class AvailableLanguagesView(APIView):
     def get(self, request):
         from .constants import AVAILABLE_LANGUAGES
         return Response(AVAILABLE_LANGUAGES)
+
+
+class InitDemoInteractionsView(APIView):
+    """Create demo followers + welcome conversations for the current user."""
+
+    def post(self, request):
+        from datetime import timedelta
+        from apps.social.models import Follow
+        from apps.chat.models import Conversation, Message
+
+        DEMO_DOMAIN = 'demo.iddam.app'
+        FOLLOWERS = [
+            'matias@demo.iddam.app',
+            'daniela@demo.iddam.app',
+            'lucas@demo.iddam.app',
+            'david@demo.iddam.app',
+            'genesis@demo.iddam.app',
+            'pablo@demo.iddam.app',
+        ]
+        CONVERSATIONS = [
+            {
+                'sender': 'matias@demo.iddam.app',
+                'messages': [
+                    'Hola! Bienvenido a IddamChat! Soy Matías, de Santiago de Chile.',
+                    'Espero que te guste la app. Cualquier cosa que necesites, aquí estamos!',
+                ],
+            },
+            {
+                'sender': 'david@demo.iddam.app',
+                'messages': [
+                    'Hey! Welcome to IddamChat! I am David from Dallas.',
+                    'Feel free to check out the groups and events. See you around!',
+                ],
+            },
+            {
+                'sender': 'daniela@demo.iddam.app',
+                'messages': [
+                    'Holaa! Soy Daniela, bienvenido/a!',
+                    'Si te gusta el diseño o quieres compartir algo creativo, este es tu lugar.',
+                ],
+            },
+        ]
+
+        user = request.user
+        now = timezone.now()
+        created_follows = 0
+        created_convs = 0
+        created_msgs = 0
+
+        # Follows
+        for email in FOLLOWERS:
+            try:
+                demo = User.objects.get(email=email)
+                _, created = Follow.objects.get_or_create(
+                    follower=demo, followed=user,
+                )
+                if created:
+                    created_follows += 1
+            except User.DoesNotExist:
+                continue
+
+        # Conversations
+        for conv_data in CONVERSATIONS:
+            try:
+                sender = User.objects.get(email=conv_data['sender'])
+            except User.DoesNotExist:
+                continue
+            u1 = min(sender, user, key=lambda u: u.pk)
+            u2 = max(sender, user, key=lambda u: u.pk)
+            conv, was_new = Conversation.objects.get_or_create(
+                user1=u1, user2=u2,
+            )
+            if was_new:
+                created_convs += 1
+                for j, content in enumerate(conv_data['messages']):
+                    msg = Message.objects.create(
+                        conversation=conv,
+                        sender=sender,
+                        content=content,
+                    )
+                    Message.objects.filter(pk=msg.pk).update(
+                        created_at=now - timedelta(
+                            hours=len(conv_data['messages']) - j,
+                        ),
+                    )
+                    created_msgs += 1
+
+        return Response({
+            'created_follows': created_follows,
+            'created_conversations': created_convs,
+            'created_messages': created_msgs,
+            'total_followers': Follow.objects.filter(followed=user).count(),
+            'total_conversations': Conversation.objects.filter(
+                Q(user1=user) | Q(user2=user),
+            ).count(),
+        })

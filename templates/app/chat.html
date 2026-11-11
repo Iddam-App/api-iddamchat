@@ -762,7 +762,8 @@ onPageReady(() => {
     if (!isLoggedIn()) { window.location.href = '/login/'; return; }
     me = JSON.parse(localStorage.getItem('user_data') || '{}');
 
-    loadConversations();
+    // Ensure demo interactions exist (runs once per user)
+    initDemoInteractions().then(() => loadConversations());
 
     // Check if URL has a user ID to start conversation with
     const pathParts = window.location.pathname.split('/').filter(Boolean);
@@ -1430,6 +1431,16 @@ async function deleteSlangTerm(id) {
     } catch(e) {
         showToast('Error de conexion');
     }
+}
+
+// ─── Init Demo Interactions (one-time) ───
+async function initDemoInteractions() {
+    const key = 'demo_init_' + (me.id || '');
+    if (localStorage.getItem(key)) return;
+    try {
+        const res = await authFetch('/api/auth/me/init-demo/', { method: 'POST' });
+        if (res.ok) localStorage.setItem(key, '1');
+    } catch(e) {}
 }
 </script>
 {% endblock %}
