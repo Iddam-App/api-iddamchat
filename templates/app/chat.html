@@ -57,6 +57,9 @@
                     </div>
                 </a>
                 <div class="chat-thread-actions">
+                    <button class="chat-action-btn" id="btn-pin-conv" onclick="togglePinFromThread()" title="Fijar conversacion">
+                        <i class="bi bi-pin-angle"></i>
+                    </button>
                     <button class="chat-action-btn" id="btn-auto-translate" onclick="toggleAutoTranslate()" title="Auto-traducir conversacion">
                         <i class="bi bi-translate"></i>
                     </button>
@@ -212,6 +215,41 @@
     width: 100%;
     text-align: left;
 }
+/* Pin UI */
+.chat-list-item-wrapper {
+    position: relative;
+}
+.chat-list-item-wrapper.pinned {
+    background: rgba(139,115,85,0.04);
+}
+.conv-pin-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    border: none;
+    background: var(--hover-bg);
+    color: var(--text-muted);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.8rem;
+    z-index: 2;
+    transition: all 0.2s;
+}
+.chat-list-item-wrapper:hover .conv-pin-btn { display: flex; }
+.chat-list-item-wrapper.pinned .conv-pin-btn { display: flex; color: var(--gold); }
+.conv-pin-btn:hover { color: var(--gold); background: var(--border-color); }
+.conv-pin-icon {
+    font-size: 0.7rem;
+    color: var(--gold);
+    margin-right: 0.3rem;
+}
+
 .chat-list-item:hover { background: var(--hover-bg); }
 .chat-list-item.active { background: var(--hover-bg); }
 .chat-list-item .conv-avatar {
@@ -838,19 +876,25 @@ function renderConversationList() {
 
         const activeClass = conv.id === activeConvId ? 'active' : '';
         const unreadDot = conv.unread_count > 0 ? '<div class="conv-unread-dot"></div>' : '';
+        const pinIcon = conv.is_pinned ? '<i class="bi bi-pin-fill conv-pin-icon"></i>' : '';
 
         return `
-        <button class="chat-list-item ${activeClass}" onclick="openConversation(${conv.id}, ${JSON.stringify(JSON.stringify(u))})">
-            <div class="conv-avatar">${avatarInner}</div>
-            <div class="conv-info">
-                <div class="conv-name">${escapeHtml(name)}</div>
-                <div class="conv-preview ${unreadClass}">${escapeHtml(preview)}</div>
-            </div>
-            <div>
-                <div class="conv-time">${time}</div>
-                ${unreadDot}
-            </div>
-        </button>`;
+        <div class="chat-list-item-wrapper ${conv.is_pinned ? 'pinned' : ''}">
+            <button class="chat-list-item ${activeClass}" onclick="openConversation(${conv.id}, ${JSON.stringify(JSON.stringify(u))})">
+                <div class="conv-avatar">${avatarInner}</div>
+                <div class="conv-info">
+                    <div class="conv-name">${pinIcon}${escapeHtml(name)}</div>
+                    <div class="conv-preview ${unreadClass}">${escapeHtml(preview)}</div>
+                </div>
+                <div>
+                    <div class="conv-time">${time}</div>
+                    ${unreadDot}
+                </div>
+            </button>
+            <button class="conv-pin-btn" onclick="togglePinConversation(${conv.id}, event)" title="${conv.is_pinned ? 'Desfijar' : 'Fijar'}">
+                <i class="bi ${conv.is_pinned ? 'bi-pin-fill' : 'bi-pin-angle'}"></i>
+            </button>
+        </div>`;
     }).join('');
 
     list.innerHTML = html;
@@ -893,6 +937,9 @@ function openConversation(convId, userJson) {
     translationCache = {};
     autoTranslateActive = false;
     document.getElementById('btn-auto-translate').classList.remove('active');
+
+    // Update pin button state
+    updateThreadPinButton(convId);
 
     // Load messages & auto-translate preference
     loadMessages(convId);
@@ -1246,6 +1293,57 @@ function autoTranslateAllVisible(messages) {
             translateMessage(parseInt(msgId), btn);
         }
     });
+}
+
+// ─── Pin/Unpin Conversations ───
+async function togglePinConversation(convId, event) {
+    if (event) event.stopPropagation();
+    try {
+        const res = await authFetch(`/api/chat/conversations/${convId}/pin/`, {
+            method: 'POST'
+        });
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+
+        // Update local state
+        const conv = conversations.find(c => c.id === convId);
+        if (conv) conv.is_pinned = data.pinned;
+
+        // Re-sort: pinned first, then by updated_at
+        conversations.sort((a, b) => {
+            if (a.is_pinned && !b.is_pinned) return -1;
+            if (!a.is_pinned && b.is_pinned) return 1;
+            return new Date(b.updated_at) - new Date(a.updated_at);
+        });
+
+        renderConversationList();
+        updateThreadPinButton(convId);
+        showToast(data.pinned ? 'Conversacion fijada' : 'Conversacion desfijada');
+    } catch(e) {
+        console.error(e);
+        showToast('Error al fijar conversacion');
+    }
+}
+
+async function togglePinFromThread() {
+    if (!activeConvId) return;
+    await togglePinConversation(activeConvId);
+}
+
+function updateThreadPinButton(convId) {
+    if (convId !== activeConvId) return;
+    const btn = document.getElementById('btn-pin-conv');
+    const conv = conversations.find(c => c.id === convId);
+    if (!conv || !btn) return;
+    if (conv.is_pinned) {
+        btn.classList.add('active');
+        btn.innerHTML = '<i class="bi bi-pin-fill"></i>';
+        btn.title = 'Desfijar conversacion';
+    } else {
+        btn.classList.remove('active');
+        btn.innerHTML = '<i class="bi bi-pin-angle"></i>';
+        btn.title = 'Fijar conversacion';
+    }
 }
 
 // ─── Slang Dictionary Modal ───

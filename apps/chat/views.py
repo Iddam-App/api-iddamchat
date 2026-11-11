@@ -10,9 +10,11 @@ from rest_framework.views import APIView
 from apps.moderation.filter import check_and_flag
 from apps.notifications.services import create_notification
 
+from django.db.models import Exists, OuterRef
+
 from .models import (
     Conversation, Message, MessageTranslation,
-    UserSlangTerm, ConversationTranslationPref,
+    PinnedConversation, UserSlangTerm, ConversationTranslationPref,
 )
 from .serializers import (
     ConversationSerializer, MessageSerializer, UserSlangTermSerializer,
@@ -35,7 +37,14 @@ class ConversationListView(generics.ListAPIView):
                 'messages',
                 queryset=Message.objects.order_by('-created_at'),
             ),
-        )
+        ).annotate(
+            _is_pinned=Exists(
+                PinnedConversation.objects.filter(
+                    user=self.request.user,
+                    conversation=OuterRef('pk'),
+                )
+            ),
+        ).order_by('-_is_pinned', '-updated_at')
 
 
 class ConversationStartView(APIView):
@@ -367,3 +376,22 @@ class MessageDeleteView(APIView):
 
         msg.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ConversationPinToggleView(APIView):
+    """POST: fijar/desfijar una conversación (toggle)."""
+
+    def post(self, request, conv_id):
+        conv = generics.get_object_or_404(Conversation, pk=conv_id)
+        if request.user not in (conv.user1, conv.user2):
+            return Response(
+                {'detail': 'No autorizado.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        pin, created = PinnedConversation.objects.get_or_create(
+            user=request.user, conversation=conv,
+        )
+        if not created:
+            pin.delete()
+            return Response({'pinned': False})
+        return Response({'pinned': True})

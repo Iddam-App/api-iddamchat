@@ -988,6 +988,41 @@ UNI_FOLLOWS = [
     ('ana@demo.iddam.app', 'daniela@demo.iddam.app'),
 ]
 
+# ── Interactions with real users ──────────────────────────────────────────────
+
+REAL_USER_CONVERSATIONS = [
+    dict(
+        sender_email='matias@demo.iddam.app',
+        messages=[
+            'Hola! Bienvenido a IddamChat! Soy Matías, de Santiago de Chile.',
+            'Espero que te guste la app. Cualquier cosa que necesites, aquí estamos!',
+        ],
+    ),
+    dict(
+        sender_email='david@demo.iddam.app',
+        messages=[
+            'Hey! Welcome to IddamChat! I am David from Dallas.',
+            'Feel free to check out the groups and events. See you around!',
+        ],
+    ),
+    dict(
+        sender_email='daniela@demo.iddam.app',
+        messages=[
+            'Holaa! Soy Daniela, bienvenido/a!',
+            'Si te gusta el diseño o quieres compartir algo creativo, este es tu lugar.',
+        ],
+    ),
+]
+
+DEMO_FOLLOWERS_FOR_REAL = [
+    'matias@demo.iddam.app',
+    'daniela@demo.iddam.app',
+    'lucas@demo.iddam.app',
+    'david@demo.iddam.app',
+    'genesis@demo.iddam.app',
+    'pablo@demo.iddam.app',
+]
+
 FRIENDSHIPS_DATA = [
     ('matias@demo.iddam.app', 'facundo@demo.iddam.app'),
     ('matias@demo.iddam.app', 'david@demo.iddam.app'),
@@ -1298,6 +1333,7 @@ class Command(BaseCommand):
         counters['job_postings'] = self._create_job_postings()
         counters['career_tips'] = self._create_career_tips()
         counters['pro_profiles'] = self._create_professional_profiles()
+        counters['real_user_interactions'] = self._create_real_user_interactions()
 
         self.stdout.write('')
         self.stdout.write(self.style.SUCCESS('═' * 50))
@@ -1326,6 +1362,9 @@ class Command(BaseCommand):
                 Q(follower_id__in=demo_ids) | Q(followed_id__in=demo_ids),
             ).delete()
             Friendship.objects.filter(
+                Q(user1_id__in=demo_ids) | Q(user2_id__in=demo_ids),
+            ).delete()
+            Conversation.objects.filter(
                 Q(user1_id__in=demo_ids) | Q(user2_id__in=demo_ids),
             ).delete()
         if count == 0 and g_count == 0:
@@ -1821,4 +1860,62 @@ class Command(BaseCommand):
                 created += 1
         self.stdout.write(f'Professional profiles: {created} created')
         return created
+
+    # ── Real user interactions ────────────────────────────────────────
+
+    def _create_real_user_interactions(self):
+        """Demo accounts follow and message every real (non-demo) user."""
+        real_users = User.objects.filter(
+            is_active=True,
+        ).exclude(
+            email__endswith=f'@{DEMO_DOMAIN}',
+        )
+
+        created_follows = 0
+        created_convs = 0
+        created_msgs = 0
+        now = timezone.now()
+
+        for real_user in real_users:
+            # 6 demo accounts follow the real user
+            for demo_email in DEMO_FOLLOWERS_FOR_REAL:
+                demo_user = self._get_user(demo_email)
+                _, was_created = Follow.objects.get_or_create(
+                    follower=demo_user, followed=real_user,
+                )
+                if was_created:
+                    created_follows += 1
+
+            # 3 demo accounts send welcome messages
+            for conv_data in REAL_USER_CONVERSATIONS:
+                sender = self._get_user(conv_data['sender_email'])
+                # Consistent ordering: lower pk first
+                u1 = min(sender, real_user, key=lambda u: u.pk)
+                u2 = max(sender, real_user, key=lambda u: u.pk)
+                conv, was_created = Conversation.objects.get_or_create(
+                    user1=u1, user2=u2,
+                )
+                if was_created:
+                    created_convs += 1
+                # Only add messages if conversation was just created
+                if was_created:
+                    for j, content in enumerate(conv_data['messages']):
+                        msg, mc = Message.objects.get_or_create(
+                            conversation=conv,
+                            sender=sender,
+                            content=content,
+                        )
+                        if mc:
+                            Message.objects.filter(pk=msg.pk).update(
+                                created_at=now - timedelta(
+                                    hours=len(conv_data['messages']) - j,
+                                ),
+                            )
+                            created_msgs += 1
+
+        self.stdout.write(
+            f'Real user interactions: {created_follows} follows, '
+            f'{created_convs} conversations, {created_msgs} messages'
+        )
+        return created_follows + created_convs
 

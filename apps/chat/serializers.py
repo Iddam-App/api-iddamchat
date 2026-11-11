@@ -25,11 +25,12 @@ class ConversationSerializer(serializers.ModelSerializer):
     other_user = serializers.SerializerMethodField()
     last_message = serializers.SerializerMethodField()
     unread_count = serializers.SerializerMethodField()
+    is_pinned = serializers.SerializerMethodField()
 
     class Meta:
         model = Conversation
         fields = ['id', 'other_user', 'last_message', 'unread_count',
-                  'created_at', 'updated_at']
+                  'is_pinned', 'created_at', 'updated_at']
 
     def get_other_user(self, obj):
         request = self.context['request']
@@ -55,6 +56,9 @@ class ConversationSerializer(serializers.ModelSerializer):
                 'is_read': msg.is_read,
             }
         return None
+
+    def get_is_pinned(self, obj):
+        return getattr(obj, '_is_pinned', False)
 
     def get_unread_count(self, obj):
         # Use annotated value if available

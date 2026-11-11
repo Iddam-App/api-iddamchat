@@ -43,9 +43,7 @@ class StoryFeedView(generics.ListAPIView):
         return Story.objects.filter(
             expires_at__gt=timezone.now(),
         ).filter(
-            # My stories, or public accounts, or private accounts I follow
             Q(user=user) |
-            Q(user__is_private=False) |
             Q(user_id__in=following_ids),
         ).select_related('user').annotate(
             _view_count=Count('views', distinct=True),

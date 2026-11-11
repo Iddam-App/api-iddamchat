@@ -50,6 +50,12 @@
     <div class="ig-highlights-scroll" id="highlights-scroll"></div>
 </div>
 
+<!-- Suggestions (own profile only) -->
+<div id="profile-suggestions-section" style="display:none;">
+    <div class="profile-suggestions-label"><i class="bi bi-person-plus me-1"></i>Sugeridos para ti</div>
+    <div class="suggestions-scroll" id="profile-suggestions-list"></div>
+</div>
+
 <!-- Content Tabs -->
 <div class="ig-content-tabs" id="content-tabs">
     <button class="ig-tab active" data-tab="grid" onclick="switchProfileTab('grid')">
@@ -401,6 +407,60 @@
     border-color: var(--gold);
     box-shadow: 0 0 0 3px rgba(139,115,85,0.15);
 }
+
+/* ─── Profile Suggestions ──────────────────────────────── */
+.profile-suggestions-label {
+    font-size: 14px;
+    font-weight: 700;
+    padding: 12px 16px 4px;
+    color: var(--text-primary);
+}
+#profile-suggestions-section .suggestions-scroll {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding: 8px 16px 16px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+#profile-suggestions-section .suggestions-scroll::-webkit-scrollbar { display: none; }
+.profile-sug-card {
+    flex: 0 0 140px;
+    background: var(--card-bg, #1e1e1e);
+    border-radius: 16px;
+    padding: 16px 12px;
+    text-align: center;
+    text-decoration: none;
+    color: inherit;
+    border: 1px solid var(--border-color, #2a2a2a);
+    transition: transform 0.15s;
+}
+.profile-sug-card:active { transform: scale(0.97); }
+.profile-sug-avatar {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--accent-color, #2EA3F2); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; font-weight: 600; margin: 0 auto 8px; overflow: hidden;
+}
+.profile-sug-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.profile-sug-name {
+    font-size: 13px; font-weight: 600;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.profile-sug-meta {
+    font-size: 11px; opacity: 0.6;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px;
+}
+.profile-sug-btn {
+    margin-top: 10px; padding: 5px 16px; border-radius: 20px; border: none;
+    background: var(--accent-color, #2EA3F2); color: #fff;
+    font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.profile-sug-btn.following {
+    background: transparent;
+    border: 1px solid var(--border-color, #444);
+    color: var(--text-secondary, #aaa);
+}
 </style>
 
 <script>
@@ -456,6 +516,7 @@ onPageReady(() => {
 
     if (isOwnProfile) {
         document.getElementById('tab-saved').style.display = '';
+        loadProfileSuggestions();
     }
 
     // Avatar change
@@ -528,6 +589,60 @@ onPageReady(() => {
         document.removeEventListener('keydown', _profileKeyHandler);
     });
 });
+
+// ─── Profile Suggestions ───
+function formatMutualFollows(names) {
+    if (!names || names.length === 0) return '';
+    if (names.length === 1) return 'Seguido por ' + escapeHtml(names[0]);
+    return 'Seguido por ' + escapeHtml(names[0]) + ' y ' + escapeHtml(names[1]);
+}
+
+async function loadProfileSuggestions() {
+    try {
+        const res = await authFetch('/api/auth/users/suggestions/');
+        if (!res.ok) return;
+        const users = await res.json();
+        if (!users.length) return;
+
+        const list = document.getElementById('profile-suggestions-list');
+        list.innerHTML = users.map(u => {
+            const name = u.display_name || u.first_name || u.username;
+            const initial = (name[0] || '?').toUpperCase();
+            const avatar = u.avatar
+                ? `<img src="${u.avatar}" alt="">`
+                : initial;
+            const mutualText = formatMutualFollows(u.mutual_follows || []);
+            const metaText = mutualText || ('@' + escapeHtml(u.username) + (u.country ? ' · ' + u.country : ''));
+            return `
+            <a href="/profile/${u.id}/" class="profile-sug-card">
+                <div class="profile-sug-avatar">${avatar}</div>
+                <div class="profile-sug-name">${escapeHtml(name)}</div>
+                <div class="profile-sug-meta">${metaText}</div>
+                <button class="profile-sug-btn" onclick="toggleProfileSugFollow(event, this, ${u.id})">Seguir</button>
+            </a>`;
+        }).join('');
+        document.getElementById('profile-suggestions-section').style.display = '';
+    } catch(e) {
+        console.error(e);
+    }
+}
+
+async function toggleProfileSugFollow(e, btn, userId) {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+        const res = await authFetch(`/api/social/follow/${userId}/`, { method: 'POST' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.status === 'following' || data.status === 'follow_request_sent') {
+            btn.textContent = data.status === 'follow_request_sent' ? 'Solicitado' : 'Siguiendo';
+            btn.classList.add('following');
+        } else {
+            btn.textContent = 'Seguir';
+            btn.classList.remove('following');
+        }
+    } catch(e) { console.error(e); }
+}
 
 // ─── Load Profile ───
 async function loadProfile() {

@@ -95,6 +95,24 @@ class UserSlangTerm(models.Model):
         return f"{self.user} — {self.term} ({self.language})"
 
 
+class PinnedConversation(models.Model):
+    """Conversación fijada por un usuario para que aparezca arriba."""
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='pinned_conversations',
+    )
+    conversation = models.ForeignKey(
+        Conversation, on_delete=models.CASCADE, related_name='pins',
+    )
+    pinned_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'conversation')
+
+    def __str__(self):
+        return f"{self.user} pinned conv {self.conversation_id}"
+
+
 class ConversationTranslationPref(models.Model):
     """Preferencia de auto-traducción por usuario/conversación."""
     user = models.ForeignKey(

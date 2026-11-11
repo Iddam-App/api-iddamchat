@@ -131,12 +131,27 @@
     border: 1px solid var(--border-color, #444);
     color: var(--text-secondary, #aaa);
 }
+
+.search-user-mutual {
+    font-size: 11px;
+    color: var(--text-muted, #888);
+    margin-top: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 </style>
 
 <script>
 let discoverPosts = [];
 let currentCategory = '';
 let searchTimeout = null;
+
+function formatMutualFollows(names) {
+    if (!names || names.length === 0) return '';
+    if (names.length === 1) return 'Seguido por ' + escapeHtml(names[0]);
+    return 'Seguido por ' + escapeHtml(names[0]) + ' y ' + escapeHtml(names[1]);
+}
 
 onPageReady(() => {
     if (!isLoggedIn()) { window.location.href = '/login/'; return; }
@@ -183,12 +198,13 @@ async function loadSuggestions() {
             const avatar = u.avatar
                 ? `<img src="${u.avatar}" alt="">`
                 : initial;
-            const country = u.country || '';
+            const mutualText = formatMutualFollows(u.mutual_follows || []);
+            const metaText = mutualText || ('@' + escapeHtml(u.username) + (u.country ? ' · ' + u.country : ''));
             return `
             <a href="/profile/${u.id}/" class="suggestion-card">
                 <div class="suggestion-avatar">${avatar}</div>
                 <div class="suggestion-name">${escapeHtml(name)}</div>
-                <div class="suggestion-meta">@${escapeHtml(u.username)}${country ? ' · ' + country : ''}</div>
+                <div class="suggestion-meta">${metaText}</div>
                 <button class="suggestion-btn" onclick="toggleSugFollow(event, this, ${u.id})">Seguir</button>
             </a>`;
         }).join('');
@@ -323,12 +339,14 @@ async function searchUsers(query) {
             const name = u.display_name || u.first_name || u.username;
             const initial = (name[0] || '?').toUpperCase();
             const avatarInner = u.avatar ? `<img src="${u.avatar}" alt="">` : initial;
+            const mutualText = formatMutualFollows(u.mutual_follows || []);
             return `
             <a href="/profile/${u.id}/" class="search-user-item">
                 <div class="search-user-avatar">${avatarInner}</div>
                 <div class="search-user-info">
                     <div class="search-user-name">${escapeHtml(name)}</div>
                     <div class="search-user-username">@${escapeHtml(u.username)}</div>
+                    ${mutualText ? `<div class="search-user-mutual">${mutualText}</div>` : ''}
                 </div>
             </a>`;
         }).join('')}`;

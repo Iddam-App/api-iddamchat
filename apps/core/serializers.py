@@ -16,6 +16,16 @@ class UserMinimalSerializer(serializers.ModelSerializer):
                   'avatar', 'country', 'display_name', 'is_private']
 
 
+class UserSuggestionSerializer(UserMinimalSerializer):
+    mutual_follows = serializers.SerializerMethodField()
+
+    class Meta(UserMinimalSerializer.Meta):
+        fields = UserMinimalSerializer.Meta.fields + ['mutual_follows']
+
+    def get_mutual_follows(self, obj):
+        return getattr(obj, '_mutual_names', [])
+
+
 class UserSerializer(serializers.ModelSerializer):
     display_name = serializers.ReadOnlyField()
 

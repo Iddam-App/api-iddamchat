@@ -15,4 +15,5 @@ urlpatterns = [
     path('conversations/<int:conv_id>/auto-translate/', views.ConversationAutoTranslateView.as_view(), name='auto_translate'),
     path('slang-terms/', views.UserSlangTermListCreateView.as_view(), name='slang_term_list_create'),
     path('slang-terms/<int:term_id>/', views.UserSlangTermDestroyView.as_view(), name='slang_term_destroy'),
+    path('conversations/<int:conv_id>/pin/', views.ConversationPinToggleView.as_view(), name='conversation_pin_toggle'),
 ]

@@ -8,7 +8,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .models import UserLanguage
 from .serializers import (
     ChangePasswordSerializer, RegisterSerializer, UserLanguageSerializer,
-    UserMinimalSerializer, UserSerializer,
+    UserMinimalSerializer, UserSerializer, UserSuggestionSerializer,
 )
 
 User = get_user_model()
@@ -18,6 +18,45 @@ def _is_following(user, target):
     """Check if user follows target."""
     from apps.social.models import Follow
     return Follow.objects.filter(follower=user, followed=target).exists()
+
+
+def _annotate_mutual_names(request_user, users):
+    """Attach _mutual_names (list of up to 2 display names) to each user."""
+    from apps.social.models import Follow
+
+    my_following_ids = set(
+        Follow.objects.filter(follower=request_user)
+        .values_list('followed_id', flat=True)
+    )
+    if not my_following_ids:
+        for u in users:
+            u._mutual_names = []
+        return users
+
+    user_ids = [u.pk for u in users]
+    # Get all follows where one of my followed users follows one of the result users
+    mutual_qs = (
+        Follow.objects.filter(
+            follower_id__in=my_following_ids,
+            followed_id__in=user_ids,
+        )
+        .select_related('follower')
+    )
+    # Group by followed_id
+    mutual_map = {}  # followed_id -> [follower display names]
+    for f in mutual_qs:
+        names = mutual_map.setdefault(f.followed_id, [])
+        if len(names) < 2:
+            name = (
+                f.follower.nickname
+                or f.follower.first_name
+                or f.follower.username
+            )
+            names.append(name)
+
+    for u in users:
+        u._mutual_names = mutual_map.get(u.pk, [])
+    return users
 
 
 class RegisterView(generics.CreateAPIView):
@@ -105,7 +144,7 @@ class DeleteAccountView(APIView):
 
 
 class UserSearchView(generics.ListAPIView):
-    serializer_class = UserMinimalSerializer
+    serializer_class = UserSuggestionSerializer
 
     def get_queryset(self):
         q = self.request.query_params.get('q', '').strip()
@@ -121,25 +160,66 @@ class UserSearchView(generics.ListAPIView):
             Q(congregation__icontains=q),
         ).exclude(pk=self.request.user.pk)[:20]
 
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        queryset = _annotate_mutual_names(request.user, queryset)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
 
 class UserSuggestionsView(generics.ListAPIView):
-    """Suggest users the current user is NOT following yet."""
-    serializer_class = UserMinimalSerializer
+    """Suggest users the current user is NOT following yet.
+    Prioritizes friends-of-friends and annotates mutual follow names.
+    """
+    serializer_class = UserSuggestionSerializer
     pagination_class = None
 
     def get_queryset(self):
         from apps.social.models import Follow
+        from django.db.models import Count
+
         user = self.request.user
-        following_ids = Follow.objects.filter(
-            follower=user,
-        ).values_list('followed_id', flat=True)
-        return User.objects.filter(
-            is_active=True,
-        ).exclude(
-            pk=user.pk,
-        ).exclude(
-            pk__in=following_ids,
-        ).order_by('?')[:12]
+        my_following_ids = set(
+            Follow.objects.filter(follower=user)
+            .values_list('followed_id', flat=True)
+        )
+        exclude_ids = my_following_ids | {user.pk}
+
+        # Friends of friends: users followed by people I follow, that I don't follow
+        fof = (
+            User.objects.filter(
+                is_active=True,
+                followers__follower_id__in=my_following_ids,
+            )
+            .exclude(pk__in=exclude_ids)
+            .annotate(mutual_count=Count('followers', filter=Q(
+                followers__follower_id__in=my_following_ids,
+            )))
+            .order_by('-mutual_count', '?')[:12]
+        )
+        fof_list = list(fof)
+
+        # Fill with random users if we have fewer than 12
+        if len(fof_list) < 12:
+            fof_ids = {u.pk for u in fof_list}
+            remaining = 12 - len(fof_list)
+            fillers = list(
+                User.objects.filter(is_active=True)
+                .exclude(pk__in=exclude_ids | fof_ids)
+                .order_by('?')[:remaining]
+            )
+            # Set mutual_count=0 for fillers
+            for u in fillers:
+                u.mutual_count = 0
+            fof_list.extend(fillers)
+
+        return fof_list
+
+    def list(self, request, *args, **kwargs):
+        users = self.get_queryset()
+        users = _annotate_mutual_names(request.user, users)
+        serializer = self.get_serializer(users, many=True)
+        return Response(serializer.data)
 
 
 class UserProfileView(generics.RetrieveAPIView):
