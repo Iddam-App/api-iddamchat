@@ -42,23 +42,34 @@ def pwa_icon(request, filename):
     raise Http404
 
 
+_seed_status = {'running': False, 'log': ''}
+
+
 def run_seed(request):
     """Temporary endpoint to run seed in a background thread."""
     import threading
-    from apps.core.models import User
 
-    # If already seeded, skip
-    if User.objects.filter(email='matias@demo.iddam.app').exists():
-        return HttpResponse('<pre>Seed already done. Demo users exist.</pre>')
+    if _seed_status['running']:
+        return HttpResponse(f'<pre>Seed is running...\n\n{_seed_status["log"]}</pre>')
+
+    # ?status to check progress
+    if request.GET.get('status'):
+        return HttpResponse(f'<pre>{_seed_status["log"] or "No seed has run yet."}</pre>')
 
     def _do_seed():
+        _seed_status['running'] = True
+        _seed_status['log'] = 'Starting seed...\n'
+        out = io.StringIO()
         try:
-            call_command('seed_demo_data')
+            call_command('seed_demo_data', stdout=out, stderr=out)
+            _seed_status['log'] = f'DONE\n\n{out.getvalue()}'
         except Exception:
-            pass  # runs in background
+            _seed_status['log'] = f'ERROR\n\n{out.getvalue()}\n\n{traceback.format_exc()}'
+        finally:
+            _seed_status['running'] = False
 
     threading.Thread(target=_do_seed, daemon=True).start()
-    return HttpResponse('<pre>Seed started in background. Wait 1-2 minutes then refresh the app.</pre>')
+    return HttpResponse('<pre>Seed started in background.\n\nCheck progress at /run-seed/?status</pre>')
 
 
 urlpatterns = [
