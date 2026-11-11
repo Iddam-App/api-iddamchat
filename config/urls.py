@@ -1,6 +1,10 @@
+import io
+import traceback
+
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.core.management import call_command
 from django.http import HttpResponse, FileResponse, Http404
 from django.urls import include, path
 
@@ -38,7 +42,20 @@ def pwa_icon(request, filename):
     raise Http404
 
 
+def run_seed(request):
+    """Temporary endpoint to run seed and see output/errors."""
+    out = io.StringIO()
+    try:
+        call_command('seed_demo_data', stdout=out, stderr=out)
+        return HttpResponse(f'<pre>OK\n\n{out.getvalue()}</pre>')
+    except Exception:
+        return HttpResponse(f'<pre>ERROR\n\n{out.getvalue()}\n\n{traceback.format_exc()}</pre>', status=500)
+
+
 urlpatterns = [
+    # Temporary seed endpoint (remove after testing)
+    path('run-seed/', run_seed, name='run_seed'),
+
     # PWA files (must be at root scope)
     path('sw.js', sw_js, name='service_worker'),
     path('manifest.json', manifest_json, name='manifest'),
