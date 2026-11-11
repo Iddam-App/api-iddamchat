@@ -1,10 +1,6 @@
-import io
-import traceback
-
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.core.management import call_command
 from django.http import HttpResponse, FileResponse, Http404
 from django.urls import include, path
 
@@ -42,57 +38,9 @@ def pwa_icon(request, filename):
     raise Http404
 
 
-_seed_status = {'running': False, 'log': ''}
-
-
-def run_seed(request):
-    """Temporary endpoint to run seed in a background thread."""
-    import threading
-    from django.db import connection
-
-    # ?status to check progress
-    if request.GET.get('status'):
-        return HttpResponse(f'<pre>{_seed_status["log"] or "No seed has run yet."}</pre>')
-
-    # ?check to count objects
-    if request.GET.get('check'):
-        from apps.core.models import User
-        from apps.posts.models import Post
-        from apps.jobs.models import JobPosting
-        from apps.profiles.models import Story
-        demo = User.objects.filter(email__endswith='@demo.iddam.app').count()
-        posts = Post.objects.count()
-        jobs = JobPosting.objects.count()
-        stories = Story.objects.count()
-        return HttpResponse(f'<pre>Demo users: {demo}\nPosts: {posts}\nJobs: {jobs}\nStories: {stories}</pre>')
-
-    if _seed_status['running']:
-        return HttpResponse(f'<pre>Seed is running...\n\n{_seed_status["log"]}</pre>')
-
-    # ?reset to allow re-run
-    _seed_status['running'] = False
-
-    def _do_seed():
-        _seed_status['running'] = True
-        _seed_status['log'] = 'Starting seed...\n'
-        out = io.StringIO()
-        try:
-            call_command('seed_demo_data', stdout=out, stderr=out)
-            _seed_status['log'] = f'DONE\n\n{out.getvalue()}'
-        except Exception:
-            _seed_status['log'] = f'ERROR\n\n{out.getvalue()}\n\n{traceback.format_exc()}'
-        finally:
-            _seed_status['running'] = False
-            connection.close()
-
-    threading.Thread(target=_do_seed, daemon=True).start()
-    return HttpResponse('<pre>Seed started.\n\nCheck: /run-seed/?status\nCount: /run-seed/?check</pre>')
 
 
 urlpatterns = [
-    # Temporary seed endpoint (remove after testing)
-    path('run-seed/', run_seed, name='run_seed'),
-
     # PWA files (must be at root scope)
     path('sw.js', sw_js, name='service_worker'),
     path('manifest.json', manifest_json, name='manifest'),
