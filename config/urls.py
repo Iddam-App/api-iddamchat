@@ -48,13 +48,29 @@ _seed_status = {'running': False, 'log': ''}
 def run_seed(request):
     """Temporary endpoint to run seed in a background thread."""
     import threading
-
-    if _seed_status['running']:
-        return HttpResponse(f'<pre>Seed is running...\n\n{_seed_status["log"]}</pre>')
+    from django.db import connection
 
     # ?status to check progress
     if request.GET.get('status'):
         return HttpResponse(f'<pre>{_seed_status["log"] or "No seed has run yet."}</pre>')
+
+    # ?check to count objects
+    if request.GET.get('check'):
+        from apps.core.models import User
+        from apps.posts.models import Post
+        from apps.jobs.models import JobPosting
+        from apps.profiles.models import Story
+        demo = User.objects.filter(email__endswith='@demo.iddam.app').count()
+        posts = Post.objects.count()
+        jobs = JobPosting.objects.count()
+        stories = Story.objects.count()
+        return HttpResponse(f'<pre>Demo users: {demo}\nPosts: {posts}\nJobs: {jobs}\nStories: {stories}</pre>')
+
+    if _seed_status['running']:
+        return HttpResponse(f'<pre>Seed is running...\n\n{_seed_status["log"]}</pre>')
+
+    # ?reset to allow re-run
+    _seed_status['running'] = False
 
     def _do_seed():
         _seed_status['running'] = True
@@ -67,9 +83,10 @@ def run_seed(request):
             _seed_status['log'] = f'ERROR\n\n{out.getvalue()}\n\n{traceback.format_exc()}'
         finally:
             _seed_status['running'] = False
+            connection.close()
 
     threading.Thread(target=_do_seed, daemon=True).start()
-    return HttpResponse('<pre>Seed started in background.\n\nCheck progress at /run-seed/?status</pre>')
+    return HttpResponse('<pre>Seed started.\n\nCheck: /run-seed/?status\nCount: /run-seed/?check</pre>')
 
 
 urlpatterns = [
