@@ -274,16 +274,21 @@ class BadgesView(APIView):
     """Single endpoint for all nav badge counts (unread msgs + notifications)."""
 
     def get(self, request):
+        from django.db.models import Exists, OuterRef
         from apps.chat.models import Conversation, Message
         from apps.notifications.models import Notification
 
         user = request.user
-        unread_messages = Message.objects.filter(
-            conversation__in=Conversation.objects.filter(
-                Q(user1=user) | Q(user2=user),
-            ),
-            is_read=False,
-        ).exclude(sender=user).count()
+        unread_messages = Conversation.objects.filter(
+            Q(user1=user) | Q(user2=user),
+        ).filter(
+            Exists(
+                Message.objects.filter(
+                    conversation=OuterRef('pk'),
+                    is_read=False,
+                ).exclude(sender=user)
+            )
+        ).count()
 
         unread_notifs = Notification.objects.filter(
             recipient=user, is_read=False,

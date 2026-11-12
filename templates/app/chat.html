@@ -859,8 +859,12 @@ function renderConversationList() {
     }
     empty.style.display = 'none';
 
+    // Store user data indexed by conv id for click handling
+    window._convUsers = {};
+
     const html = filtered.map(conv => {
         const u = conv.other_user || {};
+        window._convUsers[conv.id] = u;
         const name = u.display_name || u.first_name || u.username || 'Usuario';
         const initial = (name[0] || '?').toUpperCase();
         const avatarInner = u.avatar ? `<img src="${u.avatar}" alt="">` : initial;
@@ -882,7 +886,7 @@ function renderConversationList() {
 
         return `
         <div class="chat-list-item-wrapper ${conv.is_pinned ? 'pinned' : ''}">
-            <button class="chat-list-item ${activeClass}" onclick="openConversation(${conv.id}, ${JSON.stringify(JSON.stringify(u))})">
+            <button class="chat-list-item ${activeClass}" data-conv-id="${conv.id}">
                 <div class="conv-avatar">${avatarInner}</div>
                 <div class="conv-info">
                     <div class="conv-name">${pinIcon}${escapeHtml(name)}</div>
@@ -893,13 +897,28 @@ function renderConversationList() {
                     ${unreadDot}
                 </div>
             </button>
-            <button class="conv-pin-btn" onclick="togglePinConversation(${conv.id}, event)" title="${conv.is_pinned ? 'Desfijar' : 'Fijar'}">
+            <button class="conv-pin-btn" data-pin-conv-id="${conv.id}" title="${conv.is_pinned ? 'Desfijar' : 'Fijar'}">
                 <i class="bi ${conv.is_pinned ? 'bi-pin-fill' : 'bi-pin-angle'}"></i>
             </button>
         </div>`;
     }).join('');
 
     list.innerHTML = html;
+
+    // Event delegation for conversation clicks and pin buttons
+    list.querySelectorAll('.chat-list-item[data-conv-id]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const convId = parseInt(btn.dataset.convId);
+            const user = window._convUsers[convId];
+            if (user) openConversation(convId, user);
+        });
+    });
+    list.querySelectorAll('.conv-pin-btn[data-pin-conv-id]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            togglePinConversation(parseInt(btn.dataset.pinConvId), e);
+        });
+    });
 }
 
 function filterConversations() {
