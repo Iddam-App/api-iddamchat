@@ -762,8 +762,9 @@ onPageReady(() => {
     if (!isLoggedIn()) { window.location.href = '/login/'; return; }
     me = JSON.parse(localStorage.getItem('user_data') || '{}');
 
-    // Ensure demo interactions exist (runs once per user)
-    initDemoInteractions().then(() => loadConversations());
+    // Ensure demo interactions exist (runs once per user), then reload
+    initDemoInteractions().then(() => loadConversations(true));
+    loadConversations();
 
     // Check if URL has a user ID to start conversation with
     const pathParts = window.location.pathname.split('/').filter(Boolean);

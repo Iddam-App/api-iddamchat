@@ -729,6 +729,16 @@ async function loadProfile() {
 async function loadStats() {
     // Followers/following API only returns data for the authenticated user
     if (!isOwnProfile) return;
+
+    // Ensure demo interactions exist (runs once)
+    const demoKey = 'demo_init_' + (me.id || '');
+    if (!localStorage.getItem(demoKey)) {
+        try {
+            const initRes = await authFetch('/api/auth/me/init-demo/', { method: 'POST' });
+            if (initRes.ok) localStorage.setItem(demoKey, '1');
+        } catch(e) {}
+    }
+
     try {
         const [followersRes, followingRes] = await Promise.all([
             authFetch('/api/social/followers/'),
@@ -737,13 +747,13 @@ async function loadStats() {
 
         if (followersRes.ok) {
             const data = await followersRes.json();
-            const items = data.results || data;
-            document.getElementById('stat-followers').textContent = items.length;
+            const count = data.count != null ? data.count : (data.results || data).length;
+            document.getElementById('stat-followers').textContent = count;
         }
         if (followingRes.ok) {
             const data = await followingRes.json();
-            const items = data.results || data;
-            document.getElementById('stat-following').textContent = items.length;
+            const count = data.count != null ? data.count : (data.results || data).length;
+            document.getElementById('stat-following').textContent = count;
         }
     } catch(e) {}
 }
