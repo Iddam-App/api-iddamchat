@@ -20,7 +20,87 @@ function invalidateUserCache() { _cachedUserData = null; }
 function getToken() { return localStorage.getItem('access_token'); }
 function isLoggedIn() { return !!getToken(); }
 
+// ─── API Response Cache (stale-while-revalidate) ─────────
+const _apiCache = {};
+const API_CACHE_TTL = 60000; // 60s - serve from cache
+const API_CACHE_MAX = 50;
+
+function _apiCacheKey(url) { return url; }
+
+function _apiCacheGet(url) {
+    const entry = _apiCache[url];
+    if (!entry) return null;
+    return entry;
+}
+
+function _apiCacheSet(url, body, status) {
+    // Evict oldest if too many
+    const keys = Object.keys(_apiCache);
+    if (keys.length >= API_CACHE_MAX) {
+        let oldest = keys[0], oldestTime = _apiCache[keys[0]].ts;
+        for (const k of keys) {
+            if (_apiCache[k].ts < oldestTime) { oldest = k; oldestTime = _apiCache[k].ts; }
+        }
+        delete _apiCache[oldest];
+    }
+    _apiCache[url] = { body, status, ts: Date.now() };
+}
+
+function apiCacheClear(pattern) {
+    if (!pattern) { for (const k in _apiCache) delete _apiCache[k]; return; }
+    for (const k in _apiCache) { if (k.includes(pattern)) delete _apiCache[k]; }
+}
+
 async function authFetch(url, opts = {}) {
+    const method = (opts.method || 'GET').toUpperCase();
+    const isGet = method === 'GET' && !opts.signal;
+
+    // For GET requests, return cached response immediately if available
+    if (isGet) {
+        const cached = _apiCacheGet(url);
+        if (cached && (Date.now() - cached.ts) < API_CACHE_TTL) {
+            // Return a fake Response with cached data
+            const res = new Response(JSON.stringify(cached.body), {
+                status: cached.status,
+                headers: { 'Content-Type': 'application/json', 'X-Cache': 'hit' },
+            });
+            // Revalidate in background (silent)
+            _authFetchReal(url, opts).then(bgRes => {
+                if (bgRes.ok) bgRes.clone().json().then(d => _apiCacheSet(url, d, bgRes.status)).catch(() => {});
+            }).catch(() => {});
+            return res;
+        }
+    }
+
+    const res = await _authFetchReal(url, opts);
+
+    // Cache successful GET responses
+    if (isGet && res.ok) {
+        try {
+            const clone = res.clone();
+            const data = await clone.json();
+            _apiCacheSet(url, data, res.status);
+            // Return a new response since we consumed the clone
+            return new Response(JSON.stringify(data), {
+                status: res.status,
+                headers: { 'Content-Type': 'application/json' },
+            });
+        } catch(e) {
+            return res;
+        }
+    }
+
+    // Invalidate cache on mutations
+    if (!isGet && res.ok) {
+        // Invalidate related cache entries
+        const base = url.split('?')[0].split('/').slice(0, 4).join('/');
+        apiCacheClear(base);
+    }
+
+    return res;
+}
+
+async function _authFetchReal(url, opts = {}) {
     // Build headers, preserving any already-set headers
     if (!opts.headers) opts.headers = {};
     opts.headers['Authorization'] = 'Bearer ' + getToken();
