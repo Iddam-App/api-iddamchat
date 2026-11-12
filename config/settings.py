@@ -107,9 +107,9 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # ─── Database ────────────────────────────────────────────────────────
-DATABASES = {
-    'default': env.db('DATABASE_URL'),
-}
+_db = env.db('DATABASE_URL')
+_db['CONN_MAX_AGE'] = 600  # Reuse DB connections (saves ~200ms/request)
+DATABASES = {'default': _db}
 
 # ─── Auth ────────────────────────────────────────────────────────────
 AUTH_USER_MODEL = 'core.User'

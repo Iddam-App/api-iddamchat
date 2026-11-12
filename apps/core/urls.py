@@ -24,6 +24,6 @@ urlpatterns = [
     path('users/suggestions/', views.UserSuggestionsView.as_view(), name='user_suggestions'),
     path('users/<int:pk>/', views.UserProfileView.as_view(), name='user_profile'),
 
-    # Init demo interactions for current user
+    path('me/badges/', views.BadgesView.as_view(), name='badges'),
     path('me/init-demo/', views.InitDemoInteractionsView.as_view(), name='init_demo'),
 ]

@@ -270,9 +270,8 @@
             if (jb) jb.classList.add('active');
         }
 
-        // Load unread count + notification count + user data in parallel (non-blocking)
-        loadUnreadCount();
-        loadNotifCount();
+        // Load badge counts + user data (non-blocking)
+        loadBadges();
         ensureUserData();
 
         // Setup global create post
@@ -297,48 +296,30 @@
         } catch(e) {}
     }
 
-    // ─── Unread Messages Badge ───
-    async function loadUnreadCount() {
+    // ─── Combined Badge Counts (1 request instead of 2) ───
+    async function loadBadges() {
         try {
-            const res = await authFetch('/api/chat/unread/');
+            const res = await authFetch('/api/auth/me/badges/');
             if (!res.ok) return;
             const data = await res.json();
-            const count = data.unread_count || 0;
 
-            // Bottom nav Messages badge
+            // Messages badge
+            const msgCount = data.unread_messages || 0;
             document.querySelectorAll('.bottom-unread-badge').forEach(b => {
-                if (count > 0) {
-                    b.textContent = count > 99 ? '99+' : count;
+                if (msgCount > 0) {
+                    b.textContent = msgCount > 99 ? '99+' : msgCount;
                     b.style.display = 'flex';
                 } else {
                     b.style.display = 'none';
                 }
             });
-        } catch(e) {}
-    }
-    // Smart polling: only poll when tab is visible
-    if (isLoggedIn()) {
-        let unreadInterval = setInterval(loadUnreadCount, 12000);
-        document.addEventListener('visibilitychange', () => {
-            clearInterval(unreadInterval);
-            if (!document.hidden) {
-                loadUnreadCount();
-                unreadInterval = setInterval(loadUnreadCount, 12000);
-            }
-        });
-    }
 
-    // ─── Notification Badge ───
-    async function loadNotifCount() {
-        try {
-            const res = await authFetch('/api/notifications/unread-count/');
-            if (!res.ok) return;
-            const data = await res.json();
-            const count = data.unread_count || data.count || 0;
+            // Notifications badge
+            const notifCount = data.unread_notifications || 0;
             const badge = document.getElementById('nav-notif-badge');
             if (badge) {
-                if (count > 0) {
-                    badge.textContent = count > 99 ? '99+' : count;
+                if (notifCount > 0) {
+                    badge.textContent = notifCount > 99 ? '99+' : notifCount;
                     badge.style.display = 'flex';
                 } else {
                     badge.style.display = 'none';
@@ -347,12 +328,12 @@
         } catch(e) {}
     }
     if (isLoggedIn()) {
-        let notifInterval = setInterval(loadNotifCount, 15000);
+        let badgeInterval = setInterval(loadBadges, 30000);
         document.addEventListener('visibilitychange', () => {
-            clearInterval(notifInterval);
+            clearInterval(badgeInterval);
             if (!document.hidden) {
-                loadNotifCount();
-                notifInterval = setInterval(loadNotifCount, 15000);
+                loadBadges();
+                badgeInterval = setInterval(loadBadges, 30000);
             }
         });
     }
